@@ -1,86 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <defs>
-    <clipPath id="iconClip">
-      <rect width="256" height="256" rx="36"/>
-    </clipPath>
-
-    <!-- Deep cosmic dark background -->
-    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#2a0066"/>
-        <stop offset="100%" stop-color="#0f0028"/>
-    </radialGradient>
-
-    <!-- Modern card gradients -->
-    <linearGradient id="cardFront" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3A286A"/>
-      <stop offset="100%" stop-color="#1F123A"/>
-    </linearGradient>
-
-    <linearGradient id="cardBack" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2A1B4F"/>
-      <stop offset="100%" stop-color="#140A26"/>
-    </linearGradient>
-
-    <linearGradient id="borderFront" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#A57CF0"/>
-      <stop offset="100%" stop-color="#693BC6"/>
-    </linearGradient>
-
-    <!-- Glowing cyan gradient for the search icon -->
-    <linearGradient id="searchGradBright" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00ffff"/>
-      <stop offset="100%" stop-color="#00c8ff"/>
-    </linearGradient>
-
-    <!-- Shadow filter for depth -->
-    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="4" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.75"/>
-    </filter>
-
-    <!-- Glow for search icon -->
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-        <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-        </feMerge>
-    </filter>
-  </defs>
+<!--?xml version="1.0" encoding="UTF-8"?-->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
 
   <!-- Background -->
-  <rect width="256" height="256" rx="36" fill="url(#bgGrad)"/>
+  <rect width="1024" height="1024" rx="220" fill="#14121F"></rect>
 
-  <g clip-path="url(#iconClip)">
-      <!-- Back card -->
-      <g transform="translate(128, 128) rotate(-10) translate(-128, -128)" filter="url(#dropShadow)">
-          <!-- Card border -->
-          <rect x="68" y="44" width="120" height="168" rx="14" fill="url(#cardBack)" stroke="#4A3182" stroke-width="4"/>
-          <!-- Inner border -->
-          <rect x="78" y="54" width="100" height="148" rx="8" fill="none" stroke="#3A216A" stroke-width="2"/>
-      </g>
+  <!-- Outer Vault Ring Base -->
+  <circle cx="512" cy="512" r="360" fill="none" stroke="#2A243A" stroke-width="120"></circle>
 
-      <!-- Front card -->
-      <g transform="translate(128, 128) rotate(8) translate(-128, -128)" filter="url(#dropShadow)">
-          <!-- Card border -->
-          <rect x="68" y="44" width="120" height="168" rx="14" fill="url(#cardFront)" stroke="url(#borderFront)" stroke-width="5"/>
-          <!-- Inner border -->
-          <rect x="78" y="54" width="100" height="148" rx="8" fill="none" stroke="#7E54CD" stroke-width="2" opacity="0.6"/>
+  <!-- 5 Mana Color Segments -->
+  <!-- Each path is a 72° arc -->
 
-          <!-- Modern Search Icon -->
-          <g transform="translate(0, -10)" filter="url(#glow)">
-              <circle cx="128" cy="115" r="26" fill="none" stroke="url(#searchGradBright)" stroke-width="8"/>
-              <line x1="146" y1="133" x2="168" y2="155" stroke="url(#searchGradBright)" stroke-width="10" stroke-linecap="round"/>
-          </g>
+  <!-- White -->
+  <path d="M512 152
+           A360 360 0 0 1 855 362" fill="none" stroke="#F8E7B9" stroke-width="120" stroke-linecap="round"></path>
 
-          <!-- Colored dots at bottom of top card representing WUBRG -->
-          <g transform="translate(0, 10)">
-              <circle cx="92" cy="165" r="7" fill="#FFFBD5"/> <!-- White -->
-              <circle cx="110" cy="165" r="7" fill="#0073E6"/> <!-- Blue -->
-              <!-- Black needs contrasting stroke -->
-              <circle cx="128" cy="165" r="7" fill="#2E2E2E" stroke="#E6E6E6" stroke-width="1.5"/> <!-- Black -->
-              <circle cx="146" cy="165" r="7" fill="#E60000"/> <!-- Red -->
-              <circle cx="164" cy="165" r="7" fill="#00B33C"/> <!-- Green -->
-          </g>
-      </g>
-  </g>
+  <!-- Blue -->
+  <path d="M855 362
+           A360 360 0 0 1 735 775" fill="none" stroke="#0E68AB" stroke-width="120" stroke-linecap="round"></path>
+
+  <!-- Black -->
+  <path d="M735 775
+           A360 360 0 0 1 289 775" fill="none" stroke="#1C1C1C" stroke-width="120" stroke-linecap="round"></path>
+
+  <!-- Red -->
+  <path d="M289 775
+           A360 360 0 0 1 169 362" fill="none" stroke="#D3202A" stroke-width="120" stroke-linecap="round"></path>
+
+  <!-- Green -->
+  <path d="M169 362
+           A360 360 0 0 1 512 152" fill="none" stroke="#00733E" stroke-width="120" stroke-linecap="round"></path>
+
+  <!-- Inner Vault Core -->
+  <circle cx="512" cy="512" r="200" fill="#1E1A2D"></circle>
+
+  <!-- Subtle Inner Ring -->
+  <circle cx="512" cy="512" r="150" fill="none" stroke="#3B3355" stroke-width="6" opacity="0.6"></circle>
+
 </svg>
