@@ -1,3 +1,5 @@
+using Microsoft.Maui.Controls.Shapes;
+
 namespace MTGFetchMAUI.Services;
 
 public interface IToastService
