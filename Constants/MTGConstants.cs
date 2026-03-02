@@ -1,9 +1,9 @@
-using MTGFetchMAUI.Core;
+using AetherVault.Core;
 
-namespace MTGFetchMAUI;
+namespace AetherVault;
 
 /// <summary>
-/// Centralized constants for the MTG Fetch application.
+/// Centralized constants for the AetherVault application.
 /// Port of MTGConstants.pas.
 /// </summary>
 public static class MTGConstants
@@ -73,7 +73,7 @@ public static class MTGConstants
     // ── Database Configuration ──────────────────────────────────────
 
     public const string DbDriverSqlite = "SQLite";
-    public const string DatabaseDownloadUrl = "https://github.com/Raygunpewpew1/MTGFetchMAUI/releases/latest/download/MTG_App_DB.zip";
+    public const string DatabaseDownloadUrl = "https://github.com/Raygunpewpew1/AetherVault/releases/latest/download/MTG_App_DB.zip";
 
     // ── File / Path Constants ──────────────────────────────────────
 

@@ -1,7 +1,7 @@
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 
-namespace MTGFetchMAUI.Services;
+namespace AetherVault.Services;
 
 public interface IToastService
 {
