@@ -11,7 +11,7 @@
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
-
+		<EnableNETAnalyzers>false</EnableNETAnalyzers>
 		<ApplicationTitle>AetherVault</ApplicationTitle>
 
 		<ApplicationId>com.aethervault.mobile</ApplicationId>
@@ -19,7 +19,7 @@
 		<ApplicationDisplayVersion>2</ApplicationDisplayVersion>
 		<ApplicationVersion>$([System.DateTimeOffset]::UtcNow.ToUnixTimeSeconds())</ApplicationVersion>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<SignAssembly>False</SignAssembly>
