@@ -66,7 +66,7 @@ public partial class SearchPage : ContentPage
         var card = await _viewModel.GetCardDetailsAsync(uuid);
         if (card == null) return;
 
-        string action = await DisplayActionSheet(
+        string action = await DisplayActionSheetAsync(
             card.Name, "Cancel", null,
             "Add to Collection", "Add to Deck");
 
