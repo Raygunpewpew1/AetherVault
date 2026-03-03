@@ -72,22 +72,25 @@ public class CollectionImporter
         if (countIdx == -1) countIdx = Array.IndexOf(lowerHeaders, "amount"); // Deckstats??
         if (countIdx == -1) countIdx = Array.IndexOf(lowerHeaders, "reg qty"); // Decked Builder???
 
-        int setIdx = Array.IndexOf(lowerHeaders, "edition"); // Deckbox, MTG Studio???
-        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "set"); // MTGO, Decked Builder, Moxfield? <--
-        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "set code"); // Helvault, CardSphere??
-        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "edition code"); // ManaBox???
+        int setIdx = Array.IndexOf(lowerHeaders, "edition"); // Deckbox, MTG Studio, Archidekt (short)
+        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "edition (printing)"); // Archidekt full header
+        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "set"); // MTGO, Decked Builder, Moxfield, TappedOut
+        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "set code"); // Helvault, CardSphere, Dragon Shield
+        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "set name"); // Dragon Shield fallback
+        if (setIdx == -1) setIdx = Array.IndexOf(lowerHeaders, "edition code"); // ManaBox
 
         int foilIdx = Array.IndexOf(lowerHeaders, "foil"); // Deckbox, MTG Studio, Moxfield <--
-        if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "is foil"); // Helvault??
-        if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "premium"); // MTGO??
+        if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "is foil"); // Helvault
+        if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "premium"); // MTGO
         if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "foil qty"); // Decked Builder
         if (foilIdx == -1) foilIdx = Array.IndexOf(lowerHeaders, "printing"); // TCGplayer, ManaBox <--
 
         int scryfallIdx = Array.IndexOf(lowerHeaders, "scryfall id"); // Moxfield
         if (scryfallIdx == -1) scryfallIdx = Array.IndexOf(lowerHeaders, "scryfall_id");
 
-        int numberIdx = Array.IndexOf(lowerHeaders, "collector number"); // Moxfield
+        int numberIdx = Array.IndexOf(lowerHeaders, "collector number"); // Moxfield, Archidekt
         if (numberIdx == -1) numberIdx = Array.IndexOf(lowerHeaders, "card number"); // TCGplayer
+        if (numberIdx == -1) numberIdx = Array.IndexOf(lowerHeaders, "number"); // Dragon Shield
 
         // Ensure Name or Scryfall ID column is found
         if (nameIdx == -1 && scryfallIdx == -1)
