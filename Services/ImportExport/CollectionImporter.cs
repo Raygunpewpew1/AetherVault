@@ -262,6 +262,22 @@ public class CollectionImporter
                 if (matches.Length > 0) card = matches[0];
             }
 
+            // Strategy 7: Token layout, name contains, no side filter
+            // Handles tokens present in the DB whose name may differ slightly from the CSV
+            if (card == null && !string.IsNullOrWhiteSpace(name))
+            {
+                var helper = _cardRepo.CreateSearchHelper();
+                helper.SearchCards()
+                      .WhereNameContains(name)
+                      .WhereLayout([CardLayout.Token, CardLayout.DoubleFacedToken, CardLayout.Emblem])
+                      .IncludeAllFaces(true)
+                      .Limit(50);
+                var candidates = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                card = candidates.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (card == null && candidates.Length > 0)
+                    card = candidates.First();
+            }
+
             if (card != null && !string.IsNullOrEmpty(card.UUID))
             {
                 // The collection schema has card_uuid as PRIMARY KEY, so only one entry per UUID.
