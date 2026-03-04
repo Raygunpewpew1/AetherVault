@@ -54,6 +54,10 @@ public static class SQLQueries
         )
         """;
 
+    public const string SelectTokenByUuid = "SELECT * FROM tokens WHERE uuid = @uuid";
+    public const string SelectTokensBySetCode = "SELECT * FROM tokens WHERE setCode = @setCode";
+    public const string SelectTokenIdentifierByUuid = "SELECT * FROM tokenIdentifiers WHERE uuid = @uuid";
+
     // ============================================================================
     // THUMBNAIL CACHE SCHEMA
     // ============================================================================
