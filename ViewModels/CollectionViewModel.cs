@@ -289,12 +289,12 @@ public partial class CollectionViewModel : BaseViewModel
         try
         {
             var customFileType = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-            {
-                { DevicePlatform.iOS, new[] { "public.comma-separated-values-text" } },
-                { DevicePlatform.Android, new[] { "text/csv" } },
-                { DevicePlatform.WinUI, new[] { ".csv" } },
-                { DevicePlatform.macOS, new[] { "public.comma-separated-values-text" } },
-            });
+{
+    { DevicePlatform.iOS, new[] { "public.comma-separated-values-text" } },
+    { DevicePlatform.Android, new[] { "text/csv", "text/comma-separated-values", "application/csv" } },
+    { DevicePlatform.WinUI, new[] { ".csv" } },
+    { DevicePlatform.MacCatalyst, new[] { "public.comma-separated-values-text" } },
+});
 
             var result = await FilePicker.Default.PickAsync(new PickOptions
             {
