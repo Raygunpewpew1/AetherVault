@@ -324,7 +324,15 @@ public partial class CollectionViewModel : BaseViewModel
                     Logger.LogStuff($"Import completed with {importResult.Errors.Count} errors. First error: {importResult.Errors.First()}", LogLevel.Warning);
                 }
 
-                _toastService.Show($"Imported {importResult.SuccessCount} lines ({importResult.TotalCards} cards).");
+                if (importResult.TokenSkipCount > 0)
+                {
+                    Logger.LogStuff($"Import skipped {importResult.TokenSkipCount} token(s) — tokens are not importable.", LogLevel.Info);
+                }
+
+                var toastMsg = $"Imported {importResult.SuccessCount} unique cards ({importResult.TotalCards} total).";
+                if (importResult.TokenSkipCount > 0)
+                    toastMsg += $" Skipped {importResult.TokenSkipCount} token(s).";
+                _toastService.Show(toastMsg);
 
                 IsBusy = false;
                 await LoadCollectionAsync();

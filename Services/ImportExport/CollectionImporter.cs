@@ -15,6 +15,7 @@ public class ImportResult
 {
     public int SuccessCount { get; set; }
     public int TotalCards { get; set; }
+    public int TokenSkipCount { get; set; }
     public List<string> Errors { get; set; } = [];
 }
 
@@ -249,6 +250,17 @@ public class CollectionImporter
                 }
             }
 
+            // Strategy 6: Name exact match without primary-side filter (catches DFC token back faces)
+            if (card == null && !string.IsNullOrWhiteSpace(name))
+            {
+                var helper = _cardRepo.CreateSearchHelper();
+                helper.SearchCards()
+                      .WhereNameEquals(name)
+                      .IncludeAllFaces(true)
+                      .Limit(1);
+                var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                if (matches.Length > 0) card = matches[0];
+            }
 
             if (card != null && !string.IsNullOrEmpty(card.UUID))
             {
@@ -275,7 +287,17 @@ public class CollectionImporter
             }
             else
             {
-                result.Errors.Add($"Line {lineNumber}: Could not find card '{name}'" + (string.IsNullOrEmpty(set) ? "" : $" in set '{set}'"));
+                // MTGJSON token sets use a 'T' prefix (e.g., TKHM, TBLB, TTDM).
+                // Tokens frequently appear in CSV exports but may not exist in the card database.
+                bool isTokenSet = !string.IsNullOrWhiteSpace(set)
+                    && set.Length >= 3
+                    && set.StartsWith("T", StringComparison.OrdinalIgnoreCase)
+                    && set.Skip(1).All(char.IsLetterOrDigit);
+
+                if (isTokenSet)
+                    result.TokenSkipCount++;
+                else
+                    result.Errors.Add($"Line {lineNumber}: Could not find card '{name}'" + (string.IsNullOrEmpty(set) ? "" : $" in set '{set}'"));
             }
         }
 
