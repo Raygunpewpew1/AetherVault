@@ -15,6 +15,7 @@ public partial class CardDetailPage : ContentPage
     private readonly IToastService _toastService;
     private readonly DeckBuilderService _deckService;
     private string _cardUUID = "";
+    private bool _isSwipeAnimating;
 
     public string CardUUID
     {
@@ -38,8 +39,8 @@ public partial class CardDetailPage : ContentPage
 
         // Wire cross-platform swipe navigation via SwipeGestureContainer wrapper.
         // Left swipe = next card; Right swipe = previous card.
-        SwipeContainer.SwipedLeft += () => _viewModel.NavigateNextCardCommand.Execute(null);
-        SwipeContainer.SwipedRight += () => _viewModel.NavigatePreviousCardCommand.Execute(null);
+        SwipeContainer.SwipedLeft += () => _ = HandleSwipeAsync(isNext: true);
+        SwipeContainer.SwipedRight += () => _ = HandleSwipeAsync(isNext: false);
 
         Unloaded += (s, e) => _viewModel.Dispose();
      //   _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
@@ -167,10 +168,69 @@ public partial class CardDetailPage : ContentPage
     }
 
     private void OnSwipedLeft(object? sender, SwipedEventArgs e)
-        => _viewModel.NavigateNextCardCommand.Execute(null);
+        => _ = HandleSwipeAsync(isNext: true);
 
     private void OnSwipedRight(object? sender, SwipedEventArgs e)
-        => _viewModel.NavigatePreviousCardCommand.Execute(null);
+        => _ = HandleSwipeAsync(isNext: false);
+
+    private async Task HandleSwipeAsync(bool isNext)
+    {
+        if (_isSwipeAnimating)
+            return;
+
+        _isSwipeAnimating = true;
+
+        try
+        {
+            // If gallery navigation is not active, just execute the command without animation.
+            if (!_viewModel.ShowGalleryNavigation || CardContentRoot is null)
+            {
+                if (isNext)
+                    _viewModel.NavigateNextCardCommand.Execute(null);
+                else
+                    _viewModel.NavigatePreviousCardCommand.Execute(null);
+
+                return;
+            }
+
+            var width = DetailScreen.Width;
+            if (width <= 0)
+                width = Width;
+
+            if (width <= 0)
+            {
+                if (isNext)
+                    _viewModel.NavigateNextCardCommand.Execute(null);
+                else
+                    _viewModel.NavigatePreviousCardCommand.Execute(null);
+
+                return;
+            }
+
+            var direction = isNext ? -1 : 1;
+            var travel = Math.Max(48, width * 0.12);
+            const uint duration = 140;
+
+            // Slide current card slightly in swipe direction.
+            await CardContentRoot.TranslateTo(direction * travel, 0, duration, Easing.CubicOut);
+
+            // Trigger navigation while the content is offset.
+            if (isNext)
+                _viewModel.NavigateNextCardCommand.Execute(null);
+            else
+                _viewModel.NavigatePreviousCardCommand.Execute(null);
+
+            // Prepare new content just off-screen on the opposite side.
+            CardContentRoot.TranslationX = -direction * travel;
+
+            // Slide new card into place.
+            await CardContentRoot.TranslateTo(0, 0, duration, Easing.CubicIn);
+        }
+        finally
+        {
+            _isSwipeAnimating = false;
+        }
+    }
 
     private void CardImageView_Touch(object? sender, SKTouchEventArgs e)
     {
