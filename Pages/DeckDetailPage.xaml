@@ -150,29 +150,32 @@
                                                        CommandParameter="{Binding .}" />
                                         </SwipeItems>
                                     </SwipeView.RightItems>
-                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto"
-                                          Padding="0,6"
-                                          ColumnSpacing="8">
-                                        <Border BackgroundColor="{StaticResource Accent}"
-                                                Padding="6,2"
-                                                StrokeShape="RoundRectangle 6"
-                                                Stroke="Transparent"
-                                                VerticalOptions="Center">
-                                            <Label Text="{Binding Entity.Quantity}"
-                                                   TextColor="Black"
-                                                   FontSize="12"
-                                                   FontAttributes="Bold" />
-                                        </Border>
-                                        <Label Grid.Column="1"
-                                               Text="{Binding DisplayName}"
-                                               TextColor="{StaticResource TextPrimary}"
-                                               FontSize="14"
-                                               VerticalOptions="Center" />
-                                        <controls:ManaCostView Grid.Column="2"
-                                               ManaText="{Binding ManaCostText}"
-                                               SymbolSize="12"
-                                               VerticalOptions="Center" />
-                                    </Grid>
+                                    <Border Style="{StaticResource CardStyle}"
+                                            Margin="0,4">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                                              Padding="8,6"
+                                              ColumnSpacing="8">
+                                            <Border BackgroundColor="{StaticResource Accent}"
+                                                    Padding="6,2"
+                                                    StrokeShape="RoundRectangle 6"
+                                                    Stroke="Transparent"
+                                                    VerticalOptions="Center">
+                                                <Label Text="{Binding Entity.Quantity}"
+                                                       TextColor="Black"
+                                                       FontSize="12"
+                                                       FontAttributes="Bold" />
+                                            </Border>
+                                            <Label Grid.Column="1"
+                                                   Text="{Binding DisplayName}"
+                                                   TextColor="{StaticResource TextPrimary}"
+                                                   FontSize="14"
+                                                   VerticalOptions="Center" />
+                                            <controls:ManaCostView Grid.Column="2"
+                                                   ManaText="{Binding ManaCostText}"
+                                                   SymbolSize="12"
+                                                   VerticalOptions="Center" />
+                                        </Grid>
+                                    </Border>
                                 </SwipeView>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
@@ -206,55 +209,57 @@
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                                  Padding="12,8"
-                                  ColumnSpacing="6"
-                                  BackgroundColor="{StaticResource Background}">
-                                <Border BackgroundColor="{StaticResource Surface}"
-                                        Padding="6,2"
-                                        StrokeShape="RoundRectangle 6"
-                                        Stroke="Transparent"
-                                        VerticalOptions="Center">
-                                    <Label Text="{Binding Entity.Quantity}"
+                            <Border Style="{StaticResource CardStyle}"
+                                    Margin="8,4">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                      Padding="8,6"
+                                      ColumnSpacing="6">
+                                    <Border BackgroundColor="{StaticResource Surface}"
+                                            Padding="6,2"
+                                            StrokeShape="RoundRectangle 6"
+                                            Stroke="Transparent"
+                                            VerticalOptions="Center">
+                                        <Label Text="{Binding Entity.Quantity}"
+                                               TextColor="{StaticResource TextPrimary}"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </Border>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DisplayName}"
                                            TextColor="{StaticResource TextPrimary}"
-                                           FontSize="12"
-                                           FontAttributes="Bold" />
-                                </Border>
-                                <Label Grid.Column="1"
-                                       Text="{Binding DisplayName}"
-                                       TextColor="{StaticResource TextPrimary}"
-                                       FontSize="14"
-                                       VerticalOptions="Center"
-                                       LineBreakMode="TailTruncation" />
-                                <controls:ManaCostView Grid.Column="2"
-                                       ManaText="{Binding ManaCostText}"
-                                       SymbolSize="11"
-                                       VerticalOptions="Center" />
-                                <Button Grid.Column="3"
-                                        Text="&#x2212;"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
-                                        CommandParameter="{Binding .}"
-                                        BackgroundColor="{StaticResource Surface}"
-                                        TextColor="{StaticResource TextPrimary}"
-                                        WidthRequest="44"
-                                        HeightRequest="44"
-                                        Padding="0"
-                                        Margin="2,0"
-                                        FontSize="18"
-                                        CornerRadius="4" />
-                                <Button Grid.Column="4"
-                                        Text="+"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
-                                        CommandParameter="{Binding .}"
-                                        BackgroundColor="{StaticResource Accent}"
-                                        TextColor="Black"
-                                        WidthRequest="44"
-                                        HeightRequest="44"
-                                        Padding="0"
-                                        Margin="2,0"
-                                        FontSize="18"
-                                        CornerRadius="4" />
-                            </Grid>
+                                           FontSize="14"
+                                           VerticalOptions="Center"
+                                           LineBreakMode="TailTruncation" />
+                                    <controls:ManaCostView Grid.Column="2"
+                                           ManaText="{Binding ManaCostText}"
+                                           SymbolSize="11"
+                                           VerticalOptions="Center" />
+                                    <Button Grid.Column="3"
+                                            Text="&#x2212;"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="{StaticResource Surface}"
+                                            TextColor="{StaticResource TextPrimary}"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0"
+                                            Margin="2,0"
+                                            FontSize="18"
+                                            CornerRadius="4" />
+                                    <Button Grid.Column="4"
+                                            Text="+"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="{StaticResource Accent}"
+                                            TextColor="Black"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0"
+                                            Margin="2,0"
+                                            FontSize="18"
+                                            CornerRadius="4" />
+                                </Grid>
+                            </Border>
                         </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
@@ -282,55 +287,57 @@
                                                CommandParameter="{Binding .}" />
                                 </SwipeItems>
                             </SwipeView.RightItems>
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                                  Padding="12,8"
-                                  ColumnSpacing="6"
-                                  BackgroundColor="{StaticResource Background}">
-                                <Border BackgroundColor="{StaticResource Surface}"
-                                        Padding="6,2"
-                                        StrokeShape="RoundRectangle 6"
-                                        Stroke="Transparent"
-                                        VerticalOptions="Center">
-                                    <Label Text="{Binding Entity.Quantity}"
+                            <Border Style="{StaticResource CardStyle}"
+                                    Margin="8,4">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                      Padding="8,6"
+                                      ColumnSpacing="6">
+                                    <Border BackgroundColor="{StaticResource Surface}"
+                                            Padding="6,2"
+                                            StrokeShape="RoundRectangle 6"
+                                            Stroke="Transparent"
+                                            VerticalOptions="Center">
+                                        <Label Text="{Binding Entity.Quantity}"
+                                               TextColor="{StaticResource TextPrimary}"
+                                               FontSize="12"
+                                               FontAttributes="Bold" />
+                                    </Border>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DisplayName}"
                                            TextColor="{StaticResource TextPrimary}"
-                                           FontSize="12"
-                                           FontAttributes="Bold" />
-                                </Border>
-                                <Label Grid.Column="1"
-                                       Text="{Binding DisplayName}"
-                                       TextColor="{StaticResource TextPrimary}"
-                                       FontSize="14"
-                                       VerticalOptions="Center"
-                                       LineBreakMode="TailTruncation" />
-                                <controls:ManaCostView Grid.Column="2"
-                                       ManaText="{Binding ManaCostText}"
-                                       SymbolSize="11"
-                                       VerticalOptions="Center" />
-                                <Button Grid.Column="3"
-                                        Text="&#x2212;"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
-                                        CommandParameter="{Binding .}"
-                                        BackgroundColor="{StaticResource Surface}"
-                                        TextColor="{StaticResource TextPrimary}"
-                                        WidthRequest="44"
-                                        HeightRequest="44"
-                                        Padding="0"
-                                        Margin="2,0"
-                                        FontSize="18"
-                                        CornerRadius="4" />
-                                <Button Grid.Column="4"
-                                        Text="+"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
-                                        CommandParameter="{Binding .}"
-                                        BackgroundColor="{StaticResource Accent}"
-                                        TextColor="Black"
-                                        WidthRequest="44"
-                                        HeightRequest="44"
-                                        Padding="0"
-                                        Margin="2,0"
-                                        FontSize="18"
-                                        CornerRadius="4" />
-                            </Grid>
+                                           FontSize="14"
+                                           VerticalOptions="Center"
+                                           LineBreakMode="TailTruncation" />
+                                    <controls:ManaCostView Grid.Column="2"
+                                           ManaText="{Binding ManaCostText}"
+                                           SymbolSize="11"
+                                           VerticalOptions="Center" />
+                                    <Button Grid.Column="3"
+                                            Text="&#x2212;"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="{StaticResource Surface}"
+                                            TextColor="{StaticResource TextPrimary}"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0"
+                                            Margin="2,0"
+                                            FontSize="18"
+                                            CornerRadius="4" />
+                                    <Button Grid.Column="4"
+                                            Text="+"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="{StaticResource Accent}"
+                                            TextColor="Black"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0"
+                                            Margin="2,0"
+                                            FontSize="18"
+                                            CornerRadius="4" />
+                                </Grid>
+                            </Border>
                         </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
