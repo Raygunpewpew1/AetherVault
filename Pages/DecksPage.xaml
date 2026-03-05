@@ -60,7 +60,8 @@
             <!-- Deck List -->
             <CollectionView ItemsSource="{Binding Decks}"
                             IsVisible="{Binding IsEmpty, Converter={x:StaticResource InvertedBoolConverter}}"
-                            SelectionMode="None">
+                            SelectionMode="Single"
+                            SelectionChanged="OnDeckSelectionChanged">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:DeckEntity">
                         <SwipeView>
@@ -80,11 +81,9 @@
                             </SwipeView.RightItems>
 
                             <Border Style="{StaticResource CardStyle}"
-                                    Margin="12,4"
-                                    MinimumHeightRequest="56">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DecksViewModel}}, Path=DeckTappedCommand}" CommandParameter="{Binding .}" />
-                                </Border.GestureRecognizers>
+                                    Margin="12,6"
+                                    Padding="12,10"
+                                    MinimumHeightRequest="64">
                                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
                                     <!-- Deck Name -->
                                     <Label Grid.Row="0" Grid.Column="0"
