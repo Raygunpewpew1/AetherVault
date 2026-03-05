@@ -96,7 +96,34 @@ public partial class LoadingViewModel : BaseViewModel
 
         if (AppDataManager.MTGDatabaseExists())
         {
-            await FinalizeStartupAsync();
+            // Run a quick integrity/sanity check on the existing DB before using it.
+            var isValid = await AppDataManager.ValidateMTGDatabaseAsync();
+            if (isValid)
+            {
+                await FinalizeStartupAsync();
+            }
+            else
+            {
+                var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+                if (page != null)
+                {
+                    bool redownload = await page.DisplayAlertAsync(
+                        "Database Error",
+                        "The local card database appears to be corrupted. Download a fresh copy?",
+                        "Download",
+                        "Cancel");
+
+                    if (redownload)
+                    {
+                        await StartDownloadAsync();
+                        return;
+                    }
+                }
+
+                ShowRetry = true;
+                IsBusy = false;
+                StatusMessage = "Database is corrupted. Please retry the download.";
+            }
         }
         else
         {

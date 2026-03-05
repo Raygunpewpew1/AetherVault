@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Microsoft.Data.Sqlite;
 
 namespace AetherVault.Services;
 
@@ -72,6 +73,66 @@ public static class AppDataManager
         var path = GetMTGDatabasePath();
         if (!File.Exists(path)) return false;
         return new FileInfo(path).Length > MinValidDatabaseSize;
+    }
+
+    /// <summary>
+    /// Performs a lightweight integrity and sanity check on the MTG master database.
+    /// Returns true if the database appears valid; false otherwise.
+    /// </summary>
+    public static async Task<bool> ValidateMTGDatabaseAsync(CancellationToken ct = default)
+    {
+        var path = GetMTGDatabasePath();
+        if (!File.Exists(path))
+            return false;
+
+        try
+        {
+            var builder = new SqliteConnectionStringBuilder
+            {
+                DataSource = path,
+                Mode = SqliteOpenMode.ReadOnly
+            };
+
+            await using var connection = new SqliteConnection(builder.ConnectionString);
+            await connection.OpenAsync(ct);
+
+            // 1. Run PRAGMA integrity_check
+            await using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "PRAGMA integrity_check;";
+                var resultObj = await cmd.ExecuteScalarAsync(ct);
+                var result = resultObj?.ToString() ?? string.Empty;
+                if (!result.Equals("ok", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[ERROR] MTG DB integrity_check failed with result: '{result}'.");
+                    return false;
+                }
+            }
+
+            // 2. Sanity check: ensure 'cards' table exists
+            await using (var cmd = connection.CreateCommand())
+            {
+                cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='cards';";
+                var nameObj = await cmd.ExecuteScalarAsync(ct);
+                var name = nameObj?.ToString();
+                if (!string.Equals(name, "cards", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[ERROR] MTG DB sanity check failed: 'cards' table not found.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] MTG DB integrity check threw: {ex.Message}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -235,6 +296,30 @@ public static class AppDataManager
 
             // 4. FIXED: Extract logic moved here to ensure it runs inside the lock
             await Task.Run(() => ExtractDatabase(zipPath), ct);
+
+            UpdateProgress("Verifying database...", 97);
+
+            var valid = await ValidateMTGDatabaseAsync(ct);
+            if (!valid)
+            {
+                UpdateProgress("Database is corrupted after download. Please try again.", 0);
+
+                // Best-effort cleanup of the bad DB so the next attempt starts fresh
+                try
+                {
+                    var mtgPath = GetMTGDatabasePath();
+                    if (File.Exists(mtgPath))
+                    {
+                        File.Delete(mtgPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[WARNING] Failed to delete corrupted MTG DB: {ex.Message}");
+                }
+
+                return false;
+            }
 
             UpdateProgress("Download complete.", 100);
 
