@@ -63,4 +63,17 @@ public partial class DecksPage : ContentPage
                 await _viewModel.DeleteDeckAsync(deck);
         }
     }
+
+    private async void OnDeckSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.CurrentSelection?.FirstOrDefault() is DeckEntity deck)
+        {
+            await _viewModel.DeckTappedCommand.ExecuteAsync(deck);
+        }
+
+        if (sender is CollectionView cv)
+        {
+            cv.SelectedItem = null;
+        }
+    }
 }
