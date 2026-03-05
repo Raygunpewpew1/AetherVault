@@ -87,7 +87,7 @@
         <Grid Grid.Row="1" Padding="8,0,8,6" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <material:TextField Title="Filter collection..."
                                 Text="{Binding FilterText, Mode=TwoWay}"
-                                BackgroundColor="{StaticResource Surface}"
+                                
                                 TitleColor="{StaticResource TextSecondary}"
                                 AccentColor="{StaticResource Primary}"
                                 AllowClear="True" />
