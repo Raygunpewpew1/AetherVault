@@ -84,7 +84,7 @@
                 <Setter Property="BackgroundColor" Value="{StaticResource CardBackground}" />
                 <Setter Property="Stroke" Value="Transparent" />
                 <Setter Property="StrokeShape" Value="RoundRectangle 8" />
-                <Setter Property="Padding" Value="12" />
+                <Setter Property="Padding" Value="10" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>
