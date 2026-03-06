@@ -1,0 +1,113 @@
+using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
+
+namespace AetherVault.Controls;
+
+/// <summary>
+/// Loads and displays a card image using the app's ImageDownloadService (cache + Scryfall CDN).
+/// Use in list/grid templates where remote URL binding does not reliably show images (e.g. Android).
+/// </summary>
+public class CachedCardImage : ContentView
+{
+    private readonly Image _image;
+    private byte[]? _cachedBytes;
+    private string? _lastUuid;
+    private CancellationTokenSource? _loadCts;
+
+    public static readonly BindableProperty CardUuidProperty = BindableProperty.Create(
+        nameof(CardUuid), typeof(string), typeof(CachedCardImage), default(string),
+        propertyChanged: OnCardUuidChanged);
+
+    public string? CardUuid
+    {
+        get => (string?)GetValue(CardUuidProperty);
+        set => SetValue(CardUuidProperty, value);
+    }
+
+    public CachedCardImage()
+    {
+        _image = new Image
+        {
+            Aspect = Aspect.AspectFill,
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill
+        };
+        Content = _image;
+    }
+
+    private static void OnCardUuidChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CachedCardImage control)
+            control.LoadImageAsync((string?)newValue);
+    }
+
+    private void LoadImageAsync(string? uuid)
+    {
+        _loadCts?.Cancel();
+        _loadCts = new CancellationTokenSource();
+        var token = _loadCts.Token;
+
+        if (string.IsNullOrWhiteSpace(uuid))
+        {
+            _lastUuid = null;
+            _cachedBytes = null;
+            _image.Source = null;
+            return;
+        }
+
+        if (uuid == _lastUuid && _cachedBytes != null)
+        {
+            _image.Source = ImageSource.FromStream(() => new MemoryStream(_cachedBytes));
+            return;
+        }
+
+        _lastUuid = uuid;
+        _image.Source = null;
+
+        var serviceProvider = AetherVault.App.ServiceProvider;
+        var downloadService = serviceProvider?.GetService<Services.ImageDownloadService>();
+        if (downloadService == null)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                if (token.IsCancellationRequested) return;
+
+                // Try cache first, then download (small size for list thumbnails)
+                var img = await downloadService.GetCachedImageAsync(uuid, "small", "");
+                if (img == null && !token.IsCancellationRequested)
+                    img = await downloadService.DownloadImageDirectAsync(uuid, "small", "");
+
+                if (img == null || token.IsCancellationRequested)
+                    return;
+
+                using (img)
+                {
+                    var data = img.Encode(SKEncodedImageFormat.Png, 100);
+                    if (data == null) return;
+                    var bytes = data.ToArray();
+                    data.Dispose();
+
+                    if (token.IsCancellationRequested || uuid != _lastUuid)
+                        return;
+
+                    _cachedBytes = bytes;
+                    var source = ImageSource.FromStream(() => new MemoryStream(_cachedBytes));
+
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        if (uuid == _lastUuid)
+                            _image.Source = source;
+                    });
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                Services.Logger.LogStuff($"CachedCardImage load failed for {uuid}: {ex.Message}", Services.LogLevel.Warning);
+            }
+        }, token);
+    }
+}
