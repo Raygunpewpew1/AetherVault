@@ -30,6 +30,7 @@ public partial class CollectionPage : ContentPage
 
         _viewModel.CollectionLoaded += () =>
         {
+            AetherVault.Services.Logger.LogStuff("[CollectionUI] CollectionLoaded fired (will ScrollToAsync grid)", AetherVault.Services.LogLevel.Debug);
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 if (CollectionContentHost.Content == CollectionGrid)
@@ -102,9 +103,12 @@ public partial class CollectionPage : ContentPage
 
     private void UpdateContentHostContent()
     {
+        var showEmpty = _viewModel.IsCollectionEmpty;
+        var onMain = MainThread.IsMainThread;
+        AetherVault.Services.Logger.LogStuff($"[CollectionUI] UpdateContentHostContent: IsCollectionEmpty={showEmpty}, onMainThread={onMain}, setting Content to {(showEmpty ? "EmptyState" : "Grid")}", AetherVault.Services.LogLevel.Debug);
         if (MainThread.IsMainThread)
         {
-            CollectionContentHost.Content = _viewModel.IsCollectionEmpty ? _emptyStateView : CollectionGrid;
+            CollectionContentHost.Content = showEmpty ? _emptyStateView : CollectionGrid;
             return;
         }
         MainThread.BeginInvokeOnMainThread(() =>
