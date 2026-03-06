@@ -259,10 +259,11 @@ public partial class CollectionViewModel : BaseViewModel
         // Ensure prices are initialized
         await _cardManager.InitializePricesAsync();
 
+        // Don't set IsCollectionEmpty = false here: when loading after a clear we have no data,
+        // so we must keep the empty state visible until ApplyFilterAndSortAsync runs.
         MainThread.BeginInvokeOnMainThread(() =>
         {
             IsBusy = true;
-            IsCollectionEmpty = false;
             StatusIsError = false;
             StatusMessage = "Loading collection...";
         });
