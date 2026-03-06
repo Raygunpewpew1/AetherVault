@@ -96,7 +96,7 @@
             <Border BackgroundColor="{StaticResource Surface}"
                     StrokeShape="RoundRectangle 18"
                     Padding="10,6"
-                    Margin="12,8"
+                    Margin="12,8,80,0"
                     HorizontalOptions="Start"
                     VerticalOptions="Start"
                     IsVisible="{Binding HasLastAdded}">
@@ -213,8 +213,8 @@
                             <Border Style="{StaticResource CardStyle}"
                                     Margin="8,4">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                                      Padding="8,6"
-                                      ColumnSpacing="6">
+                                      Padding="8,4"
+                                      ColumnSpacing="4">
                                     <Border BackgroundColor="{StaticResource Surface}"
                                             Padding="6,2"
                                             StrokeShape="RoundRectangle 6"
@@ -240,16 +240,16 @@
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Surface}"
                                             TextColor="{StaticResource TextPrimary}"
-                                            WidthRequest="44"
-                                            HeightRequest="44"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
                                             Padding="0"
-                                            Margin="2,0"
-                                            FontSize="18"
-                                            CornerRadius="4">
+                                            Margin="0"
+                                            FontSize="16"
+                                            CornerRadius="6">
                                         <Button.ImageSource>
                                             <FontImageSource FontFamily="FASolid"
                                                              Glyph="{x:Static fa:Solid.Minus}"
-                                                             Size="16"
+                                                             Size="14"
                                                              Color="{StaticResource TextPrimary}" />
                                         </Button.ImageSource>
                                     </Button>
@@ -258,16 +258,16 @@
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Accent}"
                                             TextColor="Black"
-                                            WidthRequest="44"
-                                            HeightRequest="44"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
                                             Padding="0"
-                                            Margin="2,0"
-                                            FontSize="18"
-                                            CornerRadius="4">
+                                            Margin="0"
+                                            FontSize="16"
+                                            CornerRadius="6">
                                         <Button.ImageSource>
                                             <FontImageSource FontFamily="FASolid"
                                                              Glyph="{x:Static fa:Solid.Plus}"
-                                                             Size="16"
+                                                             Size="14"
                                                              Color="Black" />
                                         </Button.ImageSource>
                                     </Button>
@@ -303,8 +303,8 @@
                             <Border Style="{StaticResource CardStyle}"
                                     Margin="8,4">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                                      Padding="8,6"
-                                      ColumnSpacing="6">
+                                      Padding="8,4"
+                                      ColumnSpacing="4">
                                     <Border BackgroundColor="{StaticResource Surface}"
                                             Padding="6,2"
                                             StrokeShape="RoundRectangle 6"
@@ -330,16 +330,16 @@
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Surface}"
                                             TextColor="{StaticResource TextPrimary}"
-                                            WidthRequest="44"
-                                            HeightRequest="44"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
                                             Padding="0"
-                                            Margin="2,0"
-                                            FontSize="18"
-                                            CornerRadius="4">
+                                            Margin="0"
+                                            FontSize="16"
+                                            CornerRadius="6">
                                         <Button.ImageSource>
                                             <FontImageSource FontFamily="FASolid"
                                                              Glyph="{x:Static fa:Solid.Minus}"
-                                                             Size="16"
+                                                             Size="14"
                                                              Color="{StaticResource TextPrimary}" />
                                         </Button.ImageSource>
                                     </Button>
@@ -348,16 +348,16 @@
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Accent}"
                                             TextColor="Black"
-                                            WidthRequest="44"
-                                            HeightRequest="44"
+                                            WidthRequest="36"
+                                            HeightRequest="36"
                                             Padding="0"
-                                            Margin="2,0"
-                                            FontSize="18"
-                                            CornerRadius="4">
+                                            Margin="0"
+                                            FontSize="16"
+                                            CornerRadius="6">
                                         <Button.ImageSource>
                                             <FontImageSource FontFamily="FASolid"
                                                              Glyph="{x:Static fa:Solid.Plus}"
-                                                             Size="16"
+                                                             Size="14"
                                                              Color="Black" />
                                         </Button.ImageSource>
                                     </Button>
