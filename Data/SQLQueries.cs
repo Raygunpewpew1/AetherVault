@@ -426,7 +426,22 @@ public static class SQLQueries
         """;
 
     public const string BaseCollection =
-        "SELECT c.*, mc.quantity FROM cards c INNER JOIN col.my_collection mc ON c.uuid = mc.card_uuid";
+        """
+        SELECT c.*, ci.scryfallId, s.name as setName,
+        cl.alchemy, cl.brawl, cl.commander, cl.duel, cl.future, cl.gladiator,
+        cl.historic, cl.legacy, cl.modern, cl.oathbreaker, cl.oldschool,
+        cl.pauper, cl.paupercommander, cl.penny, cl.pioneer, cl.predh,
+        cl.premodern, cl.standard, cl.standardbrawl, cl.timeless, cl.vintage,
+        cp.cardKingdom, cp.cardKingdomFoil, cp.cardKingdomEtched,
+        cp.cardmarket, cp.tcgplayer, cp.tcgplayerEtched,
+        mc.quantity
+        FROM cards c
+        INNER JOIN col.my_collection mc ON c.uuid = mc.card_uuid
+        LEFT JOIN cardIdentifiers ci ON c.uuid = ci.uuid
+        LEFT JOIN sets s ON c.setCode = s.code
+        LEFT JOIN cardLegalities cl ON c.uuid = cl.uuid
+        LEFT JOIN cardPurchaseUrls cp ON c.uuid = cp.uuid
+        """;
 
     public const string BaseSets = "SELECT * FROM sets";
 

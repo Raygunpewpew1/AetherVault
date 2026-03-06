@@ -1,7 +1,14 @@
 # Handoff: Collection/Decks black screen bug
 
+## Root cause (confirmed)
+**The toast was the problem.** `ToastService.Show()` replaces `page.Content` with a wrapper Grid (original content + banner), then restores `page.Content` when the toast ends. Doing that swap immediately after a modal closes (when the activity is already in a fragile “first frame after resume” state) causes the black screen. **Fix:** toasts were removed from Collection and Deck flows (CollectionPage, CollectionViewModel, DeckDetailPage). Status text in the UI is unchanged.
+
+To restore toasts in those flows without bringing back the bug, either **delay** the toast (e.g. 300–500 ms after the action) so the second draw/layout completes first, or change the toast implementation so it does **not** replace/restore `page.Content` (e.g. overlay or different UI).
+
+---
+
 ## What happens
-After **clearing the collection**, **import** (file picker), or **adding a card in deck**, the Collection or Decks UI shows a **black screen** instead of the empty state or content. Toast and ViewModel state are correct; the bug is rendering.
+After **clearing the collection**, **import** (file picker), or **adding a card in deck**, the Collection or Decks UI showed a **black screen** instead of the empty state or content. Toast and ViewModel state were correct; the bug was rendering.
 
 ## What we know (from code + logcat)
 
