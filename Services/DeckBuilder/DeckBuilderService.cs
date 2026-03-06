@@ -223,6 +223,20 @@ public class DeckBuilderService
 
         // Determine basic land names based on deck color identity.
         string identity = deck.ColorIdentity ?? "";
+        if (string.IsNullOrWhiteSpace(identity) && !string.IsNullOrWhiteSpace(deck.CommanderId))
+        {
+            // Some older decks may have a commander but no cached ColorIdentity.
+            // Derive it from commander and persist for future operations.
+            var commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
+            if (!string.IsNullOrEmpty(commander?.UUID))
+            {
+                identity = commander.GetColorIdentity().AsString();
+                deck.ColorIdentity = identity;
+                deck.DateModified = DateTime.Now;
+                await _repository.UpdateDeckAsync(deck);
+            }
+        }
+
         var landNames = new List<string>();
         if (identity.Contains('W')) landNames.Add("Plains");
         if (identity.Contains('U')) landNames.Add("Island");

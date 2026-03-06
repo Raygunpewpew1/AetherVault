@@ -226,6 +226,52 @@ public class DeckBuilderTests
     }
 
     [Fact]
+    public async Task AutoSuggestLands_CommanderIdentityFallback_UsesCommanderColors()
+    {
+        var deckId = await _service.CreateDeckAsync("Commander Deck", DeckFormat.Commander);
+
+        // Set commander, but clear cached ColorIdentity to simulate older/broken decks.
+        var commander = CreateCard("cmdr-wub", "Three Color Commander", DeckFormat.Commander, LegalityStatus.Legal);
+        commander.CardType = "Legendary Creature";
+        commander.Colors = "W,U,B";
+        _cardRepo.AddCard(commander);
+
+        var setResult = await _service.SetCommanderAsync(deckId, commander.UUID);
+        Assert.True(setResult.IsSuccess);
+
+        var deck = await _deckRepo.GetDeckAsync(deckId);
+        Assert.NotNull(deck);
+        deck!.ColorIdentity = ""; // force fallback
+        await _deckRepo.UpdateDeckAsync(deck);
+
+        var plains = CreateCard("plains-2", "Plains", DeckFormat.Commander, LegalityStatus.Legal);
+        plains.CardType = "Basic Land — Plains";
+        _cardRepo.AddCard(plains);
+
+        var island = CreateCard("island-2", "Island", DeckFormat.Commander, LegalityStatus.Legal);
+        island.CardType = "Basic Land — Island";
+        _cardRepo.AddCard(island);
+
+        var swamp = CreateCard("swamp-2", "Swamp", DeckFormat.Commander, LegalityStatus.Legal);
+        swamp.CardType = "Basic Land — Swamp";
+        _cardRepo.AddCard(swamp);
+
+        var added = await _service.AutoSuggestLandsAsync(deckId);
+        Assert.Equal(37, added);
+
+        var deckCards = await _deckRepo.GetDeckCardsAsync(deckId);
+        var mainCards = deckCards.Where(c => c.Section == "Main").ToList();
+        Assert.Equal(3, mainCards.Count);
+
+        // With 3 colors: 13/12/12 distribution for 37.
+        var quantities = mainCards.Select(c => c.Quantity).OrderByDescending(q => q).ToArray();
+        Assert.Equal([13, 12, 12], quantities);
+
+        var updatedDeck = await _deckRepo.GetDeckAsync(deckId);
+        Assert.False(string.IsNullOrWhiteSpace(updatedDeck!.ColorIdentity));
+    }
+
+    [Fact]
     public async Task AddCard_RelentlessCard_AllowsMoreThan4Copies()
     {
         var deckId = await _service.CreateDeckAsync("Modern Deck", DeckFormat.Modern);
@@ -549,7 +595,16 @@ public class MockCardRepository : ICardRepository
     public Task<string[]> GetOtherFaceIdsAsync(string uuid) => throw new NotImplementedException();
     public Task<Card[]> GetCardWithOtherFacesAsync(string uuid) => throw new NotImplementedException();
     public Task<Card[]> GetFullCardPackageAsync(string uuid) => throw new NotImplementedException();
-    public Task<Dictionary<string, Card>> GetCardsByUUIDsAsync(string[] uuids) => throw new NotImplementedException();
+    public Task<Dictionary<string, Card>> GetCardsByUUIDsAsync(string[] uuids)
+    {
+        var dict = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
+        foreach (var id in uuids)
+        {
+            if (_cards.TryGetValue(id, out var card))
+                dict[id] = card;
+        }
+        return Task.FromResult(dict);
+    }
     public Task<Card[]> SearchCardsAsync(string searchText, int limit = 100)
     {
         // Minimal behavior for tests.
