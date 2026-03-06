@@ -74,98 +74,81 @@
                             Margin="0,0,0,8">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:DeckEntity">
-                        <SwipeView>
-                            <SwipeView.LeftItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Rename"
-                                               BackgroundColor="{StaticResource Primary}"
-                                               Invoked="OnRenameSwipeInvoked" />
-                                </SwipeItems>
-                            </SwipeView.LeftItems>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Delete"
-                                               BackgroundColor="#B00020"
-                                               Invoked="OnDeleteSwipeInvoked" />
-                                </SwipeItems>
-                            </SwipeView.RightItems>
+                        <Border Style="{StaticResource CardStyle}"
+                                Margin="16,6"
+                                Padding="16,14"
+                                MinimumHeightRequest="72">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                <Label Grid.Row="0" Grid.Column="0"
+                                       Text="{Binding Name}"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       LineBreakMode="TailTruncation" />
 
-                            <Border Style="{StaticResource CardStyle}"
-                                    Margin="16,6"
-                                    Padding="16,14"
-                                    MinimumHeightRequest="72">
-                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-                                    <Label Grid.Row="0" Grid.Column="0"
-                                           Text="{Binding Name}"
-                                           FontSize="16"
-                                           FontAttributes="Bold"
-                                           TextColor="{StaticResource TextPrimary}"
-                                           LineBreakMode="TailTruncation" />
+                                <HorizontalStackLayout Grid.Row="0" Grid.Column="1"
+                                                       Spacing="8"
+                                                       VerticalOptions="Center">
+                                    <Button Clicked="OnRenameDeckButtonClicked"
+                                            BackgroundColor="Transparent"
+                                            Padding="8"
+                                            HeightRequest="40"
+                                            WidthRequest="40"
+                                            CommandParameter="{Binding .}">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="FASolid"
+                                                             Glyph="{x:Static fa:Solid.PenToSquare}"
+                                                             Size="16"
+                                                             Color="{StaticResource TextSecondary}" />
+                                        </Button.ImageSource>
+                                    </Button>
+                                    <Button Clicked="OnDeleteDeckButtonClicked"
+                                            BackgroundColor="Transparent"
+                                            Padding="8"
+                                            HeightRequest="40"
+                                            WidthRequest="40"
+                                            CommandParameter="{Binding .}">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="FASolid"
+                                                             Glyph="{x:Static fa:Solid.TrashCan}"
+                                                             Size="16"
+                                                             Color="{StaticResource ErrorColor}" />
+                                        </Button.ImageSource>
+                                    </Button>
+                                </HorizontalStackLayout>
 
-                                    <HorizontalStackLayout Grid.Row="0" Grid.Column="1"
-                                                           Spacing="8"
-                                                           VerticalOptions="Center">
-                                        <Button Clicked="OnRenameDeckButtonClicked"
-                                                BackgroundColor="Transparent"
-                                                Padding="8"
-                                                HeightRequest="40"
-                                                WidthRequest="40"
-                                                CommandParameter="{Binding .}">
-                                            <Button.ImageSource>
-                                                <FontImageSource FontFamily="FASolid"
-                                                                 Glyph="{x:Static fa:Solid.PenToSquare}"
-                                                                 Size="16"
-                                                                 Color="{StaticResource TextSecondary}" />
-                                            </Button.ImageSource>
-                                        </Button>
-                                        <Button Clicked="OnDeleteDeckButtonClicked"
-                                                BackgroundColor="Transparent"
-                                                Padding="8"
-                                                HeightRequest="40"
-                                                WidthRequest="40"
-                                                CommandParameter="{Binding .}">
-                                            <Button.ImageSource>
-                                                <FontImageSource FontFamily="FASolid"
-                                                                 Glyph="{x:Static fa:Solid.TrashCan}"
-                                                                 Size="16"
-                                                                 Color="{StaticResource ErrorColor}" />
-                                            </Button.ImageSource>
-                                        </Button>
-                                    </HorizontalStackLayout>
-
-                                    <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2"
-                                                           Spacing="8" Margin="0,6,0,0">
-                                        <Border BackgroundColor="{StaticResource Surface}"
-                                                Padding="10,4"
-                                                StrokeShape="RoundRectangle 8"
-                                                Stroke="Transparent">
-                                            <Label Text="{Binding CardCount, StringFormat='{0} cards'}"
-                                                   FontSize="12"
-                                                   TextColor="{StaticResource TextSecondary}" />
-                                        </Border>
-                                        <Border BackgroundColor="{StaticResource Surface}"
-                                                Padding="10,4"
-                                                StrokeShape="RoundRectangle 8"
-                                                Stroke="Transparent">
-                                            <Label Text="{Binding FormatDisplay}"
-                                                   FontSize="12"
-                                                   TextColor="{StaticResource TextSecondary}" />
-                                        </Border>
-                                    </HorizontalStackLayout>
-
-                                    <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2"
-                                                         Spacing="2" Margin="0,4,0,0">
-                                        <Label Text="{Binding CommanderDisplay}"
-                                               IsVisible="{Binding HasCommander}"
+                                <HorizontalStackLayout Grid.Row="1" Grid.ColumnSpan="2"
+                                                       Spacing="8" Margin="0,6,0,0">
+                                    <Border BackgroundColor="{StaticResource Surface}"
+                                            Padding="10,4"
+                                            StrokeShape="RoundRectangle 8"
+                                            Stroke="Transparent">
+                                        <Label Text="{Binding CardCount, StringFormat='{0} cards'}"
                                                FontSize="12"
-                                               TextColor="{StaticResource Accent}" />
-                                        <Label Text="{Binding DateModified, StringFormat='Modified {0:MMM d, yyyy}'}"
-                                               FontSize="11"
                                                TextColor="{StaticResource TextSecondary}" />
-                                    </VerticalStackLayout>
-                                </Grid>
-                            </Border>
-                        </SwipeView>
+                                    </Border>
+                                    <Border BackgroundColor="{StaticResource Surface}"
+                                            Padding="10,4"
+                                            StrokeShape="RoundRectangle 8"
+                                            Stroke="Transparent">
+                                        <Label Text="{Binding FormatDisplay}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource TextSecondary}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <VerticalStackLayout Grid.Row="2" Grid.ColumnSpan="2"
+                                                     Spacing="2" Margin="0,4,0,0">
+                                    <Label Text="{Binding CommanderDisplay}"
+                                           IsVisible="{Binding HasCommander}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Accent}" />
+                                    <Label Text="{Binding DateModified, StringFormat='Modified {0:MMM d, yyyy}'}"
+                                           FontSize="11"
+                                           TextColor="{StaticResource TextSecondary}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
