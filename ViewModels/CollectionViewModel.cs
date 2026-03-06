@@ -97,16 +97,18 @@ public partial class CollectionViewModel : BaseViewModel
 
         if (_allItems.Length == 0)
         {
-            // Must await UI update so LoadCollectionAsync's "if (!IsCollectionEmpty)" sees true and does not invoke CollectionLoaded (which would show the grid)
+            Logger.LogStuff("[CollectionUI] ApplyFilterAndSort: empty branch, _allItems=0", LogLevel.Debug);
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 IsCollectionEmpty = true;
                 TotalCards = 0;
                 UniqueCards = 0;
                 StatusMessage = "";
+                Logger.LogStuff("[CollectionUI] ApplyFilterAndSort: set IsCollectionEmpty=true on main thread", LogLevel.Debug);
             });
             if (token.IsCancellationRequested) return;
             if (_grid != null) await _grid.SetCollectionAsync([]);
+            Logger.LogStuff("[CollectionUI] ApplyFilterAndSort: empty branch done, SetCollectionAsync([]) called", LogLevel.Debug);
             if (token.IsCancellationRequested) return;
             return;
         }
@@ -157,6 +159,7 @@ public partial class CollectionViewModel : BaseViewModel
             var totalCards = displayedTotal;
             var uniqueCards = displayedUnique;
             var statusMessage = $"{displayedTotal} cards ({displayedUnique} unique)";
+            Logger.LogStuff($"[CollectionUI] ApplyFilterAndSort: hasData branch, setting IsCollectionEmpty=false, count={filtered.Length}", LogLevel.Debug);
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 if (token.IsCancellationRequested) return;
@@ -262,9 +265,12 @@ public partial class CollectionViewModel : BaseViewModel
         try
         {
             _allItems = await Task.Run(() => _cardManager.GetCollectionAsync());
+            Logger.LogStuff($"[CollectionUI] LoadCollectionAsync: loaded _allItems.Count={_allItems.Length}", LogLevel.Debug);
 
             await ApplyFilterAndSortAsync();
-            // Only scroll when we have content; when empty the grid is hidden and we must not trigger it
+
+            var isEmptyNow = IsCollectionEmpty;
+            Logger.LogStuff($"[CollectionUI] LoadCollectionAsync: after ApplyFilterAndSort, IsCollectionEmpty={isEmptyNow}, willInvokeCollectionLoaded={!isEmptyNow}", LogLevel.Debug);
             if (!IsCollectionEmpty)
                 MainThread.BeginInvokeOnMainThread(() => CollectionLoaded?.Invoke());
         }
