@@ -6,6 +6,7 @@ namespace AetherVault.Controls;
 /// <summary>
 /// Loads and displays a card image using the app's ImageDownloadService (cache + Scryfall CDN).
 /// Use in list/grid templates where remote URL binding does not reliably show images (e.g. Android).
+/// Bind CardUuid to Card.ImageId (ScryfallId when set, else UUID) so cache keys match the main grid.
 /// </summary>
 public class CachedCardImage : ContentView
 {
@@ -33,12 +34,27 @@ public class CachedCardImage : ContentView
             VerticalOptions = LayoutOptions.Fill
         };
         Content = _image;
+        Loaded += OnLoaded;
+    }
+
+    private void OnLoaded(object? sender, EventArgs e)
+    {
+        // When control enters visual tree, Handler is set; retry load if we have an id but hadn't resolved the service yet.
+        if (!string.IsNullOrWhiteSpace(CardUuid) && _image.Source == null)
+            LoadImageAsync(CardUuid);
     }
 
     private static void OnCardUuidChanged(BindableObject bindable, object oldValue, object newValue)
     {
         if (bindable is CachedCardImage control)
             control.LoadImageAsync((string?)newValue);
+    }
+
+    private static Services.ImageDownloadService? GetImageService(BindableObject bindable)
+    {
+        if (bindable is VisualElement ve && ve.Handler?.MauiContext?.Services != null)
+            return ve.Handler.MauiContext.Services.GetService<Services.ImageDownloadService>();
+        return AetherVault.App.ServiceProvider?.GetService<Services.ImageDownloadService>();
     }
 
     private void LoadImageAsync(string? uuid)
@@ -64,8 +80,7 @@ public class CachedCardImage : ContentView
         _lastUuid = uuid;
         _image.Source = null;
 
-        var serviceProvider = AetherVault.App.ServiceProvider;
-        var downloadService = serviceProvider?.GetService<Services.ImageDownloadService>();
+        var downloadService = GetImageService(this);
         if (downloadService == null)
             return;
 

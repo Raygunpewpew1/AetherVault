@@ -156,7 +156,10 @@
 
         <!-- Single content host: shows either grid OR empty state (grid removed from tree when empty so Skia never paints) -->
         <ContentView x:Name="CollectionContentHost"
-                    Grid.Row="2">
+                    Grid.Row="2"
+                    BackgroundColor="{StaticResource Background}"
+                    VerticalOptions="Fill"
+                    HorizontalOptions="Fill">
             <controls:CardGrid x:Name="CollectionGrid"
                                Scrolled="OnCollectionScrolled"
                                UseCompactGrid="True" />

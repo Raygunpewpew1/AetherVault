@@ -39,9 +39,15 @@ public partial class DecksViewModel : BaseViewModel
             foreach (var deck in list)
                 deck.CardCount = await _deckRepository.GetDeckCardCountAsync(deck.Id);
 
-            Decks = new ObservableCollection<DeckEntity>(list);
-            IsEmpty = Decks.Count == 0;
-            StatusMessage = Decks.Count == 0 ? "" : $"{Decks.Count} deck{(Decks.Count == 1 ? "" : "s")}";
+            var collection = new ObservableCollection<DeckEntity>(list);
+            var isEmpty = collection.Count == 0;
+            var statusMessage = isEmpty ? "" : $"{collection.Count} deck{(collection.Count == 1 ? "" : "s")}";
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Decks = collection;
+                IsEmpty = isEmpty;
+                StatusMessage = statusMessage;
+            });
         }
         catch (Exception ex)
         {
@@ -60,9 +66,12 @@ public partial class DecksViewModel : BaseViewModel
         try
         {
             await _deckService.DeleteDeckAsync(deck.Id);
-            Decks.Remove(deck);
-            IsEmpty = Decks.Count == 0;
-            StatusMessage = Decks.Count == 0 ? "" : $"{Decks.Count} deck{(Decks.Count == 1 ? "" : "s")}";
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                Decks.Remove(deck);
+                IsEmpty = Decks.Count == 0;
+                StatusMessage = Decks.Count == 0 ? "" : $"{Decks.Count} deck{(Decks.Count == 1 ? "" : "s")}";
+            });
         }
         catch (Exception ex)
         {

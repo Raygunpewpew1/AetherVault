@@ -102,6 +102,11 @@ public partial class CollectionPage : ContentPage
 
     private void UpdateContentHostContent()
     {
+        if (MainThread.IsMainThread)
+        {
+            CollectionContentHost.Content = _viewModel.IsCollectionEmpty ? _emptyStateView : CollectionGrid;
+            return;
+        }
         MainThread.BeginInvokeOnMainThread(() =>
         {
             CollectionContentHost.Content = _viewModel.IsCollectionEmpty ? _emptyStateView : CollectionGrid;

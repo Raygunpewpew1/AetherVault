@@ -99,7 +99,7 @@
                         </Grid.GestureRecognizers>
 
                         <Border Grid.Column="0" WidthRequest="40" HeightRequest="56" BackgroundColor="{StaticResource Surface}" StrokeShape="RoundRectangle 4">
-                            <controls:CachedCardImage CardUuid="{Binding UUID}" HorizontalOptions="Fill" VerticalOptions="Fill" />
+                            <controls:CachedCardImage CardUuid="{Binding ImageId}" HorizontalOptions="Fill" VerticalOptions="Fill" />
                         </Border>
 
                         <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">

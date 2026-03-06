@@ -61,12 +61,13 @@
             </Grid>
         </Border>
 
-        <!-- Content area -->
-        <Grid Grid.Row="1">
+        <!-- Content area: solid background so empty state never shows black -->
+        <Grid Grid.Row="1"
+              BackgroundColor="{StaticResource Background}">
 
             <!-- Deck List -->
             <CollectionView ItemsSource="{Binding Decks}"
-                            IsVisible="{Binding IsEmpty, Converter={x:StaticResource InvertedBoolConverter}}"
+                            IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBoolConverter}}"
                             SelectionMode="Single"
                             SelectionChanged="OnDeckSelectionChanged">
                 <CollectionView.ItemTemplate>
@@ -141,26 +142,30 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <!-- Empty State -->
-            <VerticalStackLayout IsVisible="{Binding IsEmpty}"
-                                 VerticalOptions="Center"
-                                 HorizontalOptions="Center"
-                                 Spacing="12">
-                <Label FontFamily="FASolid"
-                       Text="{x:Static fa:Solid.LayerGroup}"
-                       FontSize="48"
-                       TextColor="{StaticResource TextSecondary}"
-                       HorizontalOptions="Center" />
-                <Label Text="No decks yet"
-                       FontSize="18"
-                       FontAttributes="Bold"
-                       TextColor="{StaticResource TextPrimary}"
-                       HorizontalOptions="Center" />
-                <Label Text="Tap New to create your first deck"
-                       FontSize="13"
-                       TextColor="{StaticResource TextSecondary}"
-                       HorizontalOptions="Center" />
-            </VerticalStackLayout>
+            <!-- Empty State: fills cell with theme background so no black shows through -->
+            <Grid IsVisible="{Binding IsEmpty}"
+                  BackgroundColor="{StaticResource Background}"
+                  VerticalOptions="Fill"
+                  HorizontalOptions="Fill">
+                <VerticalStackLayout VerticalOptions="Center"
+                                     HorizontalOptions="Center"
+                                     Spacing="12">
+                    <Label FontFamily="FASolid"
+                           Text="{x:Static fa:Solid.LayerGroup}"
+                           FontSize="48"
+                           TextColor="{StaticResource TextSecondary}"
+                           HorizontalOptions="Center" />
+                    <Label Text="No decks yet"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource TextPrimary}"
+                           HorizontalOptions="Center" />
+                    <Label Text="Tap New to create your first deck"
+                           FontSize="13"
+                           TextColor="{StaticResource TextSecondary}"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Grid>
 
         </Grid>
 
