@@ -158,6 +158,11 @@ public partial class CollectionViewModel : BaseViewModel
 
             if (token.IsCancellationRequested) return;
 
+            // Brief delay so grid can process state and repaint before we hide the empty overlay (avoids one-frame black flash)
+            await Task.Delay(50);
+
+            if (token.IsCancellationRequested) return;
+
             var totalCards = displayedTotal;
             var uniqueCards = displayedUnique;
             var statusMessage = $"{displayedTotal} cards ({displayedUnique} unique)";
