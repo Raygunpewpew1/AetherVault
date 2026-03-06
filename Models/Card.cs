@@ -92,6 +92,8 @@ public class Card
     public CardLegalities Legalities { get; set; } = new();
     public List<CardRuling> Rulings { get; set; } = [];
     public string ImageUrl { get; set; } = "";
+    /// <summary>ID to use for image cache/CDN (ScryfallId when set, else UUID).</summary>
+    public string ImageId => string.IsNullOrEmpty(ScryfallId) ? UUID : ScryfallId;
     public string[] RelatedCards { get; set; } = [];
 
     public string Finishes { get; set; } = "";
