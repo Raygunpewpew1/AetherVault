@@ -13,6 +13,9 @@ public partial class DeckDetailPage : ContentPage
     private readonly IServiceProvider _serviceProvider;
     private readonly DeckBuilderService _deckService;
     private readonly IToastService _toastService;
+    private readonly ImageDownloadService _imageDownloadService;
+
+    private SKImage? _commanderArtImage;
 
     public string DeckId
     {
@@ -27,13 +30,15 @@ public partial class DeckDetailPage : ContentPage
         DeckDetailViewModel viewModel,
         IServiceProvider serviceProvider,
         DeckBuilderService deckService,
-        IToastService toastService)
+        IToastService toastService,
+        ImageDownloadService imageDownloadService)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _serviceProvider = serviceProvider;
         _deckService = deckService;
         _toastService = toastService;
+        _imageDownloadService = imageDownloadService;
         BindingContext = viewModel;
 
         _viewModel.PropertyChanged += (_, e) =>
@@ -41,10 +46,49 @@ public partial class DeckDetailPage : ContentPage
             if (e.PropertyName is nameof(DeckDetailViewModel.Deck)
                                or nameof(DeckDetailViewModel.HasNoCommander))
             {
+                _ = TryLoadCommanderArtAsync();
                 CommanderArtCanvas?.InvalidateSurface();
             }
         };
+    }
 
+    private async Task TryLoadCommanderArtAsync()
+    {
+        var first = _viewModel.CommanderCards.FirstOrDefault();
+        if (first?.Card == null)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _commanderArtImage?.Dispose();
+                _commanderArtImage = null;
+                CommanderArtCanvas?.InvalidateSurface();
+            });
+            return;
+        }
+
+        string imageId = first.Card.ImageId;
+        if (string.IsNullOrEmpty(imageId)) return;
+
+        try
+        {
+            var image = await _imageDownloadService.DownloadImageDirectAsync(imageId, "art_crop", "front");
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                var currentFirst = _viewModel.CommanderCards.FirstOrDefault();
+                if (currentFirst?.Card?.ImageId != imageId)
+                {
+                    image?.Dispose();
+                    return;
+                }
+                _commanderArtImage?.Dispose();
+                _commanderArtImage = image;
+                CommanderArtCanvas?.InvalidateSurface();
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Commander art load failed: {ex.Message}");
+        }
     }
 
     protected override void OnAppearing()
@@ -134,6 +178,8 @@ public partial class DeckDetailPage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.ReloadCompleted -= RunDeferredLayoutPass;
+        _commanderArtImage?.Dispose();
+        _commanderArtImage = null;
     }
 
     /// <summary>Delay so invalidate runs after WindowManager destroys modal surface (logcat: Destroying surface → focus change).</summary>
@@ -171,28 +217,40 @@ public partial class DeckDetailPage : ContentPage
 
         try
         {
-            // Background gradient using deck color identity colors
+            if (_commanderArtImage != null)
+            {
+                float imgW = _commanderArtImage.Width;
+                float imgH = _commanderArtImage.Height;
+                if (imgW > 0 && imgH > 0)
+                {
+                    float scale = Math.Max(w / imgW, h / imgH);
+                    float drawW = imgW * scale;
+                    float drawH = imgH * scale;
+                    float x = (w - drawW) / 2f;
+                    float y = (h - drawH) / 2f;
+                    canvas.DrawImage(_commanderArtImage, new SKRect(x, y, x + drawW, y + drawH));
+                }
+            }
+
             var colorIdentity = _viewModel.Deck?.ColorIdentity ?? "";
-        var (topColor, bottomColor) = GetGradientColors(colorIdentity);
+            var (topColor, bottomColor) = GetGradientColors(colorIdentity);
 
-        using var gradPaint = new SKPaint();
-        gradPaint.Shader = SKShader.CreateLinearGradient(
-            new SKPoint(0, 0),
-            new SKPoint(w, h),
-            [topColor, bottomColor],
-            SKShaderTileMode.Clamp);
-        canvas.DrawRect(0, 0, w, h, gradPaint);
+            using var gradPaint = new SKPaint();
+            gradPaint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(0, 0),
+                new SKPoint(w, h),
+                [topColor.WithAlpha(102), bottomColor.WithAlpha(102)],
+                SKShaderTileMode.Clamp);
+            canvas.DrawRect(0, 0, w, h, gradPaint);
 
-        // Dark overlay at bottom for legibility
-        using var overlayPaint = new SKPaint();
-        overlayPaint.Shader = SKShader.CreateLinearGradient(
-            new SKPoint(0, h * 0.4f),
-            new SKPoint(0, h),
-            [SKColors.Transparent, new SKColor(0x12, 0x12, 0x12, 230)],
-            SKShaderTileMode.Clamp);
-        canvas.DrawRect(0, 0, w, h, overlayPaint);
+            using var overlayPaint = new SKPaint();
+            overlayPaint.Shader = SKShader.CreateLinearGradient(
+                new SKPoint(0, h * 0.4f),
+                new SKPoint(0, h),
+                [SKColors.Transparent, new SKColor(0x12, 0x12, 0x12, 230)],
+                SKShaderTileMode.Clamp);
+            canvas.DrawRect(0, 0, w, h, overlayPaint);
 
-            // Commander name or deck name text
             string headline = _viewModel.Deck?.CommanderName is { Length: > 0 } cn
                 ? cn
                 : (_viewModel.Deck?.Name ?? "");
