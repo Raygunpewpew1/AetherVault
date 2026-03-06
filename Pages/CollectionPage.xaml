@@ -160,10 +160,13 @@
                            Scrolled="OnCollectionScrolled"
                            UseCompactGrid="True" />
 
-        <!-- Empty State overlay: solid background so it fully covers the grid when empty -->
+        <!-- Empty State overlay: solid background, fills cell, on top so it fully covers the grid when empty -->
         <Grid Grid.Row="2"
               IsVisible="{Binding IsCollectionEmpty}"
-              BackgroundColor="{StaticResource Background}">
+              BackgroundColor="{StaticResource Background}"
+              VerticalOptions="Fill"
+              HorizontalOptions="Fill"
+              ZIndex="1">
             <VerticalStackLayout VerticalOptions="Center"
                                  HorizontalOptions="Center"
                                  Spacing="8">
