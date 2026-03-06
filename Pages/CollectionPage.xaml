@@ -5,7 +5,9 @@
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              xmlns:controls="clr-namespace:AetherVault.Controls"
+             xmlns:vm="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.CollectionPage"
+             x:DataType="vm:CollectionViewModel"
              Title="Collection"
              BackgroundColor="{StaticResource Background}">
 
@@ -154,16 +156,39 @@
             </Grid>
         </Border>
 
-        <!-- Single content host: shows either grid OR empty state (grid removed from tree when empty so Skia never paints) -->
-        <ContentView x:Name="CollectionContentHost"
-                    Grid.Row="2"
-                    BackgroundColor="{StaticResource Background}"
-                    VerticalOptions="Fill"
-                    HorizontalOptions="Fill">
+        <!-- Content area: grid and empty state both in tree; visibility toggled so empty state is always laid out (fixes Android black screen) -->
+        <Grid Grid.Row="2"
+              BackgroundColor="{StaticResource Background}">
             <controls:CardGrid x:Name="CollectionGrid"
                                Scrolled="OnCollectionScrolled"
-                               UseCompactGrid="True" />
-        </ContentView>
+                               UseCompactGrid="True"
+                               IsVisible="{Binding IsCollectionEmpty, Converter={StaticResource InvertedBoolConverter}}" />
+            <Grid IsVisible="{Binding IsCollectionEmpty}"
+                  BackgroundColor="{StaticResource Background}"
+                  VerticalOptions="Fill"
+                  HorizontalOptions="Fill"
+                  MinimumHeightRequest="200">
+                <VerticalStackLayout VerticalOptions="Center"
+                                     HorizontalOptions="Center"
+                                     Spacing="8">
+                    <Label FontFamily="FASolid"
+                           Text="{x:Static fa:Solid.BoxArchive}"
+                           FontSize="44"
+                           TextColor="{StaticResource TextSecondary}"
+                           HorizontalOptions="Center" />
+                    <Label Text="Your collection is empty"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource TextPrimary}"
+                           HorizontalOptions="Center" />
+                    <Label Text="Search for cards and long-press to add them"
+                           FontSize="13"
+                           TextColor="{StaticResource TextSecondary}"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </Grid>
+        </Grid>
 
     </Grid>
 
