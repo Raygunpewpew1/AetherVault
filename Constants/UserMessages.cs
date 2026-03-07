@@ -99,6 +99,11 @@ public static class UserMessages
         $"Imported {deckCount} deck{(deckCount == 1 ? "" : "s")} ({cardCount} cards).";
 
     public const string DeckImportFailed = "Deck import failed.";
+    public const string LoadingDeckList = "Loading deck list...";
+    public const string ImportingMTGJsonDeck = "Importing deck...";
+    public static string MTGJsonDeckImportedToast(string deckName, int cardCount) =>
+        $"Imported \"{deckName}\" ({cardCount} cards).";
+    public const string MTGJsonDeckImportFailed = "Could not import deck.";
     public const string NoDecksToExport = "No decks to export.";
     public const string NothingToExport = "Nothing to export.";
     public const string ExportFailedToast = "Export failed.";

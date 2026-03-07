@@ -88,7 +88,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<CollectionExporter>();
         builder.Services.AddSingleton<DeckImporter>();
         builder.Services.AddSingleton<DeckExporter>();
+        builder.Services.AddSingleton<MTGJsonDeckListService>();
+        builder.Services.AddSingleton<MTGJsonDeckImporter>();
         builder.Services.AddSingleton<CardGalleryContext>();
+        builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
 
         // ── ViewModels (singleton = shared state e.g. search; transient = new instance per navigation) ──
@@ -101,6 +104,7 @@ public static class MauiProgram
         builder.Services.AddTransient<LoadingViewModel>();
         builder.Services.AddTransient<CardSearchPickerViewModel>();
         builder.Services.AddTransient<SearchFiltersViewModel>();
+        builder.Services.AddTransient<MTGJsonDecksViewModel>();
         builder.Services.AddSingleton<ISearchFilterTarget>(sp => sp.GetRequiredService<SearchViewModel>());
         builder.Services.AddSingleton<Services.ISearchFiltersOpener, Services.SearchFiltersOpenerService>();
 
@@ -119,6 +123,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddToDeckPage>();
         builder.Services.AddTransient<CardQuickDetailPage>();
         builder.Services.AddTransient<CollectionAddPage>();
+        builder.Services.AddTransient<MTGJsonDecksPage>();
 
         return builder.Build();
     }

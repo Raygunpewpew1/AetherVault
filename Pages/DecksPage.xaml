@@ -87,6 +87,15 @@
                         HorizontalOptions="Fill"
                         BorderWidth="0" />
             </Grid>
+            <Button Clicked="OnBrowseMTGJsonClicked"
+                    Text="Browse MTGJSON decks"
+                    BackgroundColor="{StaticResource Surface}"
+                    TextColor="{StaticResource TextPrimary}"
+                    FontSize="14"
+                    CornerRadius="12"
+                    HeightRequest="44"
+                    HorizontalOptions="Fill"
+                    BorderWidth="0" />
         </VerticalStackLayout>
 
         <!-- Content area -->

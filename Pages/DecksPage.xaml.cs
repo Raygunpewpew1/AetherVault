@@ -70,6 +70,11 @@ public partial class DecksPage : ContentPage
             await _viewModel.DeleteDeckAsync(deck);
     }
 
+    private async void OnBrowseMTGJsonClicked(object? sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("mtgjsondecks");
+    }
+
     private async void OnDeckSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (e.CurrentSelection?.FirstOrDefault() is DeckEntity deck)

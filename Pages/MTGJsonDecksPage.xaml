@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:vm="clr-namespace:AetherVault.ViewModels"
+             xmlns:models="clr-namespace:AetherVault.Models"
+             x:Class="AetherVault.Pages.MTGJsonDecksPage"
+             Title="MTGJSON Decks"
+             BackgroundColor="{StaticResource Background}"
+             x:DataType="vm:MTGJsonDecksViewModel">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Toolbar: Refresh -->
+        <Grid Grid.Row="0" Padding="16,12" ColumnDefinitions="*,Auto">
+            <Label Text="Browse decks from MTGJSON"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource TextPrimary}"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Command="{Binding RefreshCommand}"
+                    Text="Refresh"
+                    BackgroundColor="{StaticResource Surface}"
+                    TextColor="{StaticResource TextPrimary}"
+                    FontSize="14"
+                    Padding="16,8"
+                    VerticalOptions="Center" />
+        </Grid>
+
+        <!-- Search + Status -->
+        <VerticalStackLayout Grid.Row="1" Margin="16,0,16,8" Spacing="8">
+            <SearchBar Text="{Binding SearchText, Mode=TwoWay}"
+                       Placeholder="Search by name, type, or code"
+                       PlaceholderColor="{StaticResource TextSecondary}"
+                       TextColor="{StaticResource TextPrimary}"
+                       BackgroundColor="{StaticResource Surface}"
+                       CancelButtonColor="{StaticResource Accent}" />
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
+                <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   HeightRequest="16"
+                                   WidthRequest="16"
+                                   Color="{StaticResource Accent}" />
+                <Label Text="{Binding StatusDisplayText}"
+                       FontSize="13"
+                       TextColor="{Binding StatusTextColor}"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <!-- List: show FilteredDecks when search is active, else Decks -->
+        <CollectionView Grid.Row="2"
+                         x:Name="DeckList"
+                         ItemsSource="{Binding FilteredDecks}"
+                         SelectionMode="Single"
+                         SelectionChanged="OnDeckSelectionChanged"
+                         Margin="0,0,0,8"
+                         EmptyView="No decks. Tap Refresh to load the catalog.">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:MtgJsonDeckListEntry">
+                    <Border Style="{StaticResource CardStyle}"
+                            Margin="16,6"
+                            Padding="16,14"
+                            MinimumHeightRequest="64">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+                            <Label Grid.Row="0" Grid.Column="0"
+                                   Text="{Binding Name}"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource TextPrimary}"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Grid.Row="1" Grid.Column="0"
+                                   Text="{Binding Type}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextSecondary}"
+                                   Margin="0,4,0,0" />
+                            <Label Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                   Text="{Binding ReleaseDate}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextSecondary}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>
