@@ -41,6 +41,8 @@ public class SearchOptions
     public bool NoVariations { get; set; }
     public bool IncludeAllFaces { get; set; }
     public bool IncludeTokens { get; set; }
+    /// <summary>When true, only cards that can be a commander (Legendary Creature or "can be your commander").</summary>
+    public bool CommanderOnly { get; set; }
 
     public void Clear()
     {
@@ -67,6 +69,7 @@ public class SearchOptions
         NoVariations = false;
         IncludeAllFaces = false;
         IncludeTokens = false;
+        CommanderOnly = false;
     }
 
     public int ActiveFilterCount
@@ -89,6 +92,7 @@ public class SearchOptions
             if (UseLegalFormat) count++;
             if (!string.IsNullOrWhiteSpace(ArtistFilter)) count++;
             if (IncludeTokens) count++;
+            if (CommanderOnly) count++;
             return count;
         }
     }
@@ -109,7 +113,8 @@ public class SearchOptions
         !string.IsNullOrEmpty(PowerFilter) ||
         !string.IsNullOrEmpty(ToughnessFilter) ||
         UseLegalFormat ||
-        IncludeTokens;
+        IncludeTokens ||
+        CommanderOnly;
 
     public static SearchOptions Default() => new();
 }

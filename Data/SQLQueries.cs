@@ -525,4 +525,7 @@ public static class SQLQueries
     public const string CondInCollection = "EXISTS (SELECT 1 FROM col.my_collection WHERE card_uuid = c.uuid)";
     public const string CondSidePrimary = "(c.side = 'a' OR c.side IS NULL)";
     public const string CondNoVariations = "(c.variations IS NULL OR c.variations = '' OR c.variations = '[]')";
+    /// <summary>Cards that can be a commander: Legendary Creature or text contains "can be your commander".</summary>
+    public const string CondCommanderOnly =
+        "((c.type LIKE '%Legendary%' AND c.type LIKE '%Creature%') OR (c.text LIKE '%can be your commander%'))";
 }

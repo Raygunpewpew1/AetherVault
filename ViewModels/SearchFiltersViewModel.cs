@@ -106,6 +106,9 @@ public partial class SearchFiltersViewModel : BaseViewModel
     [ObservableProperty]
     private bool _chkIncludeTokens;
 
+    [ObservableProperty]
+    private bool _chkCommanderOnly;
+
     public ObservableCollection<ColorFilterItem> ColorFilters { get; }
 
     /// <summary>Call before showing the page. Loads sets and applies current options from the target.</summary>
@@ -237,6 +240,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
         options.PrimarySideOnly = ChkPrimarySide;
         options.NoVariations = ChkNoVariations;
         options.IncludeTokens = ChkIncludeTokens;
+        options.CommanderOnly = ChkCommanderOnly;
 
         return options;
     }
@@ -302,5 +306,6 @@ public partial class SearchFiltersViewModel : BaseViewModel
         ChkPrimarySide = options.PrimarySideOnly;
         ChkNoVariations = options.NoVariations;
         ChkIncludeTokens = options.IncludeTokens;
+        ChkCommanderOnly = options.CommanderOnly;
     }
 }

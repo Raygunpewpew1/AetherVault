@@ -281,3 +281,24 @@ public static class EnumExtensions
     public static string ToDisplayName(this CommanderArchetype archetype) =>
         ArchetypeNames[(int)archetype];
 }
+
+/// <summary>Converts color filter codes (W, U, B, R, G, C) to human-readable names for display.</summary>
+public static class ColorFilterDisplay
+{
+    private static readonly Dictionary<string, string> CodeToName = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["W"] = "White", ["U"] = "Blue", ["B"] = "Black", ["R"] = "Red", ["G"] = "Green", ["C"] = "Colorless"
+    };
+
+    /// <summary>Converts a color filter string (e.g. "W, U, B") to display text (e.g. "White, Blue, Black").</summary>
+    public static string ToDisplayString(string? colorFilter)
+    {
+        if (string.IsNullOrWhiteSpace(colorFilter)) return "";
+        var names = colorFilter.Split(',')
+            .Select(s => s.Trim())
+            .Where(s => s.Length > 0)
+            .Select(c => CodeToName.TryGetValue(c, out var name) ? name : c)
+            .ToList();
+        return string.Join(", ", names);
+    }
+}

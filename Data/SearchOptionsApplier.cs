@@ -62,5 +62,8 @@ public static class SearchOptionsApplier
 
         if (options.IncludeAllFaces)
             helper.IncludeAllFaces();
+
+        if (options.CommanderOnly)
+            helper.WhereCommanderOnly();
     }
 }

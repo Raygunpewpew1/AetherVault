@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using AetherVault.Controls;
 using AetherVault.Core;
 using AetherVault.Core.Layout;
@@ -20,9 +21,19 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     private readonly IGridPriceLoadService _gridPriceLoadService;
     private readonly ISearchFiltersOpener _filtersOpener;
     private CancellationTokenSource? _searchDebounceCts;
+    private CancellationTokenSource? _stripCmcDebounceCts;
     private int _currentPage;
     private bool _isLoadingPage;
     private CardGrid? _grid;
+    private bool _isLoadingFromOptions;
+
+    private static readonly string[] StripTypeOptions =
+    [
+        "Any", "Artifact", "Battle", "Creature", "Enchantment", "Instant",
+        "Land", "Planeswalker", "Sorcery", "Kindred"
+    ];
+
+    private static readonly string[] ColorCodes = ["W", "U", "B", "R", "G", "C"];
 
     // ── Bindable properties (XAML uses these via {Binding PropertyName}) ──
 
@@ -41,7 +52,44 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     [ObservableProperty]
     public partial bool IsEmpty { get; set; }
 
+    /// <summary>When true, the inline filter strip below the search bar is visible.</summary>
+    [ObservableProperty]
+    private bool isFilterStripExpanded;
+
     public SearchOptions CurrentOptions { get; set; } = new();
+
+    /// <summary>Color chips for the inline filter strip. Synced with CurrentOptions.ColorFilter.</summary>
+    public ObservableCollection<ColorFilterItem> ColorFilters { get; }
+
+    public IList<string> TypeOptions { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CmcMinLabel))]
+    [NotifyPropertyChangedFor(nameof(CmcMaxLabel))]
+    private double stripCmcMin;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CmcMinLabel))]
+    [NotifyPropertyChangedFor(nameof(CmcMaxLabel))]
+    private double stripCmcMax = 16;
+
+    public string CmcMinLabel => $"Min: {(int)StripCmcMin}";
+    public string CmcMaxLabel => StripCmcMax >= 16 ? "Max: 16+" : $"Max: {(int)StripCmcMax}";
+
+    [ObservableProperty]
+    private int selectedTypeIndex;
+
+    [ObservableProperty]
+    private bool chkCommon;
+
+    [ObservableProperty]
+    private bool chkUncommon;
+
+    [ObservableProperty]
+    private bool chkRare;
+
+    [ObservableProperty]
+    private bool chkMythic;
 
     public string FiltersButtonText
     {
@@ -73,6 +121,10 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         _cardManager = cardManager;
         _gridPriceLoadService = gridPriceLoadService;
         _filtersOpener = filtersOpener;
+
+        TypeOptions = [.. StripTypeOptions];
+        ColorFilters = new ObservableCollection<ColorFilterItem>(
+            ColorCodes.Select(c => new ColorFilterItem(c, false)));
 
         // Subscribe to CardManager events for status updates
         _cardManager.OnProgress += (msg, pct) =>
@@ -145,6 +197,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         SearchText = "";
         CurrentOptions = new SearchOptions();
+        RefreshFilterStripFromOptions();
         _grid?.ClearCards();
         TotalResults = 0;
         HasMorePages = false;
@@ -155,10 +208,137 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         SearchCompleted?.Invoke();
     }
 
+    /// <summary>Toggles the inline filter strip. Bound to the Filters button.</summary>
+    [RelayCommand]
+    private void ToggleFilterStrip()
+    {
+        IsFilterStripExpanded = !IsFilterStripExpanded;
+    }
+
+    /// <summary>Opens the full filters modal (set, artist, format, special options). Call from "More filters…" in the strip.</summary>
     [RelayCommand]
     private async Task GoToFiltersAsync()
     {
         await _filtersOpener.OpenAsync(this, _cardManager);
+    }
+
+    /// <summary>Toggles a color in the strip and runs search. Bound to color chip tap.</summary>
+    [RelayCommand]
+    private void ToggleColor(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return;
+        var item = ColorFilters.FirstOrDefault(c => c.Code == code);
+        if (item != null)
+        {
+            item.IsSelected = !item.IsSelected;
+            SyncStripToOptionsAndSearch();
+        }
+    }
+
+    /// <summary>Syncs strip state (colors, type, CMC, rarity) into CurrentOptions and runs search. Call after strip changes.</summary>
+    private void SyncStripToOptionsAndSearch()
+    {
+        var selectedColors = ColorFilters.Where(c => c.IsSelected).Select(c => c.Code).ToList();
+        CurrentOptions.ColorFilter = selectedColors.Count > 0 ? string.Join(", ", selectedColors) : "";
+
+        if (SelectedTypeIndex > 0 && SelectedTypeIndex < TypeOptions.Count)
+            CurrentOptions.TypeFilter = TypeOptions[SelectedTypeIndex];
+        else
+            CurrentOptions.TypeFilter = "";
+
+        if (StripCmcMin > 0 || StripCmcMax < 16)
+        {
+            CurrentOptions.UseCMCRange = true;
+            CurrentOptions.CMCMin = (int)StripCmcMin;
+            CurrentOptions.CMCMax = (int)StripCmcMax;
+        }
+        else
+        {
+            CurrentOptions.UseCMCRange = false;
+        }
+
+        CurrentOptions.RarityFilter.Clear();
+        if (ChkCommon) CurrentOptions.RarityFilter.Add(CardRarity.Common);
+        if (ChkUncommon) CurrentOptions.RarityFilter.Add(CardRarity.Uncommon);
+        if (ChkRare) CurrentOptions.RarityFilter.Add(CardRarity.Rare);
+        if (ChkMythic) CurrentOptions.RarityFilter.Add(CardRarity.Mythic);
+
+        UpdateFilterState();
+        _ = PerformSearchAsync();
+    }
+
+    /// <summary>Refreshes strip UI from CurrentOptions. Call when returning from the full filters modal.</summary>
+    public void RefreshFilterStripFromOptions()
+    {
+        _isLoadingFromOptions = true;
+        try
+        {
+            var colors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (!string.IsNullOrEmpty(CurrentOptions.ColorFilter))
+            {
+                foreach (var c in CurrentOptions.ColorFilter.Split(','))
+                    colors.Add(c.Trim());
+            }
+            foreach (var item in ColorFilters)
+                item.IsSelected = colors.Contains(item.Code);
+
+            if (string.IsNullOrEmpty(CurrentOptions.TypeFilter) || CurrentOptions.TypeFilter.Equals("Any", StringComparison.OrdinalIgnoreCase))
+                SelectedTypeIndex = 0;
+            else
+            {
+                var idx = Array.FindIndex(StripTypeOptions, s => string.Equals(s, CurrentOptions.TypeFilter, StringComparison.OrdinalIgnoreCase));
+                SelectedTypeIndex = idx >= 0 ? idx : 0;
+            }
+
+            StripCmcMin = CurrentOptions.UseCMCRange ? CurrentOptions.CMCMin : 0;
+            StripCmcMax = CurrentOptions.UseCMCRange ? CurrentOptions.CMCMax : 16;
+
+            ChkCommon = CurrentOptions.RarityFilter.Contains(CardRarity.Common);
+            ChkUncommon = CurrentOptions.RarityFilter.Contains(CardRarity.Uncommon);
+            ChkRare = CurrentOptions.RarityFilter.Contains(CardRarity.Rare);
+            ChkMythic = CurrentOptions.RarityFilter.Contains(CardRarity.Mythic);
+        }
+        finally
+        {
+            _isLoadingFromOptions = false;
+        }
+    }
+
+    partial void OnSelectedTypeIndexChanged(int value)
+    {
+        if (_isLoadingFromOptions) return;
+        SyncStripToOptionsAndSearch();
+    }
+
+    partial void OnChkCommonChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
+    partial void OnChkUncommonChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
+    partial void OnChkRareChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
+    partial void OnChkMythicChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
+
+    partial void OnStripCmcMinChanged(double value)
+    {
+        if (_isLoadingFromOptions) return;
+        if (value > StripCmcMax) StripCmcMax = value;
+        DebounceStripCmcAndSearch();
+    }
+
+    partial void OnStripCmcMaxChanged(double value)
+    {
+        if (_isLoadingFromOptions) return;
+        if (value < StripCmcMin) StripCmcMin = value;
+        DebounceStripCmcAndSearch();
+    }
+
+    private void DebounceStripCmcAndSearch()
+    {
+        _stripCmcDebounceCts?.Cancel();
+        _stripCmcDebounceCts = new CancellationTokenSource();
+        var token = _stripCmcDebounceCts.Token;
+        Task.Delay(400, token).ContinueWith(t =>
+        {
+            if (t.IsCanceled) return;
+            MainThread.BeginInvokeOnMainThread(() => SyncStripToOptionsAndSearch());
+        });
     }
 
     public async Task ApplyFiltersAndSearchAsync(SearchOptions options)
@@ -171,11 +351,15 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         if (IsBusy) return;
 
-        // No search term and no filters (e.g. from filters page) → prompt user
-        if (string.IsNullOrWhiteSpace(SearchText) && options == null)
+        // No search term and no filters → prompt user (allow search with filters only)
+        if (options == null)
         {
-            StatusMessage = UserMessages.EnterSearchTerm;
-            return;
+            CurrentOptions.NameFilter = SearchText ?? "";
+            if (string.IsNullOrWhiteSpace(CurrentOptions.NameFilter) && !CurrentOptions.HasActiveFilters)
+            {
+                StatusMessage = UserMessages.EnterSearchTerm;
+                return;
+            }
         }
 
         if (!await _cardManager.EnsureInitializedAsync())
@@ -195,10 +379,6 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         if (options != null)
         {
             CurrentOptions = options;
-        }
-        else
-        {
-            CurrentOptions.NameFilter = SearchText;
         }
         UpdateFilterState();
 
@@ -385,7 +565,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     private static void AddColorAndRaritySummary(List<string> parts, SearchOptions options)
     {
         if (!string.IsNullOrWhiteSpace(options.ColorFilter))
-            parts.Add($"Colors: {options.ColorFilter.Replace(",", "").Replace(" ", "")}");
+            parts.Add($"Colors: {ColorFilterDisplay.ToDisplayString(options.ColorFilter)}");
 
         if (options.RarityFilter.Count > 0)
             parts.Add($"Rarity: {string.Join("/", options.RarityFilter)}");
@@ -427,5 +607,8 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
         if (options.IncludeTokens)
             parts.Add("Include tokens");
+
+        if (options.CommanderOnly)
+            parts.Add("Can be commander only");
     }
 }

@@ -164,7 +164,8 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     PrimarySideOnly = CurrentOptions.PrimarySideOnly,
                     NoVariations = CurrentOptions.NoVariations,
                     IncludeAllFaces = CurrentOptions.IncludeAllFaces,
-                    IncludeTokens = CurrentOptions.IncludeTokens
+                    IncludeTokens = CurrentOptions.IncludeTokens,
+                    CommanderOnly = CurrentOptions.CommanderOnly
                 };
 
                 var helper = _cardManager.CreateSearchHelper();

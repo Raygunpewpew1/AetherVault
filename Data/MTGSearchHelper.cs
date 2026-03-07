@@ -277,6 +277,13 @@ public class MTGSearchHelper
         return this;
     }
 
+    /// <summary>Restricts results to cards that can be a commander (Legendary Creature or "can be your commander").</summary>
+    public MTGSearchHelper WhereCommanderOnly()
+    {
+        _whereConditions.Add(SQLQueries.CondCommanderOnly);
+        return this;
+    }
+
     public MTGSearchHelper WhereRarity(CardRarity rarity)
     {
         AddInClause("rarity", [rarity.ToDbString()], "Rarity");
