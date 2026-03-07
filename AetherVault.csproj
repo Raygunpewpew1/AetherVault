@@ -81,21 +81,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<AndroidResource Remove="MTGFetchMAUI.Tests\**" />
-		<Compile Remove="AetherVault.Tests\**" />
-		<Compile Remove="MTGFetchMAUI.Tests\**" />
+		<Compile Remove="AetherVault.Tests\**" />	
 		<EmbeddedResource Remove="AetherVault.Tests\**" />
-		<EmbeddedResource Remove="MTGFetchMAUI.Tests\**" />
-		<MauiCss Remove="MTGFetchMAUI.Tests\**" />
-		<MauiXaml Remove="MTGFetchMAUI.Tests\**" />
 		<None Remove="AetherVault.Tests\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Remove="MTGFetchMAUI.Tests\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Remove="BENCHMARK_RESULTS.md" />
 		<None Remove="MTGFetchMAUI.csproj.Backup.tmp" />
 		<None Remove="Resources\Splash\_splash.svg" />
