@@ -18,7 +18,19 @@ public class DeckCardDisplayItem
 
     public string DisplayName => Card?.Name ?? Entity.CardId;
     public string ManaCostText => Card?.ManaCost ?? "";
+    public string CardTypeText => Card?.CardType ?? "";
+    public string ImageId => Card?.ImageId ?? "";
     public double CMC => Card?.FaceManaValue ?? 0;
+    /// <summary>Rules text for quick-detail popup.</summary>
+    public string RulesText => Card?.Text ?? "";
+    /// <summary>Power/toughness or loyalty for quick-detail popup.</summary>
+    public string PTOrLoyaltyText =>
+        Card == null ? "" :
+        !string.IsNullOrEmpty(Card.Power) && !string.IsNullOrEmpty(Card.Toughness) ? $"{Card.Power}/{Card.Toughness}" :
+        !string.IsNullOrEmpty(Card.Loyalty) ? $"Loyalty: {Card.Loyalty}" : "";
+    public string CardUuid => Entity.CardId;
+    /// <summary>e.g. "2 in Main" for quick-detail popup.</summary>
+    public string InDeckSummary => $"{Entity.Quantity} in {Entity.Section}";
 }
 
 /// <summary>
@@ -38,6 +50,9 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
 
     /// <summary>Raised on the main thread after deck data has been reloaded (so the page can force layout/redraw).</summary>
     public event Action? ReloadCompleted;
+
+    /// <summary>Raised when the user requests the quick-detail popup for a deck list card.</summary>
+    public event Action<DeckCardDisplayItem>? RequestShowQuickDetail;
 
     private LastAddedInfo? _lastAdded;
 
@@ -135,6 +150,9 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
 
     [RelayCommand]
     private void SelectStats() => SelectedSectionIndex = 3;
+
+    [RelayCommand]
+    private void ShowCardQuickDetail(DeckCardDisplayItem item) => RequestShowQuickDetail?.Invoke(item);
 
     public void RegisterLastAdded(string cardId, string cardName, string section, int quantity)
     {

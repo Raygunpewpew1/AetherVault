@@ -84,10 +84,11 @@
                                Color="{StaticResource Primary}" />
         </Grid>
 
-        <!-- Card List (hidden when no results so empty state shows) -->
+        <!-- Card List (hidden when no results so empty state shows; non-interactive while search in progress) -->
         <CollectionView Grid.Row="2"
                         ItemsSource="{Binding SearchResults}"
                         IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBoolConverter}}"
+                        InputTransparent="{Binding IsBusy}"
                         SelectionMode="None">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Card">

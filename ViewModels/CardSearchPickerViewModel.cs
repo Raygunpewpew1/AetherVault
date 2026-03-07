@@ -14,6 +14,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
     private readonly CardManager _cardManager;
     private Card[] _allCards = [];
     private CancellationTokenSource? _searchCts;
+    private int _searchGeneration;
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -54,16 +55,27 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
 
     partial void OnSearchCollectionOnlyChanged(bool value)
     {
-        // Don't auto-search if text is empty when toggling collection only
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            _ = ExecuteSearchAsync();
+            // Debounce toggle-triggered search so rapid toggles don't queue multiple searches
+            Task.Delay(150, token).ContinueWith(t =>
+            {
+                if (t.IsCanceled) return;
+                MainThread.BeginInvokeOnMainThread(async () => await ExecuteSearchAsync());
+            }, TaskContinuationOptions.None);
         }
         else
         {
-            SearchResults.Clear();
-            IsEmpty = true;
-            StatusMessage = UserMessages.EnterSearchTerm;
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                SearchResults.Clear();
+                IsEmpty = true;
+                StatusMessage = UserMessages.EnterSearchTerm;
+            });
         }
     }
 
@@ -89,6 +101,11 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
         if (fullCard != null)
         {
             CardSelected?.Invoke(fullCard);
+        }
+        else
+        {
+            StatusIsError = true;
+            StatusMessage = UserMessages.CouldNotLoadCardDetails;
         }
     }
 
@@ -121,6 +138,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
     {
         if (IsBusy) return;
         var query = SearchText?.Trim() ?? "";
+        int myGen = ++_searchGeneration;
 
         IsBusy = true;
         IsEmpty = false;
@@ -131,6 +149,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
         {
             if (string.IsNullOrEmpty(query) && !CurrentOptions.HasActiveFilters)
             {
+                if (myGen != _searchGeneration) return;
                 _allCards = [];
                 SearchResults = new ObservableCollection<Card>(_allCards);
                 IsEmpty = true;
@@ -186,6 +205,8 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     _allCards = await _cardManager.SearchCardsAsync(query, 100);
             }
 
+            if (myGen != _searchGeneration) return;
+
             SearchResults = new ObservableCollection<Card>(_allCards);
             IsEmpty = _allCards.Length == 0;
 
@@ -196,13 +217,17 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
         }
         catch (Exception ex)
         {
-            StatusIsError = true;
-            StatusMessage = UserMessages.SearchFailed(string.Empty);
+            if (myGen == _searchGeneration)
+            {
+                StatusIsError = true;
+                StatusMessage = UserMessages.SearchFailed(string.Empty);
+            }
             Logger.LogStuff($"Search error: {ex.Message}", LogLevel.Error);
         }
         finally
         {
-            IsBusy = false;
+            if (myGen == _searchGeneration)
+                IsBusy = false;
         }
     }
 

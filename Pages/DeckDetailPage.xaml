@@ -181,10 +181,26 @@
                                             Margin="0,6"
                                             Padding="12,10"
                                             MinimumHeightRequest="48">
-                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowCardQuickDetailCommand}"
+                                                                 CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto"
                                               ColumnSpacing="10"
                                               VerticalOptions="Center">
-                                            <Border BackgroundColor="{StaticResource Accent}"
+                                            <Border Grid.Column="0"
+                                                    WidthRequest="40"
+                                                    HeightRequest="56"
+                                                    BackgroundColor="{StaticResource Surface}"
+                                                    StrokeShape="RoundRectangle 4"
+                                                    Stroke="Transparent"
+                                                    VerticalOptions="Center">
+                                                <controls:CachedCardImage CardUuid="{Binding ImageId}"
+                                                                         HorizontalOptions="Fill"
+                                                                         VerticalOptions="Fill" />
+                                            </Border>
+                                            <Border Grid.Column="1"
+                                                    BackgroundColor="{StaticResource Accent}"
                                                     Padding="8,4"
                                                     StrokeShape="RoundRectangle 8"
                                                     Stroke="Transparent"
@@ -196,12 +212,19 @@
                                                        FontAttributes="Bold"
                                                        HorizontalOptions="Center" />
                                             </Border>
-                                            <Label Grid.Column="1"
-                                                   Text="{Binding DisplayName}"
-                                                   TextColor="{StaticResource TextPrimary}"
-                                                   FontSize="15"
-                                                   VerticalOptions="Center" />
-                                            <controls:ManaCostView Grid.Column="2"
+                                            <VerticalStackLayout Grid.Column="2"
+                                                               Spacing="2"
+                                                               VerticalOptions="Center">
+                                                <Label Text="{Binding DisplayName}"
+                                                       TextColor="{StaticResource TextPrimary}"
+                                                       FontSize="15"
+                                                       LineBreakMode="TailTruncation" />
+                                                <Label Text="{Binding CardTypeText}"
+                                                       TextColor="{StaticResource TextSecondary}"
+                                                       FontSize="12"
+                                                       LineBreakMode="TailTruncation" />
+                                            </VerticalStackLayout>
+                                            <controls:ManaCostView Grid.Column="3"
                                                    ManaText="{Binding ManaCostText}"
                                                    SymbolSize="12"
                                                    VerticalOptions="Center" />
@@ -244,10 +267,26 @@
                                     Margin="12,6"
                                     Padding="12,10"
                                     MinimumHeightRequest="52">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowCardQuickDetailCommand}"
+                                                         CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
                                       ColumnSpacing="8"
                                       VerticalOptions="Center">
-                                    <Border BackgroundColor="{StaticResource Surface}"
+                                    <Border Grid.Column="0"
+                                            WidthRequest="40"
+                                            HeightRequest="56"
+                                            BackgroundColor="{StaticResource Surface}"
+                                            StrokeShape="RoundRectangle 4"
+                                            Stroke="Transparent"
+                                            VerticalOptions="Center">
+                                        <controls:CachedCardImage CardUuid="{Binding ImageId}"
+                                                                 HorizontalOptions="Fill"
+                                                                 VerticalOptions="Fill" />
+                                    </Border>
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{StaticResource Surface}"
                                             Padding="8,4"
                                             StrokeShape="RoundRectangle 8"
                                             Stroke="Transparent"
@@ -259,17 +298,23 @@
                                                FontAttributes="Bold"
                                                HorizontalOptions="Center" />
                                     </Border>
-                                    <Label Grid.Column="1"
-                                           Text="{Binding DisplayName}"
-                                           TextColor="{StaticResource TextPrimary}"
-                                           FontSize="15"
-                                           VerticalOptions="Center"
-                                           LineBreakMode="TailTruncation" />
-                                    <controls:ManaCostView Grid.Column="2"
+                                    <VerticalStackLayout Grid.Column="2"
+                                                         Spacing="2"
+                                                         VerticalOptions="Center">
+                                        <Label Text="{Binding DisplayName}"
+                                               TextColor="{StaticResource TextPrimary}"
+                                               FontSize="15"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding CardTypeText}"
+                                               TextColor="{StaticResource TextSecondary}"
+                                               FontSize="12"
+                                               LineBreakMode="TailTruncation" />
+                                    </VerticalStackLayout>
+                                    <controls:ManaCostView Grid.Column="3"
                                            ManaText="{Binding ManaCostText}"
                                            SymbolSize="12"
                                            VerticalOptions="Center" />
-                                    <Button Grid.Column="3"
+                                    <Button Grid.Column="4"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Surface}"
@@ -285,7 +330,7 @@
                                                              Color="{StaticResource TextPrimary}" />
                                         </Button.ImageSource>
                                     </Button>
-                                    <Button Grid.Column="4"
+                                    <Button Grid.Column="5"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Accent}"
@@ -334,10 +379,26 @@
                                     Margin="12,6"
                                     Padding="12,10"
                                     MinimumHeightRequest="52">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowCardQuickDetailCommand}"
+                                                         CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto"
                                       ColumnSpacing="8"
                                       VerticalOptions="Center">
-                                    <Border BackgroundColor="{StaticResource Surface}"
+                                    <Border Grid.Column="0"
+                                            WidthRequest="40"
+                                            HeightRequest="56"
+                                            BackgroundColor="{StaticResource Surface}"
+                                            StrokeShape="RoundRectangle 4"
+                                            Stroke="Transparent"
+                                            VerticalOptions="Center">
+                                        <controls:CachedCardImage CardUuid="{Binding ImageId}"
+                                                                 HorizontalOptions="Fill"
+                                                                 VerticalOptions="Fill" />
+                                    </Border>
+                                    <Border Grid.Column="1"
+                                            BackgroundColor="{StaticResource Surface}"
                                             Padding="8,4"
                                             StrokeShape="RoundRectangle 8"
                                             Stroke="Transparent"
@@ -349,17 +410,23 @@
                                                FontAttributes="Bold"
                                                HorizontalOptions="Center" />
                                     </Border>
-                                    <Label Grid.Column="1"
-                                           Text="{Binding DisplayName}"
-                                           TextColor="{StaticResource TextPrimary}"
-                                           FontSize="15"
-                                           VerticalOptions="Center"
-                                           LineBreakMode="TailTruncation" />
-                                    <controls:ManaCostView Grid.Column="2"
+                                    <VerticalStackLayout Grid.Column="2"
+                                                         Spacing="2"
+                                                         VerticalOptions="Center">
+                                        <Label Text="{Binding DisplayName}"
+                                               TextColor="{StaticResource TextPrimary}"
+                                               FontSize="15"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding CardTypeText}"
+                                               TextColor="{StaticResource TextSecondary}"
+                                               FontSize="12"
+                                               LineBreakMode="TailTruncation" />
+                                    </VerticalStackLayout>
+                                    <controls:ManaCostView Grid.Column="3"
                                            ManaText="{Binding ManaCostText}"
                                            SymbolSize="12"
                                            VerticalOptions="Center" />
-                                    <Button Grid.Column="3"
+                                    <Button Grid.Column="4"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Surface}"
@@ -375,7 +442,7 @@
                                                              Color="{StaticResource TextPrimary}" />
                                         </Button.ImageSource>
                                     </Button>
-                                    <Button Grid.Column="4"
+                                    <Button Grid.Column="5"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Accent}"

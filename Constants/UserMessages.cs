@@ -40,6 +40,9 @@ public static class UserMessages
     public static string CouldNotUpdateQuantity(string? detail = null) =>
         string.IsNullOrEmpty(detail) ? "Could not update quantity." : detail;
 
+    /// <summary>Card details could not be loaded (e.g. when selecting from picker).</summary>
+    public const string CouldNotLoadCardDetails = "Could not load card details. Please try again.";
+
     // ── Loading / progress ────────────────────────────────────────────
 
     public const string CheckingDatabase = "Checking database...";

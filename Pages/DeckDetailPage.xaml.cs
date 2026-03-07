@@ -54,6 +54,13 @@ public partial class DeckDetailPage : ContentPage
         };
     }
 
+    private async void OnRequestShowQuickDetail(DeckCardDisplayItem item)
+    {
+        var quickDetail = _serviceProvider.GetRequiredService<CardQuickDetailPage>();
+        quickDetail.DisplayItem = item;
+        await Navigation.PushModalAsync(quickDetail);
+    }
+
     private async void OnExportDeckClicked(object? sender, EventArgs e)
     {
         if (_viewModel.Deck == null) return;
@@ -143,6 +150,7 @@ public partial class DeckDetailPage : ContentPage
     {
         base.OnAppearing();
         _viewModel.ReloadCompleted += RunDeferredLayoutPass;
+        _viewModel.RequestShowQuickDetail += OnRequestShowQuickDetail;
     }
 
     private async void OnAddCardClicked(object? sender, EventArgs e)
@@ -223,6 +231,7 @@ public partial class DeckDetailPage : ContentPage
     {
         base.OnDisappearing();
         _viewModel.ReloadCompleted -= RunDeferredLayoutPass;
+        _viewModel.RequestShowQuickDetail -= OnRequestShowQuickDetail;
         _commanderArtImage?.Dispose();
         _commanderArtImage = null;
     }
