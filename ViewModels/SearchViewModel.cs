@@ -95,10 +95,14 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         get
         {
+            if (IsFilterStripExpanded)
+                return "Hide filters";
             int count = CurrentOptions.ActiveFilterCount;
             return count > 0 ? $"Filters ({count})" : "Filters";
         }
     }
+
+    partial void OnIsFilterStripExpandedChanged(bool value) => OnPropertyChanged(nameof(FiltersButtonText));
 
     public bool HasNonTextFilters
     {

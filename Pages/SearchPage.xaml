@@ -76,10 +76,10 @@
                         Command="{Binding ToggleViewModeCommand}"
                         BackgroundColor="{StaticResource CardBackground}"
                         HeightRequest="44"
-                        WidthRequest="44"
-                        Padding="0"
-                        FontSize="18"
-                        StyleClass="ElevatedButton" />
+                        Padding="12,0"
+                        FontSize="14"
+                        StyleClass="ElevatedButton"
+                        ToolTipProperties.Text="{Binding ViewModeToolTip}" />
 
                 <!-- Status Bar -->
                 <Label Grid.Row="1"
@@ -154,8 +154,10 @@
                 Margin="8,0,8,4"
                 Style="{StaticResource CardStyle}"
                 IsVisible="{Binding IsFilterStripExpanded}">
-            <ScrollView MaximumHeightRequest="280">
-                <VerticalStackLayout Spacing="12" Padding="4">
+            <Grid>
+                <ScrollView MaximumHeightRequest="260"
+                           VerticalScrollBarVisibility="Default">
+                    <VerticalStackLayout Spacing="16" Padding="4">
                     <!-- Colors -->
                     <VerticalStackLayout Spacing="4">
                         <Label Text="Colors"
@@ -247,6 +249,19 @@
                             Padding="12,8" />
                 </VerticalStackLayout>
             </ScrollView>
+                <!-- Fade at bottom to indicate more content when scrollable -->
+                <BoxView VerticalOptions="End"
+                        HeightRequest="24"
+                        InputTransparent="True"
+                        Margin="0,-24,0,0">
+                    <BoxView.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="Transparent" Offset="0" />
+                            <GradientStop Color="{StaticResource CardBackground}" Offset="1" />
+                        </LinearGradientBrush>
+                    </BoxView.Background>
+                </BoxView>
+            </Grid>
         </Border>
 
         <!-- Card Grid (hidden when no results so empty state shows) -->

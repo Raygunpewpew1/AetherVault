@@ -126,10 +126,10 @@
                             Command="{Binding ToggleViewModeCommand}"
                             BackgroundColor="{StaticResource CardBackground}"
                             HeightRequest="36"
-                            WidthRequest="36"
-                            Padding="0"
-                            FontSize="18"
-                            StyleClass="ElevatedButton" />
+                            Padding="10,0"
+                            FontSize="13"
+                            StyleClass="ElevatedButton"
+                            ToolTipProperties.Text="{Binding ViewModeToolTip}" />
                 </VerticalStackLayout>
             </Grid>
         </Border>

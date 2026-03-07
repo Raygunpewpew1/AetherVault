@@ -42,14 +42,23 @@ public abstract partial class BaseViewModel : ObservableObject
     /// <summary>Grid / List / TextOnly. Used by search/collection to switch how cards are displayed.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ViewModeButtonText))]
+    [NotifyPropertyChangedFor(nameof(ViewModeToolTip))]
     public partial ViewMode ViewMode { get; set; } = ViewMode.Grid;
 
-    /// <summary>Label for the view-mode toggle button (e.g. "☰" for grid).</summary>
+    /// <summary>Label for the view-mode toggle button: current mode so users know what it does.</summary>
     public string ViewModeButtonText => ViewMode switch
     {
-        ViewMode.Grid => "☰",
-        ViewMode.List => "≣",
-        _ => "⊞"
+        ViewMode.Grid => "Grid",
+        ViewMode.List => "List",
+        _ => "Text"
+    };
+
+    /// <summary>Tooltip / accessibility description for the view-mode button (e.g. long-press on Android).</summary>
+    public string ViewModeToolTip => ViewMode switch
+    {
+        ViewMode.Grid => "Switch to list view",
+        ViewMode.List => "Switch to text view",
+        _ => "Switch to grid view"
     };
 
     [RelayCommand]
