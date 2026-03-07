@@ -79,6 +79,8 @@ public static class MTGConstants
 
     /// <summary>URL to download the full deck list catalog (zip containing DeckList.json).</summary>
     public const string MTGJsonDeckListUrl = "https://mtgjson.com/api/v5/DeckList.json.zip";
+    /// <summary>Direct URL to DeckList.json (uncompressed fallback when zip fails).</summary>
+    public const string MTGJsonDeckListJsonUrl = "https://mtgjson.com/api/v5/DeckList.json";
     /// <summary>Base URL for a single deck JSON. Append fileName + ".json" e.g. "Commander_2021_Arcane_Maelstrom_C21.json".</summary>
     public const string MTGJsonDeckBaseUrl = "https://mtgjson.com/api/v5/decks/";
     /// <summary>Local cache filename for the deck list catalog (stored in app data).</summary>

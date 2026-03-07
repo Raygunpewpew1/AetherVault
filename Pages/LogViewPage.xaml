@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:AetherVault.ViewModels"
+             xmlns:services="clr-namespace:AetherVault.Services"
+             xmlns:converters="clr-namespace:AetherVault.Converters"
+             x:Class="AetherVault.Pages.LogViewPage"
+             x:DataType="vm:LogViewViewModel"
+             Title="Log"
+             BackgroundColor="{StaticResource Background}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:LogLevelToColorConverter x:Key="LogLevelToColor" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <HorizontalStackLayout Grid.Row="0" Padding="12,8" Spacing="8" BackgroundColor="{StaticResource Surface}">
+            <Button Text="Clear"
+                    Command="{Binding ClearCommand}"
+                    StyleClass="OutlinedButton"
+                    Padding="12,6" />
+            <Label VerticalOptions="Center"
+                   Text="(last 500 lines, new entries at bottom)"
+                   FontSize="12"
+                   TextColor="{StaticResource TextSecondary}" />
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1"
+                        x:Name="LogList"
+                        ItemsSource="{Binding LogBuffer.Entries}"
+                        SelectionMode="None"
+                        VerticalScrollBarVisibility="Always">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="services:LogEntry">
+                    <Label Text="{Binding Text}"
+                           TextColor="{Binding Level, Converter={StaticResource LogLevelToColor}}"
+                           FontSize="12"
+                           FontFamily="Consolas"
+                           LineBreakMode="TailTruncation"
+                           Padding="12,4"
+                           MaximumHeightRequest="120" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

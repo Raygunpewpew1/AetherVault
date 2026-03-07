@@ -8,7 +8,7 @@ using AetherVault.Pages;
 /// </summary>
 public partial class AppShell : Shell
 {
-    public AppShell(SearchPage searchPage, CollectionPage collectionPage, StatsPage statsPage, DecksPage decksPage)
+    public AppShell(SearchPage searchPage, CollectionPage collectionPage, StatsPage statsPage, DecksPage decksPage, LogViewPage logViewPage)
     {
         InitializeComponent();
 
@@ -17,6 +17,7 @@ public partial class AppShell : Shell
         CollectionTab.Content = collectionPage;
         StatsTab.Content = statsPage;
         DecksTab.Content = decksPage;
+        LogTab.Content = logViewPage;
 
         // Register routes so we can navigate with Shell.Current.GoToAsync("carddetail", new Dictionary<string, object> { ... })
         Routing.RegisterRoute("carddetail", typeof(CardDetailPage));

@@ -36,13 +36,24 @@ public class MTGJsonDeckListService
             try
             {
                 var json = await File.ReadAllTextAsync(_cachePath, ct);
-                var root = JsonSerializer.Deserialize<MtgJsonDeckListRoot>(json, JsonOptions);
-                _cachedList = root?.Data ?? [];
-                return _cachedList;
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    Logger.LogStuff("Cached DeckList empty.", LogLevel.Warning);
+                }
+                else
+                {
+                    var root = JsonSerializer.Deserialize<MtgJsonDeckListRoot>(json, JsonOptions);
+                    _cachedList = root?.Data ?? [];
+                    if (_cachedList.Count > 0)
+                        return _cachedList;
+                    Logger.LogStuff("Cached DeckList had no data entries; will re-download.", LogLevel.Warning);
+                    try { File.Delete(_cachePath); } catch { /* ignore */ }
+                }
             }
             catch (Exception ex)
             {
                 Logger.LogStuff($"Failed to read cached DeckList: {ex.Message}", LogLevel.Warning);
+                try { File.Delete(_cachePath); } catch { /* ignore */ }
             }
         }
 
@@ -51,6 +62,34 @@ public class MTGJsonDeckListService
     }
 
     private async Task DownloadAndCacheDeckListAsync(CancellationToken ct)
+    {
+        // Try zip first, then fall back to raw JSON (more reliable on some networks/devices).
+        var json = await TryDownloadZipAsync(ct);
+        if (string.IsNullOrEmpty(json))
+            json = await TryDownloadJsonAsync(ct);
+
+        if (string.IsNullOrEmpty(json))
+        {
+            _cachedList = [];
+            return;
+        }
+
+        try
+        {
+            var root = JsonSerializer.Deserialize<MtgJsonDeckListRoot>(json, JsonOptions);
+            _cachedList = root?.Data ?? [];
+            if (_cachedList.Count == 0)
+                Logger.LogStuff("DeckList parsed but data array empty.", LogLevel.Warning);
+            await File.WriteAllTextAsync(_cachePath, json, ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"Failed to parse DeckList: {ex.Message}", LogLevel.Error);
+            _cachedList = [];
+        }
+    }
+
+    private async Task<string?> TryDownloadZipAsync(CancellationToken ct)
     {
         try
         {
@@ -61,28 +100,43 @@ public class MTGJsonDeckListService
             await using var zipStream = await response.Content.ReadAsStreamAsync(ct);
             using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
 
-            var entry = archive.GetEntry("DeckList.json") ?? archive.Entries.FirstOrDefault(e =>
+            // Zip may have entry name "DeckList.json" or path "v5/DeckList.json" etc.
+            var entry = archive.Entries.FirstOrDefault(e =>
                 e.Name.Equals("DeckList.json", StringComparison.OrdinalIgnoreCase));
 
             if (entry == null)
             {
-                Logger.LogStuff("DeckList.json not found in zip.", LogLevel.Error);
-                _cachedList = [];
-                return;
+                var names = string.Join(", ", archive.Entries.Take(5).Select(e => e.FullName));
+                if (archive.Entries.Count > 5) names += ", ...";
+                Logger.LogStuff($"DeckList.json not in zip. Entry names: [{names}]", LogLevel.Warning);
+                return null;
             }
 
             await using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);
-            var json = await reader.ReadToEndAsync(ct);
-            var root = JsonSerializer.Deserialize<MtgJsonDeckListRoot>(json, JsonOptions);
-            _cachedList = root?.Data ?? [];
-
-            await File.WriteAllTextAsync(_cachePath, json, ct);
+            return await reader.ReadToEndAsync(ct);
         }
         catch (Exception ex)
         {
-            Logger.LogStuff($"Failed to download DeckList: {ex.Message}", LogLevel.Error);
-            _cachedList = [];
+            Logger.LogStuff($"DeckList zip download failed: {ex.Message}", LogLevel.Warning);
+            return null;
+        }
+    }
+
+    private async Task<string?> TryDownloadJsonAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(60));
+            var json = await client.GetStringAsync(MTGConstants.MTGJsonDeckListJsonUrl, ct);
+            if (!string.IsNullOrWhiteSpace(json))
+                Logger.LogStuff("DeckList loaded via direct JSON URL.", LogLevel.Info);
+            return json;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"DeckList JSON download failed: {ex.Message}", LogLevel.Error);
+            return null;
         }
     }
 
@@ -103,7 +157,9 @@ public class MTGJsonDeckListService
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(30));
             var json = await client.GetStringAsync(url, ct);
-            return JsonSerializer.Deserialize<MtgJsonDeck>(json, JsonOptions);
+            // API returns {"data": { "name", "mainBoard", ... }} — unwrap to get the deck
+            var root = JsonSerializer.Deserialize<MtgJsonDeckRoot>(json, JsonOptions);
+            return root?.Data ?? JsonSerializer.Deserialize<MtgJsonDeck>(json, JsonOptions);
         }
         catch (Exception ex)
         {

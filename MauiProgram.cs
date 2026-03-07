@@ -93,6 +93,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<CardGalleryContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
+        builder.Services.AddSingleton<ILogBufferService, LogBufferService>();
 
         // ── ViewModels (singleton = shared state e.g. search; transient = new instance per navigation) ──
         builder.Services.AddSingleton<SearchViewModel>();
@@ -105,6 +106,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CardSearchPickerViewModel>();
         builder.Services.AddTransient<SearchFiltersViewModel>();
         builder.Services.AddTransient<MTGJsonDecksViewModel>();
+        builder.Services.AddSingleton<LogViewViewModel>();
         builder.Services.AddSingleton<ISearchFilterTarget>(sp => sp.GetRequiredService<SearchViewModel>());
         builder.Services.AddSingleton<Services.ISearchFiltersOpener, Services.SearchFiltersOpenerService>();
 
@@ -124,6 +126,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CardQuickDetailPage>();
         builder.Services.AddTransient<CollectionAddPage>();
         builder.Services.AddTransient<MTGJsonDecksPage>();
+        builder.Services.AddSingleton<LogViewPage>();
 
         return builder.Build();
     }

@@ -1,0 +1,27 @@
+using AetherVault.Services;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AetherVault.ViewModels;
+
+/// <summary>
+/// ViewModel for the in-app debug log viewer tab.
+/// </summary>
+public partial class LogViewViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private bool _autoScroll = true;
+
+    public ILogBufferService LogBuffer { get; }
+
+    public LogViewViewModel(ILogBufferService logBuffer)
+    {
+        LogBuffer = logBuffer;
+    }
+
+    [RelayCommand]
+    private void Clear()
+    {
+        LogBuffer.Clear();
+    }
+}

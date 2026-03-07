@@ -230,6 +230,11 @@ public static class SQLQueries
 
     public const string WhereUuidEquals = " WHERE c.uuid = @uuid";
 
+    /// <summary>Find one card/token by name and set (for MTGJSON deck import fallback).</summary>
+    public const string WhereNameAndSet = " WHERE c.name = @name AND c.setCode = @set LIMIT 1";
+    /// <summary>Find one card/token by Scryfall ID (for MTGJSON deck import fallback).</summary>
+    public const string WhereScryfallId = " WHERE c.scryfallId = @sid LIMIT 1";
+
     public const string SelectScryfallId =
         "SELECT scryfallId FROM cardIdentifiers WHERE uuid = @uuid";
 

@@ -35,6 +35,12 @@ public static class Logger
     private static readonly string[] LevelNames = ["DEBUG", "INFO", "WARNING", "ERROR"];
 
     /// <summary>
+    /// Fired for each log entry (after formatting). Subscribers receive (formattedLine, level).
+    /// Used by in-app log viewer; invoke on main thread if updating UI.
+    /// </summary>
+    public static event Action<string, LogLevel>? LogEmitted;
+
+    /// <summary>
     /// Primary logging entry point.
     /// </summary>
     public static void LogStuff(string message, LogLevel level = LogLevel.Info)
@@ -46,6 +52,7 @@ public static class Logger
         var entry = $"[{timestamp}] [{LevelNames[(int)level]}] [Thread {threadId:D5}] {message}";
 
         _queue.Enqueue(entry);
+        try { LogEmitted?.Invoke(entry, level); } catch { /* viewer must not crash logging */ }
     }
 
     private static void EnsureInitialized()

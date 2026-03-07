@@ -68,6 +68,36 @@ public class CardRepository : ICardRepository
             });
     }
 
+    public async Task<Card?> GetCardByNameAndSetAsync(string name, string setCode)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(setCode))
+            return null;
+        var card = await WithMTGReaderAsync(
+            SQLQueries.BaseCardsAndTokens + SQLQueries.WhereNameAndSet,
+            new { name = name.Trim(), set = setCode.Trim() },
+            async reader =>
+            {
+                var o = new CardMapper.CardOrdinals(reader);
+                return await reader.ReadAsync() ? CardMapper.MapCard(reader, o) : null;
+            });
+        return card?.UUID != null ? card : null;
+    }
+
+    public async Task<Card?> GetCardByScryfallIdAsync(string scryfallId)
+    {
+        if (string.IsNullOrWhiteSpace(scryfallId))
+            return null;
+        var card = await WithMTGReaderAsync(
+            SQLQueries.BaseCardsAndTokens + SQLQueries.WhereScryfallId,
+            new { sid = scryfallId.Trim() },
+            async reader =>
+            {
+                var o = new CardMapper.CardOrdinals(reader);
+                return await reader.ReadAsync() ? CardMapper.MapCard(reader, o) : null;
+            });
+        return card?.UUID != null ? card : null;
+    }
+
     public async Task<string> GetScryfallIdAsync(string cardUUID)
     {
         await _lock.WaitAsync();

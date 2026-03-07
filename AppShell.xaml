@@ -57,6 +57,18 @@
                                  Color="{StaticResource TextPrimary}" />
             </ShellContent.Icon>
         </ShellContent>
+
+        <ShellContent
+            x:Name="LogTab"
+            Title="Log"
+            ContentTemplate="{DataTemplate pages:LogViewPage}">
+            <ShellContent.Icon>
+                <FontImageSource FontFamily="FASolid"
+                                 Glyph="{x:Static fa:Solid.List}"
+                                 Size="20"
+                                 Color="{StaticResource TextPrimary}" />
+            </ShellContent.Icon>
+        </ShellContent>
     </TabBar>
 
     <Shell.FlyoutBehavior>Disabled</Shell.FlyoutBehavior>

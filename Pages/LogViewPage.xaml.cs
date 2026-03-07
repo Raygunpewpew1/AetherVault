@@ -1,0 +1,31 @@
+using System.Collections.Specialized;
+using AetherVault.ViewModels;
+
+namespace AetherVault.Pages;
+
+public partial class LogViewPage : ContentPage
+{
+    private readonly LogViewViewModel _vm;
+
+    public LogViewPage(LogViewViewModel vm)
+    {
+        InitializeComponent();
+        BindingContext = _vm = vm;
+        _vm.LogBuffer.Entries.CollectionChanged += OnEntriesChanged;
+    }
+
+    private void OnEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Add && _vm.AutoScroll && _vm.LogBuffer.Entries.Count > 0)
+            MainThread.BeginInvokeOnMainThread(() =>
+                LogList.ScrollTo(_vm.LogBuffer.Entries.Count - 1, position: ScrollToPosition.End, animate: false));
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        if (_vm.LogBuffer.Entries.Count > 0)
+            LogList.ScrollTo(_vm.LogBuffer.Entries.Count - 1, position: ScrollToPosition.End, animate: false);
+    }
+
+}

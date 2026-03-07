@@ -33,8 +33,17 @@ public class MtgJsonDeckListRoot
 }
 
 /// <summary>
+/// Optional identifiers on a deck card (for fallback lookup when uuid is missing in local DB).
+/// </summary>
+public class MtgJsonIdentifiers
+{
+    [JsonPropertyName("scryfallId")]
+    public string? ScryfallId { get; set; }
+}
+
+/// <summary>
 /// A single card entry in an MTGJSON deck (mainBoard, sideBoard, or commander).
-/// We only need uuid and count for import.
+/// uuid and count are required; name, setCode, identifiers used for fallback resolution.
 /// </summary>
 public class MtgJsonDeckCard
 {
@@ -43,6 +52,24 @@ public class MtgJsonDeckCard
 
     [JsonPropertyName("count")]
     public int Count { get; set; } = 1;
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("setCode")]
+    public string? SetCode { get; set; }
+
+    [JsonPropertyName("identifiers")]
+    public MtgJsonIdentifiers? Identifiers { get; set; }
+}
+
+/// <summary>
+/// Root of a single-deck API response: deck object is under "data".
+/// </summary>
+public class MtgJsonDeckRoot
+{
+    [JsonPropertyName("data")]
+    public MtgJsonDeck? Data { get; set; }
 }
 
 /// <summary>

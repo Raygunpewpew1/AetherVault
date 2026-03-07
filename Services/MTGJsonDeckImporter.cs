@@ -58,30 +58,66 @@ public class MTGJsonDeckImporter
                 allCards.Add(("Commander", c));
         }
 
-        var uuids = allCards.Select(x => x.Card.Uuid).Distinct().ToArray();
+        var uuids = allCards.Select(x => x.Card.Uuid).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().ToArray();
         progress?.Report($"Resolving {uuids.Length} cards...");
         var cardMap = await _cardRepo.GetCardsByUUIDsAsync(uuids);
         var missing = uuids.Where(u => !cardMap.ContainsKey(u)).ToList();
         result.MissingUuids = missing;
 
+        // Fallback cache: resolve missing cards by name+set or ScryfallId (avoids repeated DB calls).
+        var fallbackCache = new Dictionary<string, Card?>(StringComparer.OrdinalIgnoreCase);
+
+        async Task<Card?> ResolveCardAsync(MtgJsonDeckCard mtgCard)
+        {
+            if (cardMap.TryGetValue(mtgCard.Uuid, out var byUuid))
+                return byUuid;
+            if (!string.IsNullOrWhiteSpace(mtgCard.Name) && !string.IsNullOrWhiteSpace(mtgCard.SetCode))
+            {
+                var key = "n:" + mtgCard.Name + "|s:" + mtgCard.SetCode;
+                if (!fallbackCache.TryGetValue(key, out var byName))
+                {
+                    byName = await _cardRepo.GetCardByNameAndSetAsync(mtgCard.Name, mtgCard.SetCode);
+                    fallbackCache[key] = byName;
+                }
+                if (byName != null)
+                    return byName;
+            }
+            var scryfallId = mtgCard.Identifiers?.ScryfallId;
+            if (!string.IsNullOrWhiteSpace(scryfallId))
+            {
+                var key = "sf:" + scryfallId;
+                if (!fallbackCache.TryGetValue(key, out var byScryfall))
+                {
+                    byScryfall = await _cardRepo.GetCardByScryfallIdAsync(scryfallId!);
+                    fallbackCache[key] = byScryfall;
+                }
+                if (byScryfall != null)
+                    return byScryfall;
+            }
+            return null;
+        }
+
         var commanderCards = deck.Commander ?? [];
-        var firstCommanderUuid = commanderCards.Count > 0 ? commanderCards[0].Uuid : null;
-        if (!string.IsNullOrEmpty(firstCommanderUuid) && cardMap.ContainsKey(firstCommanderUuid))
+        Card? firstCommanderCard = null;
+        if (commanderCards.Count > 0)
+            firstCommanderCard = await ResolveCardAsync(commanderCards[0]);
+        if (firstCommanderCard != null && !string.IsNullOrEmpty(firstCommanderCard.UUID))
         {
             progress?.Report("Setting commander...");
-            await _deckService.SetCommanderAsync(deckId, firstCommanderUuid);
+            await _deckService.SetCommanderAsync(deckId, firstCommanderCard.UUID);
             result.CardsAdded += 1;
         }
 
         foreach (var (section, mtgCard) in allCards)
         {
             ct.ThrowIfCancellationRequested();
-            if (!cardMap.ContainsKey(mtgCard.Uuid))
+            var card = await ResolveCardAsync(mtgCard);
+            if (card == null || string.IsNullOrEmpty(card.UUID))
                 continue;
-            if (section == "Commander" && mtgCard.Uuid == firstCommanderUuid)
+            if (section == "Commander" && firstCommanderCard != null && card.UUID == firstCommanderCard.UUID)
                 continue; // already added by SetCommanderAsync
 
-            var addResult = await _deckService.AddCardAsync(deckId, mtgCard.Uuid, mtgCard.Count, section);
+            var addResult = await _deckService.AddCardAsync(deckId, card.UUID, mtgCard.Count, section);
             if (!addResult.IsError)
                 result.CardsAdded += mtgCard.Count;
         }

@@ -14,6 +14,8 @@ public interface ICardRepository
     Task<Card> GetCardWithLegalitiesAsync(string uuid);
     Task<Card> GetCardWithRulingsAsync(string uuid);
     Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode);
+    Task<Card?> GetCardByNameAndSetAsync(string name, string setCode);
+    Task<Card?> GetCardByScryfallIdAsync(string scryfallId);
 
     Task<string> GetScryfallIdAsync(string cardUUID);
     Task<CardRuling[]> GetCardRulingsAsync(string uuid);

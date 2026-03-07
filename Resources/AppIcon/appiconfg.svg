@@ -1,29 +1,78 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect 
-    x="48" 
-    y="48" 
-    width="416" 
-    height="416" 
-    rx="100" 
-    fill="#1b1a29" 
-    stroke="#00dfbd" 
-    stroke-width="20" 
-  />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background gradient: dark navy/charcoal -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1f2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:1" />
+    </linearGradient>
 
-  <path 
-    d="M 170 360 
-       L 235 140 
-       L 277 140 
-       L 342 360 
-       L 298 360 
-       L 279 295 
-       L 233 295 
-       L 214 360 
-       Z 
-       M 256 218 
-       L 242 265 
-       L 270 265 
-       Z" 
-    fill="#00dfbd" 
-  />
+    <!-- Outer glow filter for the border -->
+    <filter id="outerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feFlood flood-color="#00e5cc" flood-opacity="0.8" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Letter A glow filter -->
+    <filter id="letterGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="blur1"/>
+      <feGaussianBlur stdDeviation="6" result="blur2"/>
+      <feFlood flood-color="#00e5cc" flood-opacity="0.9" result="color1"/>
+      <feFlood flood-color="#00fff0" flood-opacity="0.6" result="color2"/>
+      <feComposite in="color1" in2="blur1" operator="in" result="glow1"/>
+      <feComposite in="color2" in2="blur2" operator="in" result="glow2"/>
+      <feMerge>
+        <feMergeNode in="glow1"/>
+        <feMergeNode in="glow2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Rounded rect clip -->
+    <clipPath id="roundedClip">
+      <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="url(#bgGrad)"/>
+
+  <!-- Subtle inner radial highlight -->
+  <radialGradient id="innerHighlight" cx="50%" cy="40%" r="55%">
+    <stop offset="0%" style="stop-color:#1e2a3a;stop-opacity:1"/>
+    <stop offset="100%" style="stop-color:#0d1117;stop-opacity:0"/>
+  </radialGradient>
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="url(#innerHighlight)" clip-path="url(#roundedClip)"/>
+
+  <!-- Neon border glow (outer layer, blurred) -->
+  <rect x="18" y="18" width="988" height="988" rx="210" ry="210"
+        fill="none"
+        stroke="#00e5cc"
+        stroke-width="6"
+        opacity="0.25"
+        filter="url(#outerGlow)"/>
+
+  <!-- Neon border (crisp) -->
+  <rect x="22" y="22" width="980" height="980" rx="207" ry="207"
+        fill="none"
+        stroke="#00e5cc"
+        stroke-width="5"
+        opacity="0.95"/>
+
+  <!-- Letter A — neon teal with glow -->
+  <text
+    x="512"
+    y="680"
+    text-anchor="middle"
+    font-family="'Arial Black', 'Impact', sans-serif"
+    font-weight="900"
+    font-size="580"
+    fill="#00e5cc"
+    filter="url(#letterGlow)"
+    letter-spacing="-10"
+  >A</text>
 </svg>
