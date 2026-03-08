@@ -106,15 +106,6 @@ public static class MTGConstants
     // Without trimming, the table grows ~170 MB/month. 90 days ≈ 500 MB ceiling.
     public const int PriceHistoryRetentionDays = 90;
 
-    // ── Experimental / hidden settings (Preferences) ────────────────────────
-
-    /// <summary>
-    /// Preference key to enable GPU-accelerated rendering for the card grid (default false).
-    /// Experimental: on some devices (e.g. Mali GPU) can cause missing content or crashes.
-    /// Set via Preferences.Default.Set(CardGridUseGpuRenderKey, true) to opt in.
-    /// </summary>
-    public const string CardGridUseGpuRenderKey = "CardGridUseGpuRender";
-
     // ── Legality Display Strings ────────────────────────────────────
 
     public static readonly string[] LegalityDisplay = ["Legal", "Banned", "Restricted", "Not Legal"];

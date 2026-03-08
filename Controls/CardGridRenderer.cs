@@ -13,7 +13,7 @@ namespace AetherVault.Controls;
 /// </summary>
 internal sealed class CardGridRenderer : IDisposable
 {
-    private readonly Action _invalidateSurface;
+    private readonly SKCanvasView _canvas;
     private readonly Func<string, SKImage?> _getImage;
 
     // Shimmer animation
@@ -50,11 +50,11 @@ internal sealed class CardGridRenderer : IDisposable
     private const float ListImgWidth = 55f;
     private const float ListImgHeight = ListImgWidth * 1.3968f; // ≈ 76.8px
 
-    /// <param name="invalidateSurface">Called to request a repaint (works with both SKCanvasView and SKGLView).</param>
+    /// <param name="canvas">Canvas to invalidate after sizing changes.</param>
     /// <param name="getImage">Returns a cached SKImage for the given cache key, or null.</param>
-    public CardGridRenderer(Action invalidateSurface, Func<string, SKImage?> getImage)
+    public CardGridRenderer(SKCanvasView canvas, Func<string, SKImage?> getImage)
     {
-        _invalidateSurface = invalidateSurface;
+        _canvas = canvas;
         _getImage = getImage;
         _lastFrameTime = _animationStopwatch.ElapsedMilliseconds;
     }
@@ -102,7 +102,7 @@ internal sealed class CardGridRenderer : IDisposable
         _badgeFont = new SKFont(SKTypeface.FromFamilyName("sans-serif", SKFontStyle.Bold), isLargeScreen ? 13f : 11f);
         _secondaryTextFont = new SKFont(SKTypeface.FromFamilyName("sans-serif", SKFontStyle.Normal), isLargeScreen ? 13f : 11f);
 
-        _invalidateSurface();
+        _canvas.InvalidateSurface();
     }
 
     public void Dispose()
@@ -131,13 +131,9 @@ internal sealed class CardGridRenderer : IDisposable
 
     public void Paint(SKPaintSurfaceEventArgs e, RenderList list, float scrollY, float viewWidth, DragState? dragState = null)
     {
-        Paint(e.Surface.Canvas, e.Info.Width, e.Info.Height, list, scrollY, viewWidth, dragState);
-    }
-
-    /// <summary>Shared paint implementation for both software (SKCanvasView) and GPU (SKGLView) backends.</summary>
-    public void Paint(SKCanvas canvas, int width, int height, RenderList list, float scrollY, float viewWidth, DragState? dragState = null)
-    {
-        if (width <= 0 || height <= 0)
+        var canvas = e.Surface.Canvas;
+        var info = e.Info;
+        if (info.Width <= 0 || info.Height <= 0)
         {
             canvas.Clear(ThemeBackground);
             return;
@@ -163,7 +159,7 @@ internal sealed class CardGridRenderer : IDisposable
             canvas.Clear(new SKColor(18, 18, 18));
             if (_bgPaint == null) EnsureResources();
 
-            float scale = width / (viewWidth > 0 ? viewWidth : 360f);
+            float scale = info.Width / (viewWidth > 0 ? viewWidth : 360f);
             canvas.Scale(scale);
             canvas.Translate(0, -scrollY);
 

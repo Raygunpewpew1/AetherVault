@@ -10,8 +10,7 @@ namespace AetherVault.Controls;
 
 public class CardGrid : ContentView
 {
-    private readonly View _surfaceView;
-    private readonly Action _invalidateSurface;
+    private readonly SKCanvasView _canvas;
     private readonly ScrollView _scrollView;
     private readonly GestureSpacerView _spacer;
     private readonly Channel<GridState> _stateChannel;
@@ -100,37 +99,15 @@ public class CardGrid : ContentView
             FullMode = BoundedChannelFullMode.DropOldest
         });
 
-        // Experimental: GPU backend can cause missing content or crashes on some devices (e.g. Mali).
-        bool useGpu = Preferences.Default.Get(MTGConstants.CardGridUseGpuRenderKey, false);
-
-        if (useGpu)
+        _canvas = new SKCanvasView
         {
-            var glView = new SKGLView
-            {
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
-                IgnorePixelScaling = true,
-                EnableTouchEvents = false,
-                InputTransparent = true
-            };
-            glView.PaintSurface += OnPaintSurfaceGL;
-            _surfaceView = glView;
-            _invalidateSurface = () => glView.InvalidateSurface();
-        }
-        else
-        {
-            var canvasView = new SKCanvasView
-            {
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
-                IgnorePixelScaling = true,
-                EnableTouchEvents = false,
-                InputTransparent = true
-            };
-            canvasView.PaintSurface += OnPaintSurface;
-            _surfaceView = canvasView;
-            _invalidateSurface = () => canvasView.InvalidateSurface();
-        }
+            HorizontalOptions = LayoutOptions.Fill,
+            VerticalOptions = LayoutOptions.Fill,
+            IgnorePixelScaling = true,
+            EnableTouchEvents = false,
+            InputTransparent = true
+        };
+        _canvas.PaintSurface += OnPaintSurface;
 
         // _gestures must be created before _spacer because GestureSpacerView
         // takes the handler as a constructor argument and wires scroll callbacks.
@@ -147,11 +124,11 @@ public class CardGrid : ContentView
         _scrollView.Scrolled += OnScrolled;
 
         var grid = new Grid();
-        grid.Add(_surfaceView);
+        grid.Add(_canvas);
         grid.Add(_scrollView);
         Content = grid;
 
-        _renderer = new CardGridRenderer(_invalidateSurface, cacheKey => _imageCache?.GetMemoryImage(cacheKey));
+        _renderer = new CardGridRenderer(_canvas, cacheKey => _imageCache?.GetMemoryImage(cacheKey));
         _gestures.Tapped += id => CardClicked?.Invoke(id);
         _gestures.LongPressed += id => CardLongPressed?.Invoke(id);
         _gestures.DragStarted += OnDragStarted;
@@ -183,7 +160,7 @@ public class CardGrid : ContentView
         }
 
         _renderer.EnsureResources();
-        MainThread.BeginInvokeOnMainThread(_invalidateSurface);
+        MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
 
 #if ANDROID
         // Subscribe here rather than in the constructor so we only listen while
@@ -314,7 +291,7 @@ public class CardGrid : ContentView
         });
     }
 
-    public void ForceRedraw() => _invalidateSurface();
+    public void ForceRedraw() => _canvas.InvalidateSurface();
 
     public void OnSleep() { }
 
@@ -344,7 +321,7 @@ public class CardGrid : ContentView
                     await _imageCache.GetImageAsync(cacheKey);
             }
 
-            MainThread.BeginInvokeOnMainThread(_invalidateSurface);
+            MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
         });
     }
 
@@ -386,7 +363,7 @@ public class CardGrid : ContentView
                     bool throttleElapsed = (now - _lastInvalidateTickCount) >= InvalidateThrottleMs;
                     if (mustDraw || throttleElapsed)
                     {
-                        _invalidateSurface();
+                        _canvas.InvalidateSurface();
                         _lastInvalidateTickCount = now;
                     }
 
@@ -435,7 +412,7 @@ public class CardGrid : ContentView
                 }
 
                 if (img != null)
-                    MainThread.BeginInvokeOnMainThread(_invalidateSurface);
+                    MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
             }
             finally
             {
@@ -495,7 +472,7 @@ public class CardGrid : ContentView
         // Always request next frame when dragging so drag stays smooth
         if (_dragState != null)
         {
-            _invalidateSurface();
+            _canvas.InvalidateSurface();
             return;
         }
 
@@ -508,34 +485,7 @@ public class CardGrid : ContentView
             if ((now - _lastShimmerInvalidateTickCount) >= ShimmerThrottleMs)
             {
                 _lastShimmerInvalidateTickCount = now;
-                _invalidateSurface();
-            }
-        }
-    }
-
-    private void OnPaintSurfaceGL(object? sender, SkiaSharp.Views.Maui.SKPaintGLSurfaceEventArgs e)
-    {
-        int w = e.BackendRenderTarget.Width;
-        int h = e.BackendRenderTarget.Height;
-        _renderer.Paint(e.Surface.Canvas, w, h, _currentRenderList, _lastState.Viewport.ScrollY, (float)(Width > 0 ? Width : 360), _dragState);
-
-        if (!_isLoaded) return;
-
-        if (_dragState != null)
-        {
-            _invalidateSurface();
-            return;
-        }
-
-        bool hasLoading;
-        lock (_loadingLock) { hasLoading = _loadingImages.Count > 0; }
-        if (hasLoading)
-        {
-            long now = Environment.TickCount64;
-            if ((now - _lastShimmerInvalidateTickCount) >= ShimmerThrottleMs)
-            {
-                _lastShimmerInvalidateTickCount = now;
-                _invalidateSurface();
+                _canvas.InvalidateSurface();
             }
         }
     }
@@ -562,7 +512,7 @@ public class CardGrid : ContentView
 
         var draggedCard = _lastState.Cards[sourceIndex];
         _dragState = new DragState(sourceIndex, sourceIndex, 0, 0, draggedCard);
-        _invalidateSurface();
+        _canvas.InvalidateSurface();
     }
 
     private void OnDragMoved(float canvasX, float canvasY)
@@ -571,7 +521,7 @@ public class CardGrid : ContentView
 
         int targetIndex = CalculateDragTargetIndex(canvasX, canvasY);
         _dragState = _dragState with { CanvasX = canvasX, CanvasY = canvasY, TargetIndex = targetIndex };
-        _invalidateSurface();
+        _canvas.InvalidateSurface();
     }
 
     private void OnDragEnded()
@@ -588,13 +538,13 @@ public class CardGrid : ContentView
             CardReorderRequested?.Invoke(from, to);
         }
 
-        _invalidateSurface();
+        _canvas.InvalidateSurface();
     }
 
     private void OnDragCancelled()
     {
         _dragState = null;
-        _invalidateSurface();
+        _canvas.InvalidateSurface();
     }
 
     private int CalculateDragTargetIndex(float canvasX, float canvasY)
