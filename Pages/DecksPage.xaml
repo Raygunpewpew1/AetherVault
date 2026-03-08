@@ -88,7 +88,7 @@
                         BorderWidth="0" />
             </Grid>
             <Button Clicked="OnBrowseMTGJsonClicked"
-                    Text="Browse Sample Decks"
+                    Text="Browse Decks"
                     BackgroundColor="{StaticResource Surface}"
                     TextColor="{StaticResource TextPrimary}"
                     FontSize="14"

@@ -19,11 +19,17 @@
     <Grid RowDefinitions="Auto,Auto,*">
         <!-- Toolbar: Refresh -->
         <Grid Grid.Row="0" Padding="16,12" ColumnDefinitions="*,Auto">
-            <Label Text="Sample decks provided by MTGJSON"
-                   FontSize="18"
-                   FontAttributes="Bold"
-                   TextColor="{StaticResource TextPrimary}"
-                   VerticalOptions="Center" />
+            <HorizontalStackLayout Grid.Column="0" Spacing="10" VerticalOptions="Center">
+                <Image Source="logo_mtgjson"
+                       WidthRequest="32"
+                       HeightRequest="22"
+                       Aspect="AspectFit" />
+                <Label Text="Decks provided by MTGJSON"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextPrimary}"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
             <Button Grid.Column="1"
                     Command="{Binding RefreshCommand}"
                     Text="Refresh"
@@ -31,7 +37,14 @@
                     TextColor="{StaticResource TextPrimary}"
                     FontSize="14"
                     Padding="16,8"
-                    VerticalOptions="Center" />
+                    VerticalOptions="Center">
+                <Button.ImageSource>
+                    <FontImageSource FontFamily="FASolid"
+                                     Glyph="{x:Static fa:Solid.ArrowsRotate}"
+                                     Size="14"
+                                     Color="{StaticResource TextPrimary}" />
+                </Button.ImageSource>
+            </Button>
         </Grid>
 
         <!-- Type filter + Search + Status -->
