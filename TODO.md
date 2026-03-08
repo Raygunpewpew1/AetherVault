@@ -10,5 +10,5 @@
 
 ## Features
 - [ ] **Deck Building**
-    - **Status**: Untouched.
+    - **Status**: In progress.
     - **Description**: Implement functionality to build and manage decks.

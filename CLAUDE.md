@@ -25,7 +25,7 @@ AetherVault/
 ├── GlobalUsings.cs                  # Global using directives
 │
 ├── Models/
-│   ├── Card.cs                      # Core MTG card model (106+ properties; ~10,330 lines)
+│   ├── Card.cs                      # Core MTG card model (~70+ properties; ~227 lines)
 │   ├── CollectionItem.cs            # Represents a card in a user's collection
 │   ├── DeckEntity.cs                # Database entity for a deck (name, format, dates, commander)
 │   ├── DeckCardEntity.cs            # Database entity for a card in a deck (quantity, section)
@@ -360,7 +360,7 @@ The app downloads this artifact from `MTGConstants.MTGDatabaseUrl` on first laun
 - The MTG master database is **read-only**. Never attempt write operations on it.
 - `CardPriceManager`, `CardPriceImporter`, and `CardPriceDatabase` handle pricing — verify wiring before relying on price data, as this subsystem may not be fully integrated in all flows.
 - `Plugin.Maui.OCR` is Android-only; any OCR code path must be guarded with `#if ANDROID` or runtime platform checks.
-- The `Card` model (`Card.cs`) is very large (~10,330 lines). Use `CardMapper.cs` to map new database columns rather than modifying raw read logic scattered across the class.
+- The `Card` model (`Card.cs`) has many properties; use `CardMapper.cs` to map new database columns rather than scattering read logic across the class.
 - Image caching relies on `FileImageCache`. If cache behavior seems wrong, check there.
 - Pages are located in `Pages/` at the project root, not `Views/Pages/`.
 - `SvgCacheEngine` is the internal shared base for `ManaSvgCache` and `SetSvgCache`; do not duplicate SVG loading logic outside of it.

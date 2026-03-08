@@ -1,6 +1,7 @@
 using AetherVault.Core;
 using AetherVault.Data;
 using AetherVault.Models;
+using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,11 +43,14 @@ public class DeckCardGroup(string name, IEnumerable<DeckCardDisplayItem> items)
     public string GroupName { get; } = name;
 }
 
-public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRepository cardRepository) : BaseViewModel
+public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRepository cardRepository, CardManager cardManager) : BaseViewModel
 {
     private readonly DeckBuilderService _deckService = deckService;
     private readonly ICardRepository _cardRepository = cardRepository;
+    private readonly CardManager _cardManager = cardManager;
     private int _deckId;
+    private CancellationTokenSource? _addCardSearchCts;
+    private int _addCardSearchGeneration;
 
     /// <summary>Raised on the main thread after deck data has been reloaded (so the page can force layout/redraw).</summary>
     public event Action? ReloadCompleted;
@@ -88,7 +92,11 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
     [NotifyPropertyChangedFor(nameof(Tab1Indicator))]
     [NotifyPropertyChangedFor(nameof(Tab2Indicator))]
     [NotifyPropertyChangedFor(nameof(Tab3Indicator))]
+    [NotifyPropertyChangedFor(nameof(IsAddCardSearchVisible))]
     public partial int SelectedSectionIndex { get; set; } = 1; // Default to Main tab
+
+    /// <summary>True when the inline "add card" search bar and results are shown (Commander, Main, Sideboard tabs).</summary>
+    public bool IsAddCardSearchVisible => SelectedSectionIndex is 0 or 1 or 2;
 
     public bool IsCommanderTab => SelectedSectionIndex == 0;
     public bool IsMainTab => SelectedSectionIndex == 1;
@@ -131,6 +139,17 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
     [ObservableProperty]
     public partial bool HasLastAdded { get; set; }
 
+    // ── Inline add-card search (visible on Commander, Main, Sideboard tabs) ──
+
+    [ObservableProperty]
+    public partial string AddCardSearchText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial ObservableCollection<Card> AddCardSearchResults { get; set; } = [];
+
+    [ObservableProperty]
+    public partial bool IsAddCardSearchBusy { get; set; }
+
     private IAsyncRelayCommand? _undoLastAddedCommand;
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
     public IAsyncRelayCommand UndoLastAddedCommand => _undoLastAddedCommand ??= new AsyncRelayCommand(UndoLastAddedAsync);
@@ -153,6 +172,93 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
 
     [RelayCommand]
     private void ShowCardQuickDetail(DeckCardDisplayItem item) => RequestShowQuickDetail?.Invoke(item);
+
+    partial void OnAddCardSearchTextChanged(string value)
+    {
+        _addCardSearchCts?.Cancel();
+        _addCardSearchCts = new CancellationTokenSource();
+        var token = _addCardSearchCts.Token;
+        Task.Delay(750, token).ContinueWith(t =>
+        {
+            if (!t.IsCanceled)
+                MainThread.BeginInvokeOnMainThread(() => _ = ExecuteAddCardSearchAsync());
+        }, TaskContinuationOptions.None);
+    }
+
+    private IAsyncRelayCommand? _addCardSearchCommand;
+    /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
+    public IAsyncRelayCommand AddCardSearchCommand => _addCardSearchCommand ??= new AsyncRelayCommand(ExecuteAddCardSearchAsync);
+
+    private async Task ExecuteAddCardSearchAsync()
+    {
+        var query = (AddCardSearchText ?? "").Trim();
+        int myGen = ++_addCardSearchGeneration;
+
+        IsAddCardSearchBusy = true;
+        try
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (myGen != _addCardSearchGeneration) return;
+                    AddCardSearchResults = [];
+                });
+                return;
+            }
+
+            var cards = await _cardManager.SearchCardsAsync(query, 50);
+            if (myGen != _addCardSearchGeneration) return;
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                AddCardSearchResults = new ObservableCollection<Card>(cards);
+            });
+        }
+        finally
+        {
+            if (myGen == _addCardSearchGeneration)
+                MainThread.BeginInvokeOnMainThread(() => IsAddCardSearchBusy = false);
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddCardFromSearchAsync(Card? card)
+    {
+        if (card == null || Deck == null) return;
+
+        if (SelectedSectionIndex == 0) // Commander
+        {
+            var result = await _deckService.SetCommanderAsync(Deck.Id, card.UUID);
+            if (result.IsError)
+            {
+                StatusIsError = true;
+                StatusMessage = result.Message ?? UserMessages.CouldNotSetCommander();
+            }
+            else
+            {
+                StatusIsError = false;
+                StatusMessage = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : $"{card.Name} set as commander.";
+                await ReloadAsync(preserveState: true);
+            }
+            return;
+        }
+
+        string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
+        var addResult = await _deckService.AddCardAsync(Deck.Id, card.UUID, 1, section);
+        if (addResult.IsError)
+        {
+            StatusIsError = true;
+            StatusMessage = addResult.Message ?? UserMessages.CouldNotAddCardToDeck();
+        }
+        else
+        {
+            StatusIsError = false;
+            StatusMessage = UserMessages.CardsAddedToSection(1, card.Name, section);
+            RegisterLastAdded(card.UUID, card.Name, section, 1);
+            await ReloadAsync(preserveState: true);
+        }
+    }
 
     public void RegisterLastAdded(string cardId, string cardName, string section, int quantity)
     {

@@ -4,6 +4,8 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
              xmlns:controls="clr-namespace:AetherVault.Controls"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:pages="clr-namespace:AetherVault.Pages"
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
@@ -17,7 +19,7 @@
                      Clicked="OnExportDeckClicked" />
     </ContentPage.ToolbarItems>
 
-    <Grid x:Name="DeckDetailRoot" RowDefinitions="Auto,100,Auto,*,Auto">
+    <Grid x:Name="DeckDetailRoot" RowDefinitions="Auto,100,Auto,Auto,*,Auto">
 
         <!-- Row 0: Deck header -->
         <Border Grid.Row="0"
@@ -105,14 +107,66 @@
             </Border>
         </Grid>
 
-        <!-- Row 3: Content Panels + FAB overlay -->
-        <Grid Grid.Row="3">
+        <!-- Row 3: Inline add-card search (visible on Commander, Main, Sideboard tabs) -->
+        <VerticalStackLayout Grid.Row="3"
+                            IsVisible="{Binding IsAddCardSearchVisible}"
+                            Spacing="4"
+                            Padding="12,8,12,8"
+                            BackgroundColor="{StaticResource Background}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <material:TextField Title="Search to add card…"
+                                    Text="{Binding AddCardSearchText, Mode=TwoWay}"
+                                    ReturnCommand="{Binding AddCardSearchCommand}"
+                                    BackgroundColor="{StaticResource Surface}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    TitleColor="{StaticResource TextSecondary}"
+                                    AccentColor="{StaticResource Primary}"
+                                    AllowClear="True" />
+                <ActivityIndicator Grid.Column="1"
+                                   IsRunning="{Binding IsAddCardSearchBusy}"
+                                   IsVisible="{Binding IsAddCardSearchBusy}"
+                                   HeightRequest="24"
+                                   WidthRequest="24"
+                                   VerticalOptions="Center"
+                                   Color="{StaticResource Primary}" />
+            </Grid>
+            <Border MaximumHeightRequest="220"
+                    Stroke="Transparent"
+                    StrokeShape="RoundRectangle 4"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="0,4">
+                <CollectionView ItemsSource="{Binding AddCardSearchResults}"
+                               SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Card">
+                            <Grid Padding="12,8" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" BackgroundColor="Transparent">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.AddCardFromSearchCommand}"
+                                                         CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Border Grid.Column="0" WidthRequest="36" HeightRequest="50" BackgroundColor="{StaticResource CardBackground}" StrokeShape="RoundRectangle 4" Stroke="Transparent">
+                                    <controls:CachedCardImage CardUuid="{Binding ImageId}" HorizontalOptions="Fill" VerticalOptions="Fill" />
+                                </Border>
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="2">
+                                    <Label Text="{Binding Name}" TextColor="{StaticResource TextPrimary}" FontSize="14" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding CardType}" TextColor="{StaticResource TextSecondary}" FontSize="11" LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                                <controls:ManaCostView Grid.Column="2" ManaText="{Binding ManaCost}" SymbolSize="12" VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
+        </VerticalStackLayout>
 
-            <!-- Undo last add (compact bar, doesn't block FAB) -->
+        <!-- Row 4: Content Panels -->
+        <Grid Grid.Row="4">
+
+            <!-- Undo last add -->
             <Border BackgroundColor="{StaticResource Surface}"
                     StrokeShape="RoundRectangle 8"
                     Padding="12,8"
-                    Margin="16,8,88,0"
+                    Margin="16,8,16,0"
                     HorizontalOptions="Start"
                     VerticalOptions="Start"
                     IsVisible="{Binding HasLastAdded}"
@@ -136,7 +190,7 @@
             </Border>
 
             <!-- Commander Tab -->
-            <ScrollView IsVisible="{Binding IsCommanderTab}" Padding="16,8,16,80">
+            <ScrollView IsVisible="{Binding IsCommanderTab}" Padding="16,8">
                 <VerticalStackLayout Spacing="12">
                     <!-- No commander placeholder -->
                     <VerticalStackLayout IsVisible="{Binding HasNoCommander}"
@@ -155,7 +209,7 @@
                                FontAttributes="Bold"
                                TextColor="{StaticResource TextPrimary}"
                                HorizontalOptions="Center" />
-                        <Label Text="Tap the + button below to search for a legendary creature to lead your deck."
+                        <Label Text="Search above to add a legendary creature as your commander."
                                FontSize="14"
                                TextColor="{StaticResource TextSecondary}"
                                HorizontalOptions="Center"
@@ -237,11 +291,7 @@
             <CollectionView IsVisible="{Binding IsMainTab}"
                             ItemsSource="{Binding MainDeckGroups}"
                             IsGrouped="True"
-                            SelectionMode="None"
-                            Margin="0,0,0,80">
-                <CollectionView.Footer>
-                    <BoxView HeightRequest="72" Color="Transparent" />
-                </CollectionView.Footer>
+                            SelectionMode="None">
                 <CollectionView.GroupHeaderTemplate>
                     <DataTemplate x:DataType="vm:DeckCardGroup">
                         <Label Text="{Binding GroupName}"
@@ -352,11 +402,7 @@
             <!-- Sideboard Tab -->
             <CollectionView IsVisible="{Binding IsSideboardTab}"
                             ItemsSource="{Binding SideboardCards}"
-                            SelectionMode="None"
-                            Margin="0,0,0,80">
-                <CollectionView.Footer>
-                    <BoxView HeightRequest="72" Color="Transparent" />
-                </CollectionView.Footer>
+                            SelectionMode="None">
                 <CollectionView.Header>
                     <Label Text="Sideboard"
                            FontSize="12"
@@ -561,25 +607,10 @@
                 </VerticalStackLayout>
             </ScrollView>
 
-            <!-- FAB: Add Card (visible on Commander, Main, Sideboard tabs); margin clears list add/remove buttons -->
-            <Button x:Name="AddCardFab"
-                    Clicked="OnAddCardClicked"
-                    IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertBool}}"
-                    Style="{StaticResource FloatingActionButtonStyle}"
-                    Margin="0,0,16,80"
-                    ZIndex="10">
-                <Button.ImageSource>
-                    <FontImageSource FontFamily="FASolid"
-                                     Glyph="{x:Static fa:Solid.Plus}"
-                                     Size="20"
-                                     Color="White" />
-                </Button.ImageSource>
-            </Button>
-
         </Grid>
 
-        <!-- Row 4: Footer -->
-        <Grid Grid.Row="4"
+        <!-- Row 5: Footer -->
+        <Grid Grid.Row="5"
               Padding="12,8"
               BackgroundColor="{StaticResource Surface}">
             <Label Text="{Binding StatusDisplayText}"

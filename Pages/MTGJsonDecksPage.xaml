@@ -32,7 +32,6 @@
             </HorizontalStackLayout>
             <Button Grid.Column="1"
                     Command="{Binding RefreshCommand}"
-                    Text="Refresh"
                     BackgroundColor="{StaticResource Surface}"
                     TextColor="{StaticResource TextPrimary}"
                     FontSize="14"
