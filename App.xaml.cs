@@ -1,6 +1,7 @@
 namespace AetherVault;
 
 using AetherVault.Pages;
+using AetherVault.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -19,6 +20,12 @@ public partial class App : Application
     {
         InitializeComponent();
         _serviceProvider = serviceProvider;
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            var ex = (Exception)e.ExceptionObject;
+            System.Diagnostics.Debug.WriteLine($"[Unhandled] {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+        };
     }
 
     /// <summary>Service provider for controls that need to resolve services (e.g. image loading).</summary>
@@ -70,6 +77,8 @@ public partial class App : Application
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var loadingPage = _serviceProvider.GetRequiredService<LoadingPage>();
+        // Do not add toast overlay here — it can cause JavaProxyThrowable on Android during first layout.
+        // LoadingViewModel creates the overlay when switching to AppShell.
         return new Window(loadingPage);
     }
 }

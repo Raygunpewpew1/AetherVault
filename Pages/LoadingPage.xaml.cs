@@ -28,7 +28,22 @@ public partial class LoadingPage : ContentPage
         // Defer init until after the first frame is painted so the loading screen is visible
         // during DB checks instead of the static native splash.
         await Task.Delay(100);
-        await _viewModel.InitAsync();
+        try
+        {
+            await _viewModel.InitAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Loading] Init failed: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _viewModel.StatusMessage = $"Startup error: {ex.Message}";
+                _viewModel.StatusIsError = true;
+                _viewModel.ShowRetry = true;
+                _viewModel.IsBusy = false;
+            });
+        }
     }
 
     protected override void OnDisappearing()

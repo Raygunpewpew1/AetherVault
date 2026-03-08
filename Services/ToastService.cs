@@ -1,5 +1,7 @@
 namespace AetherVault.Services;
 
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Controls.Shapes;
 
 public interface IToastService
@@ -10,8 +12,21 @@ public interface IToastService
     void ShowWithAction(string message, string actionLabel, Action action, int durationMs = 5000);
 }
 
+/// <summary>
+/// Shows toasts in a window-level overlay so page Content is never replaced (avoids focus/content loss and nested-toast bugs).
+/// Call <see cref="SetOverlayHost"/> when the window root is created (e.g. in App.CreateWindow).
+/// </summary>
 public class ToastService : IToastService
 {
+    /// <summary>Grid used as the toast overlay; set by the app when the window root is built. Toasts are added as children and removed when dismissed.</summary>
+    internal static Grid? OverlayHost { get; set; }
+
+    /// <summary>Called when building the window root so toasts render in an overlay instead of replacing page Content.</summary>
+    public static void SetOverlayHost(Grid overlayGrid)
+    {
+        OverlayHost = overlayGrid;
+    }
+
     public void Show(string message, int durationMs = 3000)
     {
         MainThread.BeginInvokeOnMainThread(() => _ = ShowBannerAsync(message, durationMs));
@@ -22,12 +37,27 @@ public class ToastService : IToastService
         MainThread.BeginInvokeOnMainThread(() => _ = ShowBannerWithActionAsync(message, actionLabel, action, durationMs));
     }
 
+    private static Grid GetOverlay()
+    {
+        var overlay = OverlayHost;
+        if (overlay != null)
+            return overlay;
+        throw new InvalidOperationException("ToastService overlay not set. Ensure the window root is built with ToastService.SetOverlayHost(overlayGrid).");
+    }
+
     private static async Task ShowBannerWithActionAsync(string message, string actionLabel, Action action, int durationMs)
     {
-        var page = GetCurrentContentPage();
-        if (page == null) return;
+        if (OverlayHost == null)
+        {
+            var snackbar = Snackbar.Make(message, () =>
+            {
+                action();
+            }, actionLabel, TimeSpan.FromMilliseconds(Math.Max(durationMs, 2000)));
+            await MainThread.InvokeOnMainThreadAsync(async () => await snackbar.Show());
+            return;
+        }
 
-        var original = page.Content;
+        var overlay = OverlayHost;
         var dismissed = false;
 
         var actionButton = new Button
@@ -39,14 +69,6 @@ public class ToastService : IToastService
             BackgroundColor = Colors.White,
             TextColor = Colors.Black,
             CornerRadius = 18,
-        };
-
-        actionButton.Clicked += (_, _) =>
-        {
-            if (dismissed) return;
-            dismissed = true;
-            page.Content = original;
-            MainThread.BeginInvokeOnMainThread(action);
         };
 
         var layout = new HorizontalStackLayout
@@ -80,10 +102,24 @@ public class ToastService : IToastService
             Content = layout,
         };
 
-        var wrapper = new Grid();
-        wrapper.Add(original);
-        wrapper.Add(banner);
-        page.Content = wrapper;
+        void RemoveBanner()
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (overlay.Children.Contains(banner))
+                    overlay.Children.Remove(banner);
+            });
+        }
+
+        actionButton.Clicked += (_, _) =>
+        {
+            if (dismissed) return;
+            dismissed = true;
+            RemoveBanner();
+            MainThread.BeginInvokeOnMainThread(action);
+        };
+
+        MainThread.BeginInvokeOnMainThread(() => overlay.Children.Add(banner));
 
         try
         {
@@ -100,17 +136,24 @@ public class ToastService : IToastService
         finally
         {
             if (!dismissed)
-                page.Content = original;
+                RemoveBanner();
         }
     }
 
     private static async Task ShowBannerAsync(string message, int durationMs)
     {
-        var page = GetCurrentContentPage();
-        if (page == null) return;
+        if (OverlayHost == null)
+        {
+            var duration = durationMs > 3000 ? ToastDuration.Long : ToastDuration.Short;
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var toast = Toast.Make(message, duration);
+                await toast.Show();
+            });
+            return;
+        }
 
-        var original = page.Content;
-
+        var overlay = OverlayHost;
         var banner = new Border
         {
             BackgroundColor = Color.FromArgb("#DD1E1E1E"),
@@ -131,10 +174,7 @@ public class ToastService : IToastService
             }
         };
 
-        var wrapper = new Grid();
-        wrapper.Add(original);
-        wrapper.Add(banner);
-        page.Content = wrapper;
+        MainThread.BeginInvokeOnMainThread(() => overlay.Children.Add(banner));
 
         try
         {
@@ -144,22 +184,11 @@ public class ToastService : IToastService
         }
         finally
         {
-            page.Content = original;
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (overlay.Children.Contains(banner))
+                    overlay.Children.Remove(banner);
+            });
         }
-    }
-
-    private static ContentPage? GetCurrentContentPage()
-    {
-        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
-
-        // Walk modal stack to get the topmost visible page
-        while (page?.Navigation?.ModalStack is { Count: > 0 } stack)
-            page = stack[stack.Count - 1];
-
-        // Unwrap Shell to get the current tab page
-        if (page is Shell shell)
-            page = shell.CurrentPage;
-
-        return page as ContentPage;
     }
 }

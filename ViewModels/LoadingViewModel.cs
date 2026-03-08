@@ -77,14 +77,7 @@ public partial class LoadingViewModel : BaseViewModel
         // tearing down the already-initialized app state.
         if (_cardManager.DatabaseManager.IsConnected)
         {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                if (Application.Current?.Windows.FirstOrDefault() is { } window
-                    && window.Page is not AppShell)
-                {
-                    window.Page = _serviceProvider.GetRequiredService<AppShell>();
-                }
-            });
+            MainThread.BeginInvokeOnMainThread(() => SwitchToShellWithToastOverlay());
             return;
         }
 
@@ -295,16 +288,20 @@ public partial class LoadingViewModel : BaseViewModel
         // Start prices in background
         _ = _cardManager.InitializePricesAsync();
 
-        // Switch to main app
-        // We need to dispatch this to the main thread to be safe,
-        // though we should already be on it if called from UI events.
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            if (Application.Current != null && Application.Current.Windows.Count > 0)
-            {
-                var appShell = _serviceProvider.GetRequiredService<AppShell>();
-                Application.Current.Windows[0].Page = appShell;
-            }
-        });
+        // Switch to main app and create toast overlay (deferred from CreateWindow to avoid Android startup crash).
+        MainThread.BeginInvokeOnMainThread(SwitchToShellWithToastOverlay);
+    }
+
+    private void SwitchToShellWithToastOverlay()
+    {
+        if (Application.Current == null || Application.Current.Windows.Count == 0)
+            return;
+        var window = Application.Current.Windows[0];
+        var appShell = _serviceProvider.GetRequiredService<AppShell>();
+        if (window.Page is AppShell)
+            return;
+        // Set shell as window page directly. MAUI requires "Parent of a Page must also be a Page",
+        // so we cannot put AppShell inside a Grid. Toasts use CommunityToolkit when overlay is not set.
+        window.Page = appShell;
     }
 }

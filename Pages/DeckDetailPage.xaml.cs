@@ -48,8 +48,11 @@ public partial class DeckDetailPage : ContentPage
             if (e.PropertyName is nameof(DeckDetailViewModel.Deck)
                                or nameof(DeckDetailViewModel.HasNoCommander))
             {
-                _ = TryLoadCommanderArtAsync();
-                CommanderArtCanvas?.InvalidateSurface();
+                if (Window != null)
+                {
+                    _ = TryLoadCommanderArtAsync();
+                    try { CommanderArtCanvas?.InvalidateSurface(); } catch { /* ignore if view detached */ }
+                }
             }
         };
     }
@@ -114,9 +117,10 @@ public partial class DeckDetailPage : ContentPage
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                if (Window == null) return;
                 _commanderArtImage?.Dispose();
                 _commanderArtImage = null;
-                CommanderArtCanvas?.InvalidateSurface();
+                try { CommanderArtCanvas?.InvalidateSurface(); } catch { /* ignore if view detached */ }
             });
             return;
         }
@@ -129,6 +133,7 @@ public partial class DeckDetailPage : ContentPage
             var image = await _imageDownloadService.DownloadImageDirectAsync(imageId, "art_crop", "front");
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                if (Window == null) { image?.Dispose(); return; }
                 var currentFirst = _viewModel.CommanderCards.FirstOrDefault();
                 if (currentFirst?.Card?.ImageId != imageId)
                 {
@@ -137,7 +142,7 @@ public partial class DeckDetailPage : ContentPage
                 }
                 _commanderArtImage?.Dispose();
                 _commanderArtImage = image;
-                CommanderArtCanvas?.InvalidateSurface();
+                try { CommanderArtCanvas?.InvalidateSurface(); } catch { /* ignore if view detached */ }
             });
         }
         catch (Exception ex)
@@ -169,18 +174,34 @@ public partial class DeckDetailPage : ContentPage
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            (Content as View)?.InvalidateMeasure();
-            DeckDetailRoot.InvalidateMeasure();
-            CommanderArtCanvas.InvalidateSurface();
+            if (Window == null) return;
+            try
+            {
+                (Content as View)?.InvalidateMeasure();
+                DeckDetailRoot.InvalidateMeasure();
+                CommanderArtCanvas.InvalidateSurface();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DeckDetail] RunDeferredLayoutPass: {ex.Message}");
+            }
         });
         _ = Task.Run(async () =>
         {
             await Task.Delay(DeferredLayoutDelayMs);
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                (Content as View)?.InvalidateMeasure();
-                DeckDetailRoot.InvalidateMeasure();
-                CommanderArtCanvas.InvalidateSurface();
+                if (Window == null) return;
+                try
+                {
+                    (Content as View)?.InvalidateMeasure();
+                    DeckDetailRoot.InvalidateMeasure();
+                    CommanderArtCanvas.InvalidateSurface();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DeckDetail] RunDeferredLayoutPass (delayed): {ex.Message}");
+                }
             });
         });
     }
