@@ -8,6 +8,7 @@ namespace AetherVault.Pages;
 /// <summary>
 /// Search tab: search box, filters, and card grid. Binds to SearchViewModel; grid events open card detail or add-to-collection/deck.
 /// CardGalleryContext is set on tap so CardDetailPage can swipe between cards from this result set.
+/// Easter egg: tap the top-right corner 7 times within 6 seconds to play a sound.
 /// </summary>
 public partial class SearchPage : ContentPage
 {
@@ -15,14 +16,18 @@ public partial class SearchPage : ContentPage
     private readonly CardGalleryContext _galleryContext;
     private readonly DeckBuilderService _deckService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IEasterEggSoundService _easterEggSound;
+    private int _easterEggTapCount;
+    private IDispatcherTimer? _easterEggResetTimer;
 
-    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckBuilderService deckService, IServiceProvider serviceProvider)
+    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckBuilderService deckService, IServiceProvider serviceProvider, IEasterEggSoundService easterEggSound)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _galleryContext = galleryContext;
         _deckService = deckService;
         _serviceProvider = serviceProvider;
+        _easterEggSound = easterEggSound;
         BindingContext = _viewModel;
 
         // ViewModel needs the grid reference for pagination and visible-range (e.g. price loading)
@@ -39,6 +44,30 @@ public partial class SearchPage : ContentPage
                 await CardGrid.ScrollToAsync(0, false);
             });
         };
+    }
+
+    private void OnEasterEggTap(object? sender, TappedEventArgs e)
+    {
+        _easterEggResetTimer?.Stop();
+        _easterEggTapCount++;
+        System.Diagnostics.Debug.WriteLine($"[EasterEgg] Tap {_easterEggTapCount}/7");
+        if (_easterEggTapCount >= 7)
+        {
+            _easterEggTapCount = 0;
+            System.Diagnostics.Debug.WriteLine("[EasterEgg] Triggered — playing sound.");
+            _easterEggSound.Play();
+            return;
+        }
+        var timer = Dispatcher.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(6);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) =>
+        {
+            _easterEggTapCount = 0;
+            timer.Stop();
+        };
+        timer.Start();
+        _easterEggResetTimer = timer;
     }
 
     protected override void OnAppearing()

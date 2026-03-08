@@ -8,6 +8,7 @@ using SkiaSharp.Views.Maui.Controls.Hosting;
 using CommunityToolkit.Maui;
 using UraniumUI;
 using AppoMobi.Maui.Gestures;
+using Plugin.Maui.Audio;
 
 #if ANDROID
 using Plugin.Maui.OCR;
@@ -33,6 +34,7 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+            .AddAudio()
             .UseSkiaSharp()
             .UseUraniumUI()
             .UseUraniumUIMaterial()
@@ -92,6 +94,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MTGJsonDeckImporter>();
         builder.Services.AddSingleton<CardGalleryContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
+        builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
         builder.Services.AddSingleton<ILogBufferService, LogBufferService>();
 

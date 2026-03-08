@@ -45,9 +45,9 @@ public class DeckCardGroup(string name, IEnumerable<DeckCardDisplayItem> items, 
 {
     public string GroupName { get; } = name;
     /// <summary>Sum of Entity.Quantity for all items in this group (e.g. for "Creatures (32)" header).</summary>
-    public int Count { get; } = count;
+    public int TotalQuantity { get; } = count;
     /// <summary>e.g. "Creatures (32)" for section header.</summary>
-    public string HeaderText => $"{GroupName} ({Count})";
+    public string HeaderText => $"{GroupName} ({TotalQuantity})";
 }
 
 public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRepository cardRepository, CardManager cardManager, IToastService toast) : BaseViewModel

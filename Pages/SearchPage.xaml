@@ -38,7 +38,8 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid>
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
 
         <!-- Search + Status Card -->
         <Border Grid.Row="0"
@@ -294,6 +295,21 @@
                    HorizontalTextAlignment="Center" />
         </VerticalStackLayout>
 
+        </Grid>
+
+        <!-- Easter egg: tap 7 times within 6 seconds to play sound (invisible top-right corner) -->
+        <Border x:Name="EasterEggTapArea"
+                VerticalOptions="Start"
+                HorizontalOptions="End"
+                Margin="0,56,24,0"
+                WidthRequest="96"
+                HeightRequest="96"
+                BackgroundColor="#01000000"
+                InputTransparent="False">
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="OnEasterEggTap" NumberOfTapsRequired="1" />
+            </Border.GestureRecognizers>
+        </Border>
     </Grid>
 
 </ContentPage>
