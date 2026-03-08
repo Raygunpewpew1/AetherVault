@@ -4,6 +4,8 @@ AetherVault is a .NET MAUI app for browsing, searching, and managing **Magic: Th
 
 It uses a local SQLite copy of MTGJSON data, downloads card images from Scryfall, and stores user collection/deck data in a separate local database.
 
+Decks are slowly being added.
+
 ---
 
 ## What this repo is built with
@@ -83,29 +85,20 @@ dotnet test AetherVault.Tests/AetherVault.Tests.csproj
 
 ---
 
-## Media placeholders (screenshots + video)
-
-Add your media files under:
-
-- `docs/media/screenshots/`
-- `docs/media/video/`
-
-Then replace this section as needed:
-
-```md
 ## Screenshots
 
-![Search Page](docs/media/screenshots/search-page.png)
-![Card Detail](docs/media/screenshots/card-detail.png)
-![Collection](docs/media/screenshots/collection-page.png)
-
-## Demo Video
-
-[![Watch Demo](docs/media/screenshots/demo-thumb.png)](https://www.youtube.com/watch?v=REPLACE_WITH_VIDEO_ID)
-
-Or link directly to a local video file:
-[Download Demo Video (MP4)](docs/media/video/demo.mp4)
-```
+<table>
+  <tr>
+    <td align="center"><img src="docs/media/screenshots/search-page.png" width="220" alt="Search Page"/><br/><b>Search</b></td>
+    <td align="center"><img src="docs/media/screenshots/collection-page.png" width="220" alt="Collection Page"/><br/><b>Collection</b></td>
+    <td align="center"><img src="docs/media/screenshots/card-detail.png" width="220" alt="Card Detail"/><br/><b>Card Detail</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/media/screenshots/decks-page.png" width="220" alt="Decks Page"/><br/><b>Decks</b></td>
+    <td align="center"><img src="docs/media/screenshots/sample-decks.png" width="220" alt="Sample Decks"/><br/><b>Browse Sample Decks</b></td>
+    <td></td>
+  </tr>
+</table>
 
 ---
 
