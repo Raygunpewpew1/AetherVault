@@ -96,7 +96,7 @@ dotnet test AetherVault.Tests/AetherVault.Tests.csproj
   <tr>
     <td align="center"><img src="docs/media/screenshots/decks-page.jpg" width="220" alt="Decks Page"/><br/><b>Decks</b></td>
     <td align="center"><img src="docs/media/screenshots/sample-decks.jpg" width="220" alt="Sample Decks"/><br/><b>Browse Sample Decks</b></td>
-    <td></td>
+    <td align="center"><img src="docs/media/screenshots/stats-page.jpg" width="220" alt="Stats Page"/><br/><b>Stats</b></td>
   </tr>
 </table>
 
