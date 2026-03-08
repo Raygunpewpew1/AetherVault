@@ -60,6 +60,7 @@ Pages bind to ViewModels via MAUI data binding. ViewModels expose `ObservablePro
 - **Avoid Allocations**: To prevent GC pressure and frame drops in 60fps render loops (like `CardGridRenderer.cs`), avoid inline object allocations (e.g., `new SKPaint`). Cache these resources as class-level fields, initialize them in `EnsureResources()`, and clean them up in `Dispose()`.
 - **Guard Zero Dimensions**: `SKCanvasView` paint events (e.g., `OnPaintSurface`) can trigger with zero width/height before layout is complete. Always guard against `w <= 0 || h <= 0` and use `try-catch` blocks during rendering to prevent silent UI crashes/black screens.
 - **Touch Events**: To enable touch events on an `SKCanvasView`, the `EnableTouchEvents="True"` property must be set in XAML alongside the `Touch` event binding. In the event handler, verify `e.ActionType` (e.g., `SKTouchAction.Released`) and set `e.Handled = true`. With nullable reference types enabled, the sender parameter must be nullable (`object? sender`).
+- **Experimental GPU backend**: The card grid can use GPU rendering via a hidden preference. Set `Preferences.Default.Set(MTGConstants.CardGridUseGpuRenderKey, true)` to opt in (e.g. for testing). Default is false; on some devices (e.g. Mali) the GPU path can cause missing content or crashes.
 
 ### UI Thread Management
 - **MainThread Updates**: When updating `ObservableCollection` instances bound to the UI from background threads, wrap the updates in `MainThread.BeginInvokeOnMainThread` to prevent application crashes and black screens.

@@ -14,6 +14,15 @@ internal sealed class SvgCacheEngine
     private readonly Dictionary<string, SKSvg> _cache = new();
     private readonly HashSet<string> _failedSymbols = [];
     private readonly object _lock = new();
+
+    // Reusable paints for DrawPictureInRect to avoid per-call allocations (FPS).
+    private static readonly object _paintLock = new();
+    private static SKPaint? _paintNoTint;
+    private static SKPaint? _paintGrayTint;
+    private static SKPaint? _paintWhiteTint;
+    private static SKColorFilter? _filterGrayTint;
+    private static SKColorFilter? _filterWhiteTint;
+    private static readonly SKColor GrayTintColor = new(160, 160, 160);
     private readonly Assembly _assembly;
     private readonly Func<string, string> _normalizer;
     private readonly Func<string, bool> _resourceMatcher;
@@ -89,6 +98,7 @@ internal sealed class SvgCacheEngine
 
     /// <summary>
     /// Shared draw logic: draws an SKPicture into destRect with optional tint and optional centering.
+    /// Uses cached paints for common tints (no tint, gray) to avoid per-frame allocations.
     /// </summary>
     internal static void DrawPictureInRect(SKCanvas canvas, SKPicture picture, SKRect destRect, SKColor? tint = null, bool centerInRect = true)
     {
@@ -111,13 +121,56 @@ internal sealed class SvgCacheEngine
             canvas.Scale(scaleX, scaleY);
         }
 
-        using var paint = new SKPaint
+        SKPaint? cachedPaint = GetCachedPaintForTint(tint);
+        if (cachedPaint != null)
         {
-            IsAntialias = true,
-            ColorFilter = tint.HasValue ? SKColorFilter.CreateBlendMode(tint.Value, SKBlendMode.SrcIn) : null
-        };
-        canvas.DrawPicture(picture, paint);
+            canvas.DrawPicture(picture, cachedPaint);
+        }
+        else
+        {
+            using var paint = new SKPaint
+            {
+                IsAntialias = true,
+                ColorFilter = tint.HasValue ? SKColorFilter.CreateBlendMode(tint.Value, SKBlendMode.SrcIn) : null
+            };
+            canvas.DrawPicture(picture, paint);
+        }
         canvas.Restore();
+    }
+
+    /// <summary>Returns a cached paint for common tints (null or gray), or null if one-off paint should be used.</summary>
+    private static SKPaint? GetCachedPaintForTint(SKColor? tint)
+    {
+        if (!tint.HasValue)
+        {
+            lock (_paintLock)
+            {
+                _paintNoTint ??= new SKPaint { IsAntialias = true };
+                return _paintNoTint;
+            }
+        }
+
+        if (tint.Value == GrayTintColor)
+        {
+            lock (_paintLock)
+            {
+                _filterGrayTint ??= SKColorFilter.CreateBlendMode(GrayTintColor, SKBlendMode.SrcIn);
+                _paintGrayTint ??= new SKPaint { IsAntialias = true, ColorFilter = _filterGrayTint };
+                return _paintGrayTint;
+            }
+        }
+
+        if (tint.Value == SKColors.White)
+        {
+            lock (_paintLock)
+            {
+                _filterWhiteTint ??= SKColorFilter.CreateBlendMode(SKColors.White, SKBlendMode.SrcIn);
+                _paintWhiteTint ??= new SKPaint { IsAntialias = true, ColorFilter = _filterWhiteTint };
+                return _paintWhiteTint;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Clears all cached SVGs and failed-lookup records.</summary>

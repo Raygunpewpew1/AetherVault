@@ -13,7 +13,7 @@ namespace AetherVault.Controls;
 /// </summary>
 internal sealed class CardGridRenderer : IDisposable
 {
-    private readonly SKCanvasView _canvas;
+    private readonly Action _invalidateSurface;
     private readonly Func<string, SKImage?> _getImage;
 
     // Shimmer animation
@@ -41,6 +41,7 @@ internal sealed class CardGridRenderer : IDisposable
     private SKPaint? _borderPaint;
     private SKPaint? _chipBgPaint;
     private SKPaint? _shimmerPaint;
+    private SKShader? _shimmerShader;
 
     // Theme background (matches App Background #121212) so empty/zero-size canvas never shows black.
     private static readonly SKColor ThemeBackground = new SKColor(0x12, 0x12, 0x12);
@@ -49,11 +50,11 @@ internal sealed class CardGridRenderer : IDisposable
     private const float ListImgWidth = 55f;
     private const float ListImgHeight = ListImgWidth * 1.3968f; // ≈ 76.8px
 
-    /// <param name="canvas">Canvas to invalidate after sizing changes.</param>
+    /// <param name="invalidateSurface">Called to request a repaint (works with both SKCanvasView and SKGLView).</param>
     /// <param name="getImage">Returns a cached SKImage for the given cache key, or null.</param>
-    public CardGridRenderer(SKCanvasView canvas, Func<string, SKImage?> getImage)
+    public CardGridRenderer(Action invalidateSurface, Func<string, SKImage?> getImage)
     {
-        _canvas = canvas;
+        _invalidateSurface = invalidateSurface;
         _getImage = getImage;
         _lastFrameTime = _animationStopwatch.ElapsedMilliseconds;
     }
@@ -79,6 +80,13 @@ internal sealed class CardGridRenderer : IDisposable
         _shimmerPaint ??= new SKPaint { IsAntialias = true };
         _cardRoundRect ??= new SKRoundRect();
         _imageRoundRect ??= new SKRoundRect();
+        // Cached gradient for shimmer (0..1 x, band in middle); phase applied via local matrix per draw.
+        _shimmerShader ??= SKShader.CreateLinearGradient(
+            new SKPoint(0f, 0f),
+            new SKPoint(1f, 0f),
+            [SKColors.Transparent, new SKColor(255, 255, 255, 55), SKColors.Transparent],
+            [0f, 0.5f, 1f],
+            SKShaderTileMode.Clamp);
     }
 
     /// <summary>Rebuilds size-dependent fonts and schedules a repaint.</summary>
@@ -94,7 +102,7 @@ internal sealed class CardGridRenderer : IDisposable
         _badgeFont = new SKFont(SKTypeface.FromFamilyName("sans-serif", SKFontStyle.Bold), isLargeScreen ? 13f : 11f);
         _secondaryTextFont = new SKFont(SKTypeface.FromFamilyName("sans-serif", SKFontStyle.Normal), isLargeScreen ? 13f : 11f);
 
-        _canvas.InvalidateSurface();
+        _invalidateSurface();
     }
 
     public void Dispose()
@@ -116,15 +124,20 @@ internal sealed class CardGridRenderer : IDisposable
         _borderPaint?.Dispose(); _borderPaint = null;
         _chipBgPaint?.Dispose(); _chipBgPaint = null;
         _shimmerPaint?.Dispose(); _shimmerPaint = null;
+        _shimmerShader?.Dispose(); _shimmerShader = null;
         _cardRoundRect?.Dispose(); _cardRoundRect = null;
         _imageRoundRect?.Dispose(); _imageRoundRect = null;
     }
 
     public void Paint(SKPaintSurfaceEventArgs e, RenderList list, float scrollY, float viewWidth, DragState? dragState = null)
     {
-        var canvas = e.Surface.Canvas;
-        var info = e.Info;
-        if (info.Width <= 0 || info.Height <= 0)
+        Paint(e.Surface.Canvas, e.Info.Width, e.Info.Height, list, scrollY, viewWidth, dragState);
+    }
+
+    /// <summary>Shared paint implementation for both software (SKCanvasView) and GPU (SKGLView) backends.</summary>
+    public void Paint(SKCanvas canvas, int width, int height, RenderList list, float scrollY, float viewWidth, DragState? dragState = null)
+    {
+        if (width <= 0 || height <= 0)
         {
             canvas.Clear(ThemeBackground);
             return;
@@ -150,7 +163,7 @@ internal sealed class CardGridRenderer : IDisposable
             canvas.Clear(new SKColor(18, 18, 18));
             if (_bgPaint == null) EnsureResources();
 
-            float scale = info.Width / (viewWidth > 0 ? viewWidth : 360f);
+            float scale = width / (viewWidth > 0 ? viewWidth : 360f);
             canvas.Scale(scale);
             canvas.Translate(0, -scrollY);
 
@@ -457,7 +470,7 @@ internal sealed class CardGridRenderer : IDisposable
 
     private void DrawShimmer(SKCanvas canvas, SKRect rect)
     {
-        if (_shimmerPaint == null) return;
+        if (_shimmerPaint == null || _shimmerShader == null) return;
 
         canvas.Save();
         _imageRoundRect!.SetRect(rect, 8f, 8f);
@@ -467,19 +480,14 @@ internal sealed class CardGridRenderer : IDisposable
 
         float sweepWidth = rect.Width * 0.6f;
         float travelRange = rect.Width + sweepWidth;
-        float shimmerX = rect.Left - sweepWidth + travelRange * _shimmerPhase;
-
-        using var shader = SKShader.CreateLinearGradient(
-            new SKPoint(shimmerX, rect.Top),
-            new SKPoint(shimmerX + sweepWidth, rect.Top),
-            new[] { SKColors.Transparent, new SKColor(255, 255, 255, 55), SKColors.Transparent },
-            new[] { 0f, 0.5f, 1f },
-            SKShaderTileMode.Clamp);
-
-        _shimmerPaint.Shader = shader;
+        // Map draw coords to shader 0..1 so the band sweeps; phase slides the gradient.
+        var translate = SKMatrix.CreateTranslation(-rect.Left - _shimmerPhase * travelRange, -rect.Top);
+        var scale = SKMatrix.CreateScale(1f / travelRange, 1f / rect.Height);
+        var localMatrix = SKMatrix.Concat(translate, scale);
+        _shimmerPaint.Shader = _shimmerShader.WithLocalMatrix(localMatrix);
         try
         {
-            canvas.DrawRect(rect, _shimmerPaint);
+            canvas.DrawRect(rect.Left, rect.Top, travelRange, rect.Height, _shimmerPaint);
         }
         finally
         {
