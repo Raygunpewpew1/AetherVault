@@ -50,11 +50,11 @@ public partial class SearchPage : ContentPage
     {
         _easterEggResetTimer?.Stop();
         _easterEggTapCount++;
-        System.Diagnostics.Debug.WriteLine($"[EasterEgg] Tap {_easterEggTapCount}/7");
+        Logger.LogStuff($"[EasterEgg] Tap {_easterEggTapCount}/7", LogLevel.Debug);
         if (_easterEggTapCount >= 7)
         {
             _easterEggTapCount = 0;
-            System.Diagnostics.Debug.WriteLine("[EasterEgg] Triggered — playing sound.");
+            Logger.LogStuff("[EasterEgg] Triggered — playing sound.", LogLevel.Debug);
             _easterEggSound.Play();
             return;
         }

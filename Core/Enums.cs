@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace AetherVault.Core;
 
 /// <summary>Legality status for a card in a format.</summary>

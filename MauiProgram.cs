@@ -65,7 +65,7 @@ public static class MauiProgram
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"OCR plugin init failed: {ex}");
+            Logger.LogStuff($"OCR plugin init failed: {ex}", LogLevel.Warning);
         }
 #endif
 

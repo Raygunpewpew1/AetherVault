@@ -177,7 +177,7 @@ public partial class LoadingViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Update check failed: {ex.Message}");
+            Logger.LogStuff($"Update check failed: {ex.Message}", LogLevel.Warning);
             return (false, string.Empty, string.Empty);
         }
     }

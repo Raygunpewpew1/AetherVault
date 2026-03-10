@@ -3,7 +3,6 @@ using AetherVault.Services;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
-using System.Diagnostics;
 
 namespace AetherVault.Controls;
 
@@ -216,7 +215,7 @@ internal sealed class CardGridRenderer : IDisposable
         catch (Exception ex)
         {
             canvas.Clear(new SKColor(18, 18, 18));
-            System.Diagnostics.Debug.WriteLine($"[CardGridRenderer] Paint error: {ex}");
+            Logger.LogStuff($"[CardGridRenderer] Paint error: {ex}", LogLevel.Error);
         }
     }
 

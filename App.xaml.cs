@@ -1,6 +1,7 @@
 namespace AetherVault;
 
 using AetherVault.Pages;
+using AetherVault.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 
@@ -22,8 +23,8 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
             var ex = (Exception)e.ExceptionObject;
-            System.Diagnostics.Debug.WriteLine($"[Unhandled] {ex.GetType().Name}: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+            Logger.LogStuff($"[Unhandled] {ex.GetType().Name}: {ex.Message}", LogLevel.Error);
+            Logger.LogStuff(ex.StackTrace ?? "", LogLevel.Error);
         };
     }
 
@@ -69,7 +70,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ResumeRedraw] {ex.Message}");
+            Logger.LogStuff($"[ResumeRedraw] {ex.Message}", LogLevel.Warning);
         }
     }
 
