@@ -109,6 +109,10 @@ public partial class SearchFiltersViewModel : BaseViewModel
     [ObservableProperty]
     private bool _chkCommanderOnly;
 
+    /// <summary>When true, the advanced filter section (format/set/artist/special) is visible.</summary>
+    [ObservableProperty]
+    private bool _isAdvancedVisible;
+
     public ObservableCollection<ColorFilterItem> ColorFilters { get; }
 
     /// <summary>Call before showing the page. Loads sets and applies current options from the target.</summary>
@@ -160,6 +164,13 @@ public partial class SearchFiltersViewModel : BaseViewModel
     private void Reset()
     {
         LoadFromOptions(new SearchOptions());
+        IsAdvancedVisible = false;
+    }
+
+    [RelayCommand]
+    private void ToggleAdvanced()
+    {
+        IsAdvancedVisible = !IsAdvancedVisible;
     }
 
     public async Task LoadSetsAsync()

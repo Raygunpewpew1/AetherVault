@@ -48,38 +48,40 @@
         <ScrollView Grid.Row="0" Padding="16">
             <VerticalStackLayout Spacing="16">
 
-                <!-- Colors -->
-                <Border Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Colors" FontSize="{StaticResource HeaderFontSize}" FontAttributes="Bold" />
-                        <FlexLayout BindableLayout.ItemsSource="{Binding ColorFilters}"
-                                    BindableLayout.ItemTemplate="{StaticResource ColorFilterItemTemplate}"
-                                    Wrap="NoWrap" JustifyContent="SpaceEvenly" />
-                    </VerticalStackLayout>
-                </Border>
+                <!-- Header / summary -->
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Refine your search"
+                           FontSize="{StaticResource HeaderFontSize}"
+                           FontAttributes="Bold" />
+                    <Label Text="{Binding FiltersSummaryText}"
+                           FontSize="{StaticResource SmallFontSize}"
+                           TextColor="{StaticResource TextSecondary}"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
 
-                <!-- Card Text / Keywords -->
-                <Border Style="{StaticResource CardStyle}">
-                    <material:TextField Text="{Binding Keywords, Mode=TwoWay}"
-                                        Title="Card Text"
-                                        TitleColor="{StaticResource TextSecondary}"
-                                        AccentColor="{StaticResource Primary}" />
-                </Border>
-
-                <!-- Card Type / Subtype / Supertype -->
+                <!-- Quick text & type -->
                 <Border Style="{StaticResource CardStyle}">
                     <VerticalStackLayout Spacing="12">
-                        <material:PickerField SelectedIndex="{Binding SelectedTypeIndex, Mode=TwoWay}"
-                                               ItemsSource="{Binding TypeOptions}"
-                                               Title="Card Type"
-                                               TextColor="{StaticResource TextPrimary}"
-                                               TitleColor="{StaticResource TextSecondary}"
-                                               AccentColor="{StaticResource Primary}" />
-
-                        <material:TextField Text="{Binding Subtype, Mode=TwoWay}"
-                                            Title="Subtype"
+                        <material:TextField Text="{Binding Keywords, Mode=TwoWay}"
+                                            Title="Card text or rules"
                                             TitleColor="{StaticResource TextSecondary}"
                                             AccentColor="{StaticResource Primary}" />
+
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="12">
+                            <material:PickerField SelectedIndex="{Binding SelectedTypeIndex, Mode=TwoWay}"
+                                                   ItemsSource="{Binding TypeOptions}"
+                                                   Title="Card type"
+                                                   TextColor="{StaticResource TextPrimary}"
+                                                   TitleColor="{StaticResource TextSecondary}"
+                                                   AccentColor="{StaticResource Primary}" />
+
+                            <material:TextField Grid.Column="1"
+                                                Text="{Binding Subtype, Mode=TwoWay}"
+                                                Title="Subtype"
+                                                TitleColor="{StaticResource TextSecondary}"
+                                                AccentColor="{StaticResource Primary}" />
+                        </Grid>
 
                         <material:TextField Text="{Binding Supertype, Mode=TwoWay}"
                                             Title="Supertype"
@@ -88,128 +90,196 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Rarity -->
+                <!-- Colors & rarity -->
                 <Border Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Rarity" FontSize="{StaticResource BodyFontSize}" />
-                        <Grid RowDefinitions="Auto,Auto"
-                              ColumnDefinitions="*,*"
-                              ColumnSpacing="12"
-                              RowSpacing="4">
-                            <material:CheckBox Grid.Row="0" Grid.Column="0"
-                                               IsChecked="{Binding ChkCommon, Mode=TwoWay}"
-                                               Text="Common"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="0" Grid.Column="1"
-                                               IsChecked="{Binding ChkUncommon, Mode=TwoWay}"
-                                               Text="Uncommon"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="1" Grid.Column="0"
-                                               IsChecked="{Binding ChkRare, Mode=TwoWay}"
-                                               Text="Rare"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="1" Grid.Column="1"
-                                               IsChecked="{Binding ChkMythic, Mode=TwoWay}"
-                                               Text="Mythic"
-                                               Color="{StaticResource Primary}" />
-                        </Grid>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Colors &amp; rarity"
+                               FontSize="{StaticResource BodyFontSize}"
+                               FontAttributes="Bold" />
+
+                        <!-- Colors -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Colors"
+                                   FontSize="{StaticResource SmallFontSize}"
+                                   TextColor="{StaticResource TextSecondary}" />
+                            <FlexLayout BindableLayout.ItemsSource="{Binding ColorFilters}"
+                                        BindableLayout.ItemTemplate="{StaticResource ColorFilterItemTemplate}"
+                                        Wrap="NoWrap"
+                                        JustifyContent="SpaceEvenly" />
+                        </VerticalStackLayout>
+
+                        <!-- Rarity -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Rarity"
+                                   FontSize="{StaticResource SmallFontSize}"
+                                   TextColor="{StaticResource TextSecondary}" />
+                            <Grid RowDefinitions="Auto,Auto"
+                                  ColumnDefinitions="*,*"
+                                  ColumnSpacing="12"
+                                  RowSpacing="4">
+                                <material:CheckBox Grid.Row="0" Grid.Column="0"
+                                                   IsChecked="{Binding ChkCommon, Mode=TwoWay}"
+                                                   Text="Common"
+                                                   Color="{StaticResource Primary}" />
+                                <material:CheckBox Grid.Row="0" Grid.Column="1"
+                                                   IsChecked="{Binding ChkUncommon, Mode=TwoWay}"
+                                                   Text="Uncommon"
+                                                   Color="{StaticResource Primary}" />
+                                <material:CheckBox Grid.Row="1" Grid.Column="0"
+                                                   IsChecked="{Binding ChkRare, Mode=TwoWay}"
+                                                   Text="Rare"
+                                                   Color="{StaticResource Primary}" />
+                                <material:CheckBox Grid.Row="1" Grid.Column="1"
+                                                   IsChecked="{Binding ChkMythic, Mode=TwoWay}"
+                                                   Text="Mythic"
+                                                   Color="{StaticResource Primary}" />
+                            </Grid>
+                        </VerticalStackLayout>
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- CMC Range -->
+                <!-- Stats: CMC / Power / Toughness -->
                 <Border Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Mana Value (CMC)" FontSize="{StaticResource BodyFontSize}" />
-                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                            <VerticalStackLayout>
-                                <Label Text="{Binding CmcMinLabel}"
-                                       FontSize="{StaticResource SmallFontSize}"
-                                       TextColor="{StaticResource TextSecondary}" />
-                                <Slider Minimum="0" Maximum="16"
-                                        Value="{Binding CmcMin, Mode=TwoWay}"
-                                        ThumbColor="{StaticResource Primary}"
-                                        MinimumTrackColor="{StaticResource Primary}" />
-                            </VerticalStackLayout>
-                            <Label Grid.Column="1"
-                                   Text="to"
-                                   VerticalOptions="End"
-                                   Margin="0,0,0,8"
-                                   FontSize="{StaticResource BodyFontSize}" />
-                            <VerticalStackLayout Grid.Column="2">
-                                <Label Text="{Binding CmcMaxLabel}"
-                                       FontSize="{StaticResource SmallFontSize}"
-                                       TextColor="{StaticResource TextSecondary}" />
-                                <Slider Minimum="0" Maximum="16"
-                                        Value="{Binding CmcMax, Mode=TwoWay}"
-                                        ThumbColor="{StaticResource Primary}"
-                                        MinimumTrackColor="{StaticResource Primary}" />
-                            </VerticalStackLayout>
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Stats"
+                               FontSize="{StaticResource BodyFontSize}"
+                               FontAttributes="Bold" />
+
+                        <!-- CMC Range -->
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Mana value (CMC)"
+                                   FontSize="{StaticResource SmallFontSize}"
+                                   TextColor="{StaticResource TextSecondary}" />
+                            <Grid ColumnDefinitions="*,Auto,*"
+                                  ColumnSpacing="8">
+                                <VerticalStackLayout>
+                                    <Label Text="{Binding CmcMinLabel}"
+                                           FontSize="{StaticResource SmallFontSize}"
+                                           TextColor="{StaticResource TextSecondary}" />
+                                    <Slider Minimum="0" Maximum="16"
+                                            Value="{Binding CmcMin, Mode=TwoWay}"
+                                            ThumbColor="{StaticResource Primary}"
+                                            MinimumTrackColor="{StaticResource Primary}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1"
+                                       Text="to"
+                                       VerticalOptions="End"
+                                       Margin="0,0,0,8"
+                                       FontSize="{StaticResource BodyFontSize}" />
+                                <VerticalStackLayout Grid.Column="2">
+                                    <Label Text="{Binding CmcMaxLabel}"
+                                           FontSize="{StaticResource SmallFontSize}"
+                                           TextColor="{StaticResource TextSecondary}" />
+                                    <Slider Minimum="0" Maximum="16"
+                                            Value="{Binding CmcMax, Mode=TwoWay}"
+                                            ThumbColor="{StaticResource Primary}"
+                                            MinimumTrackColor="{StaticResource Primary}" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- Power / Toughness -->
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="12">
+                            <material:TextField Text="{Binding Power, Mode=TwoWay}"
+                                                Title="Power"
+                                                Keyboard="Numeric"
+                                                TitleColor="{StaticResource TextSecondary}"
+                                                AccentColor="{StaticResource Primary}" />
+                            <material:TextField Grid.Column="1"
+                                                Text="{Binding Toughness, Mode=TwoWay}"
+                                                Title="Toughness"
+                                                Keyboard="Numeric"
+                                                TitleColor="{StaticResource TextSecondary}"
+                                                AccentColor="{StaticResource Primary}" />
                         </Grid>
                     </VerticalStackLayout>
                 </Border>
-
-                <!-- Power / Toughness -->
+                
+                <!-- Advanced toggle -->
                 <Border Style="{StaticResource CardStyle}">
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                        <material:TextField Text="{Binding Power, Mode=TwoWay}"
-                                            Title="Power"
-                                            Keyboard="Numeric"
-                                            TitleColor="{StaticResource TextSecondary}"
-                                            AccentColor="{StaticResource Primary}" />
-                        <material:TextField Grid.Column="1"
-                                            Text="{Binding Toughness, Mode=TwoWay}"
-                                            Title="Toughness"
-                                            Keyboard="Numeric"
-                                            TitleColor="{StaticResource TextSecondary}"
-                                            AccentColor="{StaticResource Primary}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Advanced filters"
+                                   FontSize="{StaticResource BodyFontSize}"
+                                   FontAttributes="Bold" />
+                            <Label Text="Format, set, commander, tokens…"
+                                   FontSize="{StaticResource SmallFontSize}"
+                                   TextColor="{StaticResource TextSecondary}" />
+                        </VerticalStackLayout>
+
+                        <Label Grid.Column="1"
+                               VerticalOptions="Center"
+                               Text="Tap to toggle"
+                               FontSize="{StaticResource SmallFontSize}"
+                               TextColor="{StaticResource Primary}" />
+
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleAdvancedCommand}" />
+                        </Grid.GestureRecognizers>
                     </Grid>
                 </Border>
 
-                <!-- Format / Set / Artist -->
-                <Border Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="12">
-                        <material:PickerField SelectedIndex="{Binding SelectedFormatIndex, Mode=TwoWay}"
-                                              ItemsSource="{Binding FormatOptions}"
-                                              Title="Format"
-                                              TextColor="{StaticResource TextPrimary}"
-                                              TitleColor="{StaticResource TextSecondary}"
-                                              AccentColor="{StaticResource Primary}" />
+                <!-- Advanced section -->
+                <VerticalStackLayout Spacing="16"
+                                     IsVisible="{Binding IsAdvancedVisible}">
 
-                        <material:PickerField SelectedIndex="{Binding SelectedSetIndex, Mode=TwoWay}"
-                                              ItemsSource="{Binding SetList}"
-                                              Title="Set"
-                                              TextColor="{StaticResource TextPrimary}"
-                                              TitleColor="{StaticResource TextSecondary}"
-                                              AccentColor="{StaticResource Primary}" />
+                    <!-- Format, set & artist -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="Format, set &amp; artist"
+                                   FontSize="{StaticResource BodyFontSize}"
+                                   FontAttributes="Bold" />
 
-                        <material:TextField Text="{Binding Artist, Mode=TwoWay}"
-                                            Title="Artist"
-                                            TitleColor="{StaticResource TextSecondary}"
-                                            AccentColor="{StaticResource Primary}" />
-                    </VerticalStackLayout>
-                </Border>
+                            <material:PickerField SelectedIndex="{Binding SelectedFormatIndex, Mode=TwoWay}"
+                                                  ItemsSource="{Binding FormatOptions}"
+                                                  Title="Format"
+                                                  TextColor="{StaticResource TextPrimary}"
+                                                  TitleColor="{StaticResource TextSecondary}"
+                                                  AccentColor="{StaticResource Primary}" />
 
-                <!-- Special Options -->
-                <Border Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="4">
-                        <material:CheckBox IsChecked="{Binding ChkPrimarySide, Mode=TwoWay}"
-                                           Text="Primary side only"
-                                           Color="{StaticResource Primary}"
-                                           Margin="0,0,0,8" />
-                        <material:CheckBox IsChecked="{Binding ChkNoVariations, Mode=TwoWay}"
-                                           Text="Exclude variations"
-                                           Color="{StaticResource Primary}"
-                                           Margin="0,0,0,8" />
-                        <material:CheckBox IsChecked="{Binding ChkIncludeTokens, Mode=TwoWay}"
-                                           Text="Include tokens"
-                                           Color="{StaticResource Primary}"
-                                           Margin="0,0,0,8" />
-                        <material:CheckBox IsChecked="{Binding ChkCommanderOnly, Mode=TwoWay}"
-                                           Text="Can be commander only"
-                                           Color="{StaticResource Primary}"
-                                           Margin="0,0,0,8" />
-                    </VerticalStackLayout>
-                </Border>
+                            <material:PickerField SelectedIndex="{Binding SelectedSetIndex, Mode=TwoWay}"
+                                                  ItemsSource="{Binding SetList}"
+                                                  Title="Set"
+                                                  TextColor="{StaticResource TextPrimary}"
+                                                  TitleColor="{StaticResource TextSecondary}"
+                                                  AccentColor="{StaticResource Primary}" />
+
+                            <material:TextField Text="{Binding Artist, Mode=TwoWay}"
+                                                Title="Artist"
+                                                TitleColor="{StaticResource TextSecondary}"
+                                                AccentColor="{StaticResource Primary}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Special options -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="Special options"
+                                   FontSize="{StaticResource BodyFontSize}"
+                                   FontAttributes="Bold"
+                                   Margin="0,0,0,4" />
+
+                            <material:CheckBox IsChecked="{Binding ChkPrimarySide, Mode=TwoWay}"
+                                               Text="Primary side only"
+                                               Color="{StaticResource Primary}"
+                                               Margin="0,0,0,8" />
+                            <material:CheckBox IsChecked="{Binding ChkNoVariations, Mode=TwoWay}"
+                                               Text="Exclude variations"
+                                               Color="{StaticResource Primary}"
+                                               Margin="0,0,0,8" />
+                            <material:CheckBox IsChecked="{Binding ChkIncludeTokens, Mode=TwoWay}"
+                                               Text="Include tokens"
+                                               Color="{StaticResource Primary}"
+                                               Margin="0,0,0,8" />
+                            <material:CheckBox IsChecked="{Binding ChkCommanderOnly, Mode=TwoWay}"
+                                               Text="Can be commander only"
+                                               Color="{StaticResource Primary}"
+                                               Margin="0,0,0,8" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
 
             </VerticalStackLayout>
         </ScrollView>
@@ -217,7 +287,7 @@
         <!-- Bottom buttons -->
         <Grid Grid.Row="1"
               Padding="16,8"
-              ColumnDefinitions="*,*,*"
+              ColumnDefinitions="Auto,*,Auto"
               ColumnSpacing="8"
               BackgroundColor="{StaticResource Surface}">
             <Button Text="Reset"

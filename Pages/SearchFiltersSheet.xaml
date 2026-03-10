@@ -17,9 +17,11 @@
             <OnIdiom x:Key="BodyFontSize"   x:TypeArguments="x:Double" Phone="14" Tablet="16" Desktop="16" />
             <OnIdiom x:Key="SmallFontSize"  x:TypeArguments="x:Double" Phone="12" Tablet="14" Desktop="14" />
 
-            <!-- Section card: generous padding so content isn't squished -->
-            <Style x:Key="FilterSectionStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+            <!-- Section container: padding only, no nested card background -->
+            <Style x:Key="FilterSectionStyle" TargetType="Border">
                 <Setter Property="Padding" Value="18" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="StrokeThickness" Value="0" />
             </Style>
 
             <!-- Color filter item template: more margin so icons aren't cramped -->
@@ -52,7 +54,8 @@
             StrokeThickness="0"
             StrokeShape="RoundRectangle 20,20,0,0"
             Margin="0"
-            VerticalOptions="End">
+            VerticalOptions="End"
+            HorizontalOptions="Fill">
         <Border.Shadow>
             <Shadow Brush="Black" Offset="0,-2" Radius="12" Opacity="0.3" />
         </Border.Shadow>
@@ -74,7 +77,7 @@
                        HorizontalOptions="Center" />
             </VerticalStackLayout>
 
-            <ScrollView Grid.Row="1" Padding="24,12,24,16">
+            <ScrollView Grid.Row="1" Padding="16,12,16,16">
                 <VerticalStackLayout Spacing="28">
 
                     <!-- Colors -->
