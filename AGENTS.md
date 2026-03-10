@@ -12,7 +12,7 @@ This file provides crucial guidance and operational instructions for AI assistan
 
 - **Target Platform**: Android (primary), Windows (partial)
 - **Target Framework**: `net10.0-android`
-- **Application ID**: `com.mtgfetch.mobile`
+- **Application ID**: `com.aethervault.mobile`
 - **Architecture**: MVVM with Repository pattern and DI
 
 ---

@@ -10,7 +10,7 @@ This file provides guidance for AI assistants (Claude Code and others) working i
 
 - **Target Platform**: Android (primary), Windows (partial)
 - **Target Framework**: `net10.0-android`
-- **Application ID**: `com.mtgfetch.mobile`
+- **Application ID**: `com.aethervault.mobile`
 - **Architecture**: MVVM with Repository pattern and DI
 
 ---
