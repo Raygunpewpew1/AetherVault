@@ -35,10 +35,10 @@ public class EasterEggSoundService : IEasterEggSoundService
             catch (FileNotFoundException) { }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[EasterEgg] OpenAppPackageFileAsync('{path}'): {ex.Message}");
+                Logger.LogStuff($"[EasterEgg] OpenAppPackageFileAsync('{path}'): {ex.Message}", LogLevel.Warning);
             }
         }
-        System.Diagnostics.Debug.WriteLine("[EasterEgg] hehe.mp3 not found. Add Resources/Raw/hehe.mp3 and rebuild.");
+        Logger.LogStuff("[EasterEgg] hehe.mp3 not found. Add Resources/Raw/hehe.mp3 and rebuild.", LogLevel.Warning);
     }
 
     private async Task PlayFromStreamAsync(Stream fileStream)

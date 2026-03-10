@@ -167,7 +167,7 @@ public partial class DeckDetailPage : ContentPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Commander art load failed: {ex.Message}");
+            Logger.LogStuff($"Commander art load failed: {ex.Message}", LogLevel.Warning);
         }
     }
 
@@ -207,7 +207,7 @@ public partial class DeckDetailPage : ContentPage
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[DeckDetail] RunDeferredLayoutPass: {ex.Message}");
+                Logger.LogStuff($"[DeckDetail] RunDeferredLayoutPass: {ex.Message}", LogLevel.Warning);
             }
         });
         _ = Task.Run(async () =>
@@ -224,7 +224,7 @@ public partial class DeckDetailPage : ContentPage
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[DeckDetail] RunDeferredLayoutPass (delayed): {ex.Message}");
+                    Logger.LogStuff($"[DeckDetail] RunDeferredLayoutPass (delayed): {ex.Message}", LogLevel.Warning);
                 }
             });
         });
@@ -291,7 +291,7 @@ public partial class DeckDetailPage : ContentPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error drawing commander art: {ex}");
+            Logger.LogStuff($"Error drawing commander art: {ex}", LogLevel.Error);
         }
     }
 

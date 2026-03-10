@@ -1,3 +1,4 @@
+using AetherVault.Services;
 using AetherVault.ViewModels;
 using System.ComponentModel;
 
@@ -34,8 +35,8 @@ public partial class LoadingPage : ContentPage
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Loading] Init failed: {ex.GetType().Name}: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+            Logger.LogStuff($"[Loading] Init failed: {ex.GetType().Name}: {ex.Message}", LogLevel.Error);
+            Logger.LogStuff(ex.StackTrace ?? "", LogLevel.Error);
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 _viewModel.StatusMessage = $"Startup error: {ex.Message}";
