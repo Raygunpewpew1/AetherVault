@@ -429,6 +429,9 @@ public class CardGrid : ContentView
 
     private void OnScrolled(object? sender, ScrolledEventArgs e)
     {
+        // Notify the gesture handler immediately so it can suppress a tap even if
+        // ScrollY hasn't propagated yet when the finger lifts (common on Android).
+        _gestures.NotifyScrolled();
         UpdateState(s => s with
         {
             Viewport = s.Viewport with { ScrollY = (float)e.ScrollY }

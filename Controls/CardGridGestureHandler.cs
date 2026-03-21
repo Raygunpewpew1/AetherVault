@@ -5,7 +5,7 @@ namespace AetherVault.Controls;
 internal sealed class CardGridGestureHandler
 {
     /// <summary>Minimum list scroll (Y) between touch down and up to treat the gesture as a scroll, not a tap.</summary>
-    private const double ScrollDeltaSuppressTap = 6d;
+    private const double ScrollDeltaSuppressTap = 10d;
 
     /// <summary>Squared distance (DIP) finger must move from press point to cancel a tap (thumb slop).</summary>
     private const float TapCancelDistanceSquared = 10f * 10f;
@@ -43,6 +43,7 @@ internal sealed class CardGridGestureHandler
     private readonly Func<double> _getScrollY;
 
     private double _scrollYAtPress;
+    private bool _scrolledSinceDown;
 
     public CardGridGestureHandler(
         IDispatcher dispatcher,
@@ -57,6 +58,17 @@ internal sealed class CardGridGestureHandler
 
     // ── Platform-agnostic gesture state machine ───────────────────────────────
 
+    /// <summary>
+    /// Called by CardGrid whenever the ScrollView fires a Scrolled event.
+    /// Marks that a real scroll occurred so HandleUp can suppress accidental taps
+    /// even when ScrollY hasn't updated yet at the moment the finger lifts.
+    /// </summary>
+    internal void NotifyScrolled()
+    {
+        if (_gestureState == GestureState.PressTracking)
+            _scrolledSinceDown = true;
+    }
+
     internal void HandleDown(float x, float y)
     {
         // Always unlock scroll at the start of a new gesture sequence.
@@ -67,6 +79,7 @@ internal sealed class CardGridGestureHandler
         _pressPoint = new Point(x, y);
         _hasMovedBeyondTapThreshold = false;
         _scrollYAtPress = _getScrollY();
+        _scrolledSinceDown = false;
         _gestureState = GestureState.PressTracking;
         _armedUuid = null;
         _armedIndex = -1;
@@ -149,7 +162,7 @@ internal sealed class CardGridGestureHandler
                 // (ScrollView often consumes pans, so we may not see pointer moves during scroll).
                 _gestureState = GestureState.Idle;
                 _longPressTimer?.Stop();
-                bool scrolled = Math.Abs(_getScrollY() - _scrollYAtPress) >= ScrollDeltaSuppressTap;
+                bool scrolled = _scrolledSinceDown || Math.Abs(_getScrollY() - _scrollYAtPress) >= ScrollDeltaSuppressTap;
                 if (!_hasMovedBeyondTapThreshold && !scrolled)
                 {
                     var tapPoint = _pressPoint;
