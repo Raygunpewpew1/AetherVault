@@ -8,7 +8,7 @@ namespace AetherVault.Services;
 /// <summary>
 /// Result of importing a single MTGJSON deck into the app.
 /// </summary>
-public sealed class MTGJsonDeckImportResult
+public sealed class MtgJsonDeckImportResult
 {
     public int DeckId { get; set; }
     public int CardsAdded { get; set; }
@@ -20,12 +20,12 @@ public sealed class MTGJsonDeckImportResult
 /// Imports an MTGJSON deck (mainBoard, sideBoard, commander) into the app by resolving UUIDs
 /// against the local card DB and creating a new deck via DeckBuilderService.
 /// </summary>
-public class MTGJsonDeckImporter
+public class MtgJsonDeckImporter
 {
     private readonly DeckBuilderService _deckService;
     private readonly ICardRepository _cardRepo;
 
-    public MTGJsonDeckImporter(DeckBuilderService deckService, ICardRepository cardRepo)
+    public MtgJsonDeckImporter(DeckBuilderService deckService, ICardRepository cardRepo)
     {
         _deckService = deckService;
         _cardRepo = cardRepo;
@@ -74,9 +74,9 @@ public class MTGJsonDeckImporter
     /// <summary>
     /// Imports the given MTGJSON deck as a new deck. Returns the new deck id and counts.
     /// </summary>
-    public async Task<MTGJsonDeckImportResult> ImportDeckAsync(MtgJsonDeck deck, IProgress<string>? progress = null, CancellationToken ct = default)
+    public async Task<MtgJsonDeckImportResult> ImportDeckAsync(MtgJsonDeck deck, IProgress<string>? progress = null, CancellationToken ct = default)
     {
-        var result = new MTGJsonDeckImportResult();
+        var result = new MtgJsonDeckImportResult();
         if (deck == null)
             return result;
 
@@ -111,7 +111,7 @@ public class MTGJsonDeckImporter
 
         var uuids = allCards.Select(x => x.Card.Uuid).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().ToArray();
         progress?.Report($"Resolving {uuids.Length} cards...");
-        var cardMap = await _cardRepo.GetCardsByUUIDsAsync(uuids);
+        var cardMap = await _cardRepo.GetCardsByUuiDsAsync(uuids);
         var missing = uuids.Where(u => !cardMap.ContainsKey(u)).ToList();
         result.MissingUuids = missing;
 
@@ -152,10 +152,10 @@ public class MTGJsonDeckImporter
         Card? firstCommanderCard = null;
         if (commanderCards.Count > 0)
             firstCommanderCard = await ResolveCardAsync(commanderCards[0]);
-        if (firstCommanderCard != null && !string.IsNullOrEmpty(firstCommanderCard.UUID))
+        if (firstCommanderCard != null && !string.IsNullOrEmpty(firstCommanderCard.Uuid))
         {
             progress?.Report("Setting commander...");
-            await _deckService.SetCommanderAsync(deckId, firstCommanderCard.UUID);
+            await _deckService.SetCommanderAsync(deckId, firstCommanderCard.Uuid);
             result.CardsAdded += 1;
         }
 
@@ -163,14 +163,14 @@ public class MTGJsonDeckImporter
         {
             ct.ThrowIfCancellationRequested();
             var card = await ResolveCardAsync(mtgCard);
-            if (card == null || string.IsNullOrEmpty(card.UUID))
+            if (card == null || string.IsNullOrEmpty(card.Uuid))
                 continue;
-            if (section == "Commander" && firstCommanderCard != null && card.UUID == firstCommanderCard.UUID)
+            if (section == "Commander" && firstCommanderCard != null && card.Uuid == firstCommanderCard.Uuid)
                 continue; // already added by SetCommanderAsync
 
             var quantity = mtgCard.Count < 1 ? 1 : mtgCard.Count;
             // skipLegalityCheck: MTGJSON deck files are authoritative — trust the source.
-            var addResult = await _deckService.AddCardAsync(deckId, card.UUID, quantity, section, skipLegalityCheck: true);
+            var addResult = await _deckService.AddCardAsync(deckId, card.Uuid, quantity, section, skipLegalityCheck: true);
             if (!addResult.IsError)
                 result.CardsAdded += quantity;
         }

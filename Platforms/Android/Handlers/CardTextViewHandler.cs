@@ -26,7 +26,7 @@ public class CardTextViewHandler : ViewHandler<CardTextView, TextView>
     ];
 
     private static Regex? _keywordRegex;
-    private static readonly HashSet<string> _keywords = new(DefaultKeywords, StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> Keywords = new(DefaultKeywords, StringComparer.OrdinalIgnoreCase);
 
     public static IPropertyMapper<CardTextView, CardTextViewHandler> Mapper =
         new PropertyMapper<CardTextView, CardTextViewHandler>(ViewHandler.ViewMapper)
@@ -46,7 +46,7 @@ public class CardTextViewHandler : ViewHandler<CardTextView, TextView>
     private static void EnsureRegex()
     {
         if (_keywordRegex != null) return;
-        var sorted = _keywords.OrderByDescending(k => k.Length);
+        var sorted = Keywords.OrderByDescending(k => k.Length);
         var pattern = @"\b(" + string.Join("|", sorted.Select(Regex.Escape)) + @")\b";
         _keywordRegex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
     }

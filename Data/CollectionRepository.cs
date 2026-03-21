@@ -25,19 +25,19 @@ public class CollectionRepository : ICollectionRepository
         public int RareCount { get; set; }
         public int MythicCount { get; set; }
         public int FoilCount { get; set; }
-        public double TotalCMC { get; set; }
+        public double TotalCmc { get; set; }
         public int NonLandCount { get; set; }
     }
 #pragma warning restore SA1401
 
     private class CollectionRow
     {
-        public string card_uuid { get; set; } = "";
-        public int quantity { get; set; }
-        public string date_added { get; set; } = "";
-        public int? sort_order { get; set; }
-        public int? is_foil { get; set; }
-        public int? is_etched { get; set; }
+        public string CardUuid { get; set; } = "";
+        public int Quantity { get; set; }
+        public string DateAdded { get; set; } = "";
+        public int? SortOrder { get; set; }
+        public int? IsFoil { get; set; }
+        public int? IsEtched { get; set; }
     }
 
     private readonly DatabaseManager _db;
@@ -51,13 +51,13 @@ public class CollectionRepository : ICollectionRepository
     }
 
     /// <summary>Insert or update quantity for one card. Uses upsert so multiple adds accumulate quantity.</summary>
-    public async Task AddCardAsync(string cardUUID, int quantity = 1, bool isFoil = false, bool isEtched = false)
+    public async Task AddCardAsync(string cardUuid, int quantity = 1, bool isFoil = false, bool isEtched = false)
     {
         await WithCollectionTransactionAsync(async (conn, trans) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.CollectionUpsertAddCard,
-                new { uuid = cardUUID, qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0 },
+                SqlQueries.CollectionUpsertAddCard,
+                new { uuid = cardUuid, qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0 },
                 trans);
         });
     }
@@ -83,16 +83,16 @@ public class CollectionRepository : ICollectionRepository
                 return;
             }
 
-            await conn.ExecuteAsync(SQLQueries.CollectionUpsertAddCard, parameters, trans);
+            await conn.ExecuteAsync(SqlQueries.CollectionUpsertAddCard, parameters, trans);
         });
     }
 
-    public async Task RemoveCardAsync(string cardUUID)
+    public async Task RemoveCardAsync(string cardUuid)
     {
         await _lock.WaitAsync();
         try
         {
-            await _db.CollectionConnection.ExecuteAsync(SQLQueries.CollectionDeleteCard, new { uuid = cardUUID });
+            await _db.CollectionConnection.ExecuteAsync(SqlQueries.CollectionDeleteCard, new { uuid = cardUuid });
         }
         finally
         {
@@ -105,7 +105,7 @@ public class CollectionRepository : ICollectionRepository
         await _lock.WaitAsync();
         try
         {
-            await _db.CollectionConnection.ExecuteAsync(SQLQueries.CollectionDeleteAll);
+            await _db.CollectionConnection.ExecuteAsync(SqlQueries.CollectionDeleteAll);
         }
         finally
         {
@@ -113,30 +113,30 @@ public class CollectionRepository : ICollectionRepository
         }
     }
 
-    public async Task UpdateQuantityAsync(string cardUUID, int quantity, bool isFoil = false, bool isEtched = false)
+    public async Task UpdateQuantityAsync(string cardUuid, int quantity, bool isFoil = false, bool isEtched = false)
     {
         if (quantity <= 0)
         {
-            await RemoveCardAsync(cardUUID);
+            await RemoveCardAsync(cardUuid);
             return;
         }
 
         await WithCollectionTransactionAsync(async (conn, trans) =>
         {
-            var currentQty = await GetQuantityInternalAsync(conn, cardUUID, trans);
+            var currentQty = await GetQuantityInternalAsync(conn, cardUuid, trans);
 
             if (currentQty > 0)
             {
                 await conn.ExecuteAsync(
-                    SQLQueries.CollectionUpdateQuantity,
-                    new { qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0, uuid = cardUUID },
+                    SqlQueries.CollectionUpdateQuantity,
+                    new { qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0, uuid = cardUuid },
                     trans);
             }
             else
             {
                 await conn.ExecuteAsync(
-                    SQLQueries.CollectionInsertCard,
-                    new { uuid = cardUUID, qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0 },
+                    SqlQueries.CollectionInsertCard,
+                    new { uuid = cardUuid, qty = quantity, isFoil = isFoil ? 1 : 0, isEtched = isEtched ? 1 : 0 },
                     trans);
             }
         });
@@ -150,7 +150,7 @@ public class CollectionRepository : ICollectionRepository
         await _lock.WaitAsync();
         try
         {
-            entries = await _db.CollectionConnection.QueryAsync<CollectionRow>(SQLQueries.CollectionGetAll);
+            entries = await _db.CollectionConnection.QueryAsync<CollectionRow>(SqlQueries.CollectionGetAll);
         }
         finally
         {
@@ -158,26 +158,26 @@ public class CollectionRepository : ICollectionRepository
         }
 
         var entryList = entries.ToList();
-        var uuids = entryList.Select(e => e.card_uuid).ToArray();
+        var uuids = entryList.Select(e => e.CardUuid).ToArray();
 
         // Batch-load card details from MTG database
         if (uuids.Length > 0)
         {
-            var cardCache = await _cardRepo.GetCardsByUUIDsAsync(uuids);
+            var cardCache = await _cardRepo.GetCardsByUuiDsAsync(uuids);
 
             foreach (var row in entryList)
             {
-                if (cardCache.TryGetValue(row.card_uuid, out var card))
+                if (cardCache.TryGetValue(row.CardUuid, out var card))
                 {
-                    DateTime dateAdded = DateTime.TryParse(row.date_added, out var d) ? d : DateTime.Now;
+                    DateTime dateAdded = DateTime.TryParse(row.DateAdded, out var d) ? d : DateTime.Now;
                     items.Add(new CollectionItem
                     {
-                        CardUUID = row.card_uuid,
-                        Quantity = row.quantity,
-                        IsFoil = row.is_foil.HasValue && row.is_foil.Value != 0,
-                        IsEtched = row.is_etched.HasValue && row.is_etched.Value != 0,
+                        CardUuid = row.CardUuid,
+                        Quantity = row.Quantity,
+                        IsFoil = row.IsFoil.HasValue && row.IsFoil.Value != 0,
+                        IsEtched = row.IsEtched.HasValue && row.IsEtched.Value != 0,
                         DateAdded = dateAdded,
-                        SortOrder = row.sort_order ?? 0,
+                        SortOrder = row.SortOrder ?? 0,
                         Card = card
                     });
                 }
@@ -192,9 +192,9 @@ public class CollectionRepository : ICollectionRepository
         await _lock.WaitAsync();
         try
         {
-            var rows = await _db.CollectionConnection.QueryAsync<CollectionRow>(SQLQueries.CollectionGetForPricing);
+            var rows = await _db.CollectionConnection.QueryAsync<CollectionRow>(SqlQueries.CollectionGetForPricing);
             return rows
-                .Select(r => (Uuid: r.card_uuid, Quantity: r.quantity, IsFoil: r.is_foil.HasValue && r.is_foil.Value != 0, IsEtched: r.is_etched.HasValue && r.is_etched.Value != 0))
+                .Select(r => (Uuid: r.CardUuid, Quantity: r.Quantity, IsFoil: r.IsFoil.HasValue && r.IsFoil.Value != 0, IsEtched: r.IsEtched.HasValue && r.IsEtched.Value != 0))
                 .ToList();
         }
         finally
@@ -227,7 +227,7 @@ public class CollectionRepository : ICollectionRepository
     public static CollectionStats CalculateStats(IList<CollectionItem> collection)
     {
         var stats = new CollectionStats();
-        double totalCMC = 0;
+        double totalCmc = 0;
         int nonLandCount = 0;
 
         foreach (var item in collection)
@@ -255,7 +255,7 @@ public class CollectionRepository : ICollectionRepository
             // CMC Calculation (Non-Lands only)
             if (!item.Card.IsLand)
             {
-                totalCMC += item.Card.CMC * item.Quantity;
+                totalCmc += item.Card.Cmc * item.Quantity;
                 nonLandCount += item.Quantity;
             }
 
@@ -264,7 +264,7 @@ public class CollectionRepository : ICollectionRepository
         }
 
         if (nonLandCount > 0)
-            stats.AvgCMC = totalCMC / nonLandCount;
+            stats.AvgCmc = totalCmc / nonLandCount;
 
         return stats;
     }
@@ -281,7 +281,7 @@ public class CollectionRepository : ICollectionRepository
         await _db.ConnectionLock.WaitAsync();
         try
         {
-            var row = await _db.MTGConnection.QueryFirstOrDefaultAsync<CollectionStatsAggregateRow>(SQLQueries.CollectionStatsAggregates);
+            var row = await _db.MtgConnection.QueryFirstOrDefaultAsync<CollectionStatsAggregateRow>(SqlQueries.CollectionStatsAggregates);
             if (row is null)
                 return new CollectionStats();
 
@@ -300,7 +300,7 @@ public class CollectionRepository : ICollectionRepository
             };
 
             if (row.NonLandCount > 0)
-                stats.AvgCMC = row.TotalCMC / row.NonLandCount;
+                stats.AvgCmc = row.TotalCmc / row.NonLandCount;
 
             return stats;
         }
@@ -310,13 +310,13 @@ public class CollectionRepository : ICollectionRepository
         }
     }
 
-    public async Task<bool> IsInCollectionAsync(string cardUUID)
+    public async Task<bool> IsInCollectionAsync(string cardUuid)
     {
         await _lock.WaitAsync();
         try
         {
             var result = await _db.CollectionConnection.QueryFirstOrDefaultAsync<int?>(
-                SQLQueries.CollectionCheckExists, new { uuid = cardUUID });
+                SqlQueries.CollectionCheckExists, new { uuid = cardUuid });
             return result.HasValue;
         }
         finally
@@ -325,12 +325,12 @@ public class CollectionRepository : ICollectionRepository
         }
     }
 
-    public async Task<int> GetQuantityAsync(string cardUUID)
+    public async Task<int> GetQuantityAsync(string cardUuid)
     {
         await _lock.WaitAsync();
         try
         {
-            return await GetQuantityInternalAsync(_db.CollectionConnection, cardUUID);
+            return await GetQuantityInternalAsync(_db.CollectionConnection, cardUuid);
         }
         finally
         {
@@ -345,7 +345,7 @@ public class CollectionRepository : ICollectionRepository
             for (int i = 0; i < orderedUuids.Count; i++)
             {
                 await conn.ExecuteAsync(
-                    SQLQueries.CollectionReorderItem,
+                    SqlQueries.CollectionReorderItem,
                     new { sortOrder = i, uuid = orderedUuids[i] },
                     trans);
             }
@@ -354,11 +354,11 @@ public class CollectionRepository : ICollectionRepository
 
     // ── Private helpers ─────────────────────────────────────────────
 
-    private Task<int> GetQuantityInternalAsync(SqliteConnection conn, string cardUUID, SqliteTransaction? trans = null)
+    private Task<int> GetQuantityInternalAsync(SqliteConnection conn, string cardUuid, SqliteTransaction? trans = null)
     {
         return conn.QueryFirstOrDefaultAsync<int>(
-            SQLQueries.CollectionGetQuantity,
-            new { uuid = cardUUID },
+            SqlQueries.CollectionGetQuantity,
+            new { uuid = cardUuid },
             trans);
     }
 

@@ -6,7 +6,7 @@ namespace AetherVault.Models;
 /// </summary>
 public class CollectionItem
 {
-    public string CardUUID { get; set; } = "";
+    public string CardUuid { get; set; } = "";
     public int Quantity { get; set; }
     public bool IsFoil { get; set; }
     public bool IsEtched { get; set; }
@@ -34,13 +34,13 @@ public class CollectionStats
     public int MythicCount { get; set; }
     public int FoilCount { get; set; }
     public double TotalValue { get; set; }
-    public double AvgCMC { get; set; }
+    public double AvgCmc { get; set; }
 
     public override string ToString() =>
         $"Total: {TotalCards} cards ({UniqueCards} unique)\n" +
         $"Creatures: {CreatureCount} | Spells: {SpellCount} | Lands: {LandCount}\n" +
         $"Common: {CommonCount} | Uncommon: {UncommonCount} | Rare: {RareCount} | Mythic: {MythicCount}\n" +
-        $"Foils: {FoilCount} | Avg CMC: {AvgCMC:F2} | Total value: ${TotalValue:F2}";
+        $"Foils: {FoilCount} | Avg CMC: {AvgCmc:F2} | Total value: ${TotalValue:F2}";
 }
 
 /// <summary>

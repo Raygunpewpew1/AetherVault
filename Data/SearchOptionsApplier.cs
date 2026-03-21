@@ -3,13 +3,13 @@ using AetherVault.Core;
 namespace AetherVault.Data;
 
 /// <summary>
-/// Applies <see cref="SearchOptions"/> to an <see cref="MTGSearchHelper"/>.
+/// Applies <see cref="SearchOptions"/> to an <see cref="MtgSearchHelper"/>.
 /// Shared by SearchViewModel and CardSearchPickerViewModel.
 /// Original LIKE-based behavior (no FTS usage in query building).
 /// </summary>
 public static class SearchOptionsApplier
 {
-    public static void Apply(MTGSearchHelper helper, SearchOptions options)
+    public static void Apply(MtgSearchHelper helper, SearchOptions options)
     {
         if (!string.IsNullOrEmpty(options.NameFilter))
             helper.WhereNameContains(options.NameFilter);
@@ -36,10 +36,10 @@ public static class SearchOptionsApplier
         if (!string.IsNullOrEmpty(options.SetFilter))
             helper.WhereSet(options.SetFilter);
 
-        if (options.UseCMCExact)
-            helper.WhereCMC(options.CMCExact);
-        else if (options.UseCMCRange)
-            helper.WhereCMCBetween(options.CMCMin, options.CMCMax);
+        if (options.UseCmcExact)
+            helper.WhereCmc(options.CmcExact);
+        else if (options.UseCmcRange)
+            helper.WhereCmcBetween(options.CmcMin, options.CmcMax);
 
         if (!string.IsNullOrEmpty(options.PowerFilter))
             helper.WherePower(options.PowerFilter);

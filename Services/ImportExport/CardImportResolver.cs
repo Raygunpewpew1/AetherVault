@@ -64,12 +64,12 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     if (string.Equals(NormalizeKey(candidate.SetCode), normalizedSet, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(NormalizeKey(candidate.SetName), normalizedSet, StringComparison.OrdinalIgnoreCase))
                     {
-                        return candidate.UUID;
+                        return candidate.Uuid;
                     }
                 }
             }
 
-            return candidates[0].UUID;
+            return candidates[0].Uuid;
         }
 
         internal async Task<string?> ResolveFromFallbackAsync(string? scryfallId, string? set, string? number, string? name)
@@ -82,7 +82,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereScryfallId(cacheKey).Limit(1);
                     var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
-                    cachedUuid = matches.Length > 0 ? matches[0].UUID : null;
+                    cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _scryfallFallbackCache[cacheKey] = cachedUuid;
                 }
 
@@ -100,7 +100,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereSet(set!).WhereNumber(number!).Limit(1);
                     var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
-                    cachedUuid = matches.Length > 0 ? matches[0].UUID : null;
+                    cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _setNumberFallbackCache[setNumberKey] = cachedUuid;
                 }
 
@@ -133,7 +133,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     }
 
                     chosen ??= matches.FirstOrDefault();
-                    cachedUuid = chosen?.UUID;
+                    cachedUuid = chosen?.Uuid;
                     _nameSetFallbackCache[nameSetKey] = cachedUuid;
                 }
 
@@ -150,7 +150,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereNameEquals(name!).WherePrimarySideOnly().Limit(1);
                     var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
-                    cachedUuid = matches.Length > 0 ? matches[0].UUID : null;
+                    cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _nameExactFallbackCache[normalizedName] = cachedUuid;
                 }
 
@@ -176,7 +176,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                     }
 
                     chosen ??= candidates.FirstOrDefault();
-                    cachedUuid = chosen?.UUID;
+                    cachedUuid = chosen?.Uuid;
                     _namePartialFallbackCache[normalizedName] = cachedUuid;
                 }
 
@@ -190,7 +190,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
         }
     }
 
-    internal sealed record ImportCandidate(string UUID, string SetCode, string? SetName);
+    internal sealed record ImportCandidate(string Uuid, string SetCode, string? SetName);
 
     internal sealed class ImportLookupIndex
     {
@@ -205,14 +205,14 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
 
         foreach (var row in rows)
         {
-            if (string.IsNullOrWhiteSpace(row.UUID))
+            if (string.IsNullOrWhiteSpace(row.Uuid))
             {
                 continue;
             }
 
             if (!string.IsNullOrWhiteSpace(row.ScryfallId))
             {
-                index.ByScryfallId.TryAdd(NormalizeKey(row.ScryfallId), row.UUID);
+                index.ByScryfallId.TryAdd(NormalizeKey(row.ScryfallId), row.Uuid);
             }
 
             if (!string.IsNullOrWhiteSpace(row.Number))
@@ -220,17 +220,17 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 var setCodeKey = BuildSetNumberKey(row.SetCode, row.Number);
                 if (!string.IsNullOrEmpty(setCodeKey))
                 {
-                    index.BySetNumber.TryAdd(setCodeKey, row.UUID);
+                    index.BySetNumber.TryAdd(setCodeKey, row.Uuid);
                 }
 
                 var setNameKey = BuildSetNumberKey(row.SetName, row.Number);
                 if (!string.IsNullOrEmpty(setNameKey))
                 {
-                    index.BySetNumber.TryAdd(setNameKey, row.UUID);
+                    index.BySetNumber.TryAdd(setNameKey, row.Uuid);
                 }
             }
 
-            var candidate = new ImportCandidate(row.UUID, row.SetCode, row.SetName);
+            var candidate = new ImportCandidate(row.Uuid, row.SetCode, row.SetName);
             AddNameCandidate(index.ByName, row.Name, candidate);
             AddNameCandidate(index.ByName, row.FaceName, candidate);
         }
@@ -257,7 +257,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
 
         for (int i = 0; i < candidates.Count; i++)
         {
-            if (candidates[i].UUID == candidate.UUID)
+            if (candidates[i].Uuid == candidate.Uuid)
             {
                 return;
             }

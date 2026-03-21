@@ -58,9 +58,9 @@ public sealed class DatabaseManager : IDisposable
                     }
 
                     // Create collection tables
-                    await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateCollectionTable);
-                    await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateDecksTable);
-                    await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateDeckCardsTable);
+                    await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateCollectionTable);
+                    await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateDecksTable);
+                    await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateDeckCardsTable);
                     await MigrateCollectionSchemaAsync(_collectionConnection);
 
                     // Connect MTG database (read-only) and attach collection so we can JOIN col.my_collection in search/collection queries
@@ -99,7 +99,7 @@ public sealed class DatabaseManager : IDisposable
     /// <summary>
     /// Gets the MTG database connection. Throws if not connected.
     /// </summary>
-    public SqliteConnection MTGConnection =>
+    public SqliteConnection MtgConnection =>
         _mtgConnection ?? throw new InvalidOperationException("MTG database not connected.");
 
     /// <summary>
@@ -154,7 +154,7 @@ public sealed class DatabaseManager : IDisposable
     /// <summary>
     /// Executes a non-query SQL on the collection database with optional parameters.
     /// </summary>
-    public async Task ExecuteCollectionSQLAsync(string sql, params (string name, object value)[] parameters)
+    public async Task ExecuteCollectionSqlAsync(string sql, params (string name, object value)[] parameters)
     {
         if (!IsConnected)
             throw new InvalidOperationException("Database not connected.");
@@ -222,15 +222,15 @@ public sealed class DatabaseManager : IDisposable
         _collectionConnection = CreateConnection(collectionDbPath, readOnly: false);
         await _collectionConnection.OpenAsync();
         await ConfigureConnectionAsync(_collectionConnection, isCollection: true);
-        await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateCollectionTable);
-        await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateDecksTable);
-        await ExecuteNonQueryAsync(_collectionConnection, SQLQueries.CreateDeckCardsTable);
+        await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateCollectionTable);
+        await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateDecksTable);
+        await ExecuteNonQueryAsync(_collectionConnection, SqlQueries.CreateDeckCardsTable);
         await MigrateCollectionSchemaAsync(_collectionConnection);
     }
 
     private class PragmaTableInfo
     {
-        public string name { get; set; } = "";
+        public string Name { get; set; } = "";
     }
 
     private static async Task MigrateCollectionSchemaAsync(SqliteConnection conn)
@@ -241,46 +241,46 @@ public sealed class DatabaseManager : IDisposable
         bool hasIsFoil = false;
         bool hasIsEtched = false;
 
-        var columns = await conn.QueryAsync<PragmaTableInfo>(SQLQueries.CollectionTableInfo);
+        var columns = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.CollectionTableInfo);
         foreach (var col in columns)
         {
-            if (col.name == "sort_order") hasSortOrder = true;
-            if (col.name == "is_foil") hasIsFoil = true;
-            if (col.name == "is_etched") hasIsEtched = true;
+            if (col.Name == "sort_order") hasSortOrder = true;
+            if (col.Name == "is_foil") hasIsFoil = true;
+            if (col.Name == "is_etched") hasIsEtched = true;
         }
 
         if (!hasSortOrder)
         {
             Logger.LogStuff("Migrating collection table: adding sort_order column and seeding values.", LogLevel.Info);
-            await ExecuteNonQueryAsync(conn, SQLQueries.CollectionAddSortOrder);
-            await ExecuteNonQueryAsync(conn, SQLQueries.CollectionSeedSortOrder);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddSortOrder);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionSeedSortOrder);
         }
 
         if (!hasIsFoil)
         {
             Logger.LogStuff("Migrating collection table: adding is_foil column.", LogLevel.Info);
-            await ExecuteNonQueryAsync(conn, SQLQueries.CollectionAddIsFoil);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddIsFoil);
         }
 
         if (!hasIsEtched)
         {
             Logger.LogStuff("Migrating collection table: adding is_etched column.", LogLevel.Info);
-            await ExecuteNonQueryAsync(conn, SQLQueries.CollectionAddIsEtched);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddIsEtched);
         }
 
         // Migrate Decks table — add CommanderName if missing
         bool hasCommanderName = false;
-        var deckColumns = await conn.QueryAsync<PragmaTableInfo>(SQLQueries.DecksTableInfo);
+        var deckColumns = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.DecksTableInfo);
         foreach (var col in deckColumns)
         {
-            if (col.name == "CommanderName")
+            if (col.Name == "CommanderName")
                 hasCommanderName = true;
         }
 
         if (!hasCommanderName)
         {
             Logger.LogStuff("Migrating decks table: adding CommanderName column.", LogLevel.Info);
-            await ExecuteNonQueryAsync(conn, SQLQueries.DecksAddCommanderName);
+            await ExecuteNonQueryAsync(conn, SqlQueries.DecksAddCommanderName);
         }
 
         Logger.LogStuff("Collection schema migration check completed.", LogLevel.Info);

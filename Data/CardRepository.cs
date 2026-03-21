@@ -19,13 +19,13 @@ public class CardRepository : ICardRepository
         _db = databaseManager;
     }
 
-    public Task<Card> GetCardByUUIDAsync(string uuid) => GetCardWithLegalitiesAsync(uuid);
+    public Task<Card> GetCardByUuidAsync(string uuid) => GetCardWithLegalitiesAsync(uuid);
 
     /// <summary>Loads a single card by UUID from cards/tokens and maps it to a Card model.</summary>
     public async Task<Card> GetCardWithLegalitiesAsync(string uuid)
     {
-        return await WithMTGReaderAsync(
-            SQLQueries.BaseCardsAndTokens + SQLQueries.WhereUuidEquals,
+        return await WithMtgReaderAsync(
+            SqlQueries.BaseCardsAndTokens + SqlQueries.WhereUuidEquals,
             new { uuid },
             async reader =>
             {
@@ -51,15 +51,15 @@ public class CardRepository : ICardRepository
     public async Task<Card> GetCardWithRulingsAsync(string uuid)
     {
         var card = await GetCardWithLegalitiesAsync(uuid);
-        if (!string.IsNullOrEmpty(card.UUID))
+        if (!string.IsNullOrEmpty(card.Uuid))
             card.Rulings = (await GetCardRulingsAsync(uuid)).ToList();
         return card;
     }
 
     public async Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode)
     {
-        return await WithMTGReaderAsync(
-            SQLQueries.SelectFullCard + " WHERE c.faceName = @fname AND c.setCode = @set LIMIT 1",
+        return await WithMtgReaderAsync(
+            SqlQueries.SelectFullCard + " WHERE c.faceName = @fname AND c.setCode = @set LIMIT 1",
             new { fname = faceName, set = setCode },
             async reader =>
             {
@@ -72,39 +72,39 @@ public class CardRepository : ICardRepository
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(setCode))
             return null;
-        var card = await WithMTGReaderAsync(
-            SQLQueries.BaseCardsAndTokens + SQLQueries.WhereNameAndSet,
+        var card = await WithMtgReaderAsync(
+            SqlQueries.BaseCardsAndTokens + SqlQueries.WhereNameAndSet,
             new { name = name.Trim(), set = setCode.Trim() },
             async reader =>
             {
                 var o = new CardMapper.CardOrdinals(reader);
                 return await reader.ReadAsync() ? CardMapper.MapCard(reader, o) : null;
             });
-        return card?.UUID != null ? card : null;
+        return card?.Uuid != null ? card : null;
     }
 
     public async Task<Card?> GetCardByScryfallIdAsync(string scryfallId)
     {
         if (string.IsNullOrWhiteSpace(scryfallId))
             return null;
-        var card = await WithMTGReaderAsync(
-            SQLQueries.BaseCardsAndTokens + SQLQueries.WhereScryfallId,
+        var card = await WithMtgReaderAsync(
+            SqlQueries.BaseCardsAndTokens + SqlQueries.WhereScryfallId,
             new { sid = scryfallId.Trim() },
             async reader =>
             {
                 var o = new CardMapper.CardOrdinals(reader);
                 return await reader.ReadAsync() ? CardMapper.MapCard(reader, o) : null;
             });
-        return card?.UUID != null ? card : null;
+        return card?.Uuid != null ? card : null;
     }
 
-    public async Task<string> GetScryfallIdAsync(string cardUUID)
+    public async Task<string> GetScryfallIdAsync(string cardUuid)
     {
         await _lock.WaitAsync();
         try
         {
-            var result = await _db.MTGConnection.QueryFirstOrDefaultAsync<string>(
-                SQLQueries.SelectScryfallId, new { uuid = cardUUID });
+            var result = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
+                SqlQueries.SelectScryfallId, new { uuid = cardUuid });
             return result ?? "";
         }
         finally
@@ -115,8 +115,8 @@ public class CardRepository : ICardRepository
 
     private class CardRulingRow
     {
-        public string date { get; set; } = "";
-        public string text { get; set; } = "";
+        public string Date { get; set; } = "";
+        public string Text { get; set; } = "";
     }
 
     public async Task<CardRuling[]> GetCardRulingsAsync(string uuid)
@@ -124,14 +124,14 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            var rows = await _db.MTGConnection.QueryAsync<CardRulingRow>(
-                SQLQueries.SelectRulings, new { uuid });
+            var rows = await _db.MtgConnection.QueryAsync<CardRulingRow>(
+                SqlQueries.SelectRulings, new { uuid });
 
             var rulings = new List<CardRuling>();
             foreach (var row in rows)
             {
-                DateTime.TryParse(row.date, out var date);
-                rulings.Add(new CardRuling(date, row.text));
+                DateTime.TryParse(row.Date, out var date);
+                rulings.Add(new CardRuling(date, row.Text));
             }
 
             return [.. rulings];
@@ -147,8 +147,8 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            var raw = await _db.MTGConnection.QueryFirstOrDefaultAsync<string>(
-                SQLQueries.SelectOtherFaces, new { uuid });
+            var raw = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
+                SqlQueries.SelectOtherFaces, new { uuid });
             return CardMapper.ParseOtherFaceIds(raw ?? "");
         }
         finally
@@ -161,14 +161,14 @@ public class CardRepository : ICardRepository
     {
         var otherIds = await GetOtherFaceIdsAsync(uuid);
         var allIds = new[] { uuid }.Concat(otherIds).ToArray();
-        var dict = await GetCardsByUUIDsAsync(allIds);
+        var dict = await GetCardsByUuiDsAsync(allIds);
         return SortCardsBySide([.. dict.Values]);
     }
 
     public async Task<Card[]> GetFullCardPackageAsync(string uuid)
     {
         var mainCard = await GetCardWithRulingsAsync(uuid);
-        if (string.IsNullOrEmpty(mainCard.UUID)) return [];
+        if (string.IsNullOrEmpty(mainCard.Uuid)) return [];
 
         var cards = new List<Card> { mainCard };
 
@@ -177,7 +177,7 @@ public class CardRepository : ICardRepository
         {
             var cardParts = CardMapper.ParseJsonArrayToStrings(mainCard.CardParts);
             if (cardParts.Length > 0)
-                cards.AddRange(await GetMeldPartCardsAsync(cardParts, mainCard.SetCode, mainCard.UUID));
+                cards.AddRange(await GetMeldPartCardsAsync(cardParts, mainCard.SetCode, mainCard.Uuid));
         }
         // CASE B: Standard multi-face (Transform, Adventure, Split, etc.)
         else
@@ -185,7 +185,7 @@ public class CardRepository : ICardRepository
             var otherIds = CardMapper.ParseOtherFaceIds(mainCard.OtherFaceIds);
             if (otherIds.Length > 0)
             {
-                var dict = await GetCardsByUUIDsAsync(otherIds);
+                var dict = await GetCardsByUuiDsAsync(otherIds);
                 cards.AddRange(dict.Values);
             }
         }
@@ -193,11 +193,11 @@ public class CardRepository : ICardRepository
         // Include tokens/related cards
         if (mainCard.RelatedCards != null && mainCard.RelatedCards.Length > 0)
         {
-            var dict = await GetCardsByUUIDsAsync(mainCard.RelatedCards);
+            var dict = await GetCardsByUuiDsAsync(mainCard.RelatedCards);
             foreach (var kvp in dict)
             {
                 // Ensure we don't duplicate (e.g. if a related card was already included)
-                if (!cards.Any(c => c.UUID == kvp.Key))
+                if (!cards.Any(c => c.Uuid == kvp.Key))
                 {
                     cards.Add(kvp.Value);
                 }
@@ -207,7 +207,7 @@ public class CardRepository : ICardRepository
         return SortCardsBySide([.. cards]);
     }
 
-    public async Task<Dictionary<string, Card>> GetCardsByUUIDsAsync(string[] uuids)
+    public async Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids)
     {
         var result = new Dictionary<string, Card>();
         if (uuids.Length == 0) return result;
@@ -217,7 +217,7 @@ public class CardRepository : ICardRepository
         {
             var chunk = uuids.Skip(i).Take(chunkSize).ToArray();
             var paramNames = chunk.Select((_, idx) => $"@u{idx}").ToArray();
-            var sql = SQLQueries.BaseCardsAndTokens + " WHERE c.uuid IN (" + string.Join(",", paramNames) + ")";
+            var sql = SqlQueries.BaseCardsAndTokens + " WHERE c.uuid IN (" + string.Join(",", paramNames) + ")";
 
             var dynamicParams = new DynamicParameters();
             for (int j = 0; j < chunk.Length; j++)
@@ -225,7 +225,7 @@ public class CardRepository : ICardRepository
                 dynamicParams.Add(paramNames[j], chunk[j]);
             }
 
-            await WithMTGReaderAsync(sql,
+            await WithMtgReaderAsync(sql,
                 dynamicParams,
                 async reader =>
                 {
@@ -233,7 +233,7 @@ public class CardRepository : ICardRepository
                     while (await reader.ReadAsync())
                     {
                         var card = CardMapper.MapCard(reader, o);
-                        result[card.UUID] = card;
+                        result[card.Uuid] = card;
                     }
                     return 0;
                 });
@@ -247,7 +247,7 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            var rows = await _db.MTGConnection.QueryAsync<ImportLookupRow>(SQLQueries.SelectImportLookupRows);
+            var rows = await _db.MtgConnection.QueryAsync<ImportLookupRow>(SqlQueries.SelectImportLookupRows);
             return [.. rows];
         }
         finally
@@ -267,7 +267,7 @@ public class CardRepository : ICardRepository
         return await SearchCardsAdvancedAsync(helper);
     }
 
-    public async Task<Card[]> SearchCardsAdvancedAsync(MTGSearchHelper searchHelper)
+    public async Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper)
     {
         var cards = new List<Card>();
         var (sql, parameters) = searchHelper.Build();
@@ -278,7 +278,7 @@ public class CardRepository : ICardRepository
             dynamicParams.Add(name, value);
         }
 
-        await WithMTGReaderAsync(sql,
+        await WithMtgReaderAsync(sql,
             dynamicParams,
             async reader =>
             {
@@ -291,7 +291,7 @@ public class CardRepository : ICardRepository
         return [.. cards];
     }
 
-    public async Task<int> GetCountAdvancedAsync(MTGSearchHelper searchHelper)
+    public async Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper)
     {
         var (sql, parameters) = searchHelper.BuildCount();
 
@@ -304,7 +304,7 @@ public class CardRepository : ICardRepository
                 dynamicParams.Add(name, value);
             }
 
-            return await _db.MTGConnection.ExecuteScalarAsync<int>(sql, dynamicParams);
+            return await _db.MtgConnection.ExecuteScalarAsync<int>(sql, dynamicParams);
         }
         finally
         {
@@ -312,14 +312,14 @@ public class CardRepository : ICardRepository
         }
     }
 
-    public MTGSearchHelper CreateSearchHelper() => new();
+    public MtgSearchHelper CreateSearchHelper() => new();
 
     public async Task<IReadOnlyList<SetInfo>> GetAllSetsAsync()
     {
         await _lock.WaitAsync();
         try
         {
-            var list = await _db.MTGConnection.QueryAsync<SetInfo>(SQLQueries.SelectSetsForFilter);
+            var list = await _db.MtgConnection.QueryAsync<SetInfo>(SqlQueries.SelectSetsForFilter);
             return [.. list];
         }
         finally
@@ -333,7 +333,7 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            var val = await _db.MTGConnection.QueryFirstOrDefaultAsync<int>(SQLQueries.FtsExistsCheck);
+            var val = await _db.MtgConnection.QueryFirstOrDefaultAsync<int>(SqlQueries.FtsExistsCheck);
             return val == 1;
         }
         catch
@@ -348,12 +348,12 @@ public class CardRepository : ICardRepository
 
     // ── Private helpers ─────────────────────────────────────────────
 
-    private async Task<Card[]> GetMeldPartCardsAsync(string[] cardParts, string setCode, string mainUUID)
+    private async Task<Card[]> GetMeldPartCardsAsync(string[] cardParts, string setCode, string mainUuid)
     {
         var cards = new List<Card>();
         var dynamicParams = new DynamicParameters();
         dynamicParams.Add("@set", setCode);
-        dynamicParams.Add("@mainUUID", mainUUID);
+        dynamicParams.Add("@mainUUID", mainUuid);
 
         var conditions = new List<string>();
         for (int i = 0; i < cardParts.Length; i++)
@@ -362,10 +362,10 @@ public class CardRepository : ICardRepository
             conditions.Add($"(c.faceName = @n{i} OR c.name = @n{i})");
         }
 
-        var sql = SQLQueries.SelectFullCard +
+        var sql = SqlQueries.SelectFullCard +
             $" WHERE c.setCode = @set AND ({string.Join(" OR ", conditions)}) AND c.uuid <> @mainUUID";
 
-        await WithMTGReaderAsync(sql,
+        await WithMtgReaderAsync(sql,
             dynamicParams,
             async reader =>
             {
@@ -386,7 +386,7 @@ public class CardRepository : ICardRepository
     /// Uses SemaphoreSlim for non-blocking thread safety.
     /// Uses Dapper ExecuteReaderAsync underneath.
     /// </summary>
-    private async Task<T> WithMTGReaderAsync<T>(
+    private async Task<T> WithMtgReaderAsync<T>(
         string sql,
         object? param,
         Func<DbDataReader, Task<T>> readFunc)
@@ -394,7 +394,7 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            using var reader = await _db.MTGConnection.ExecuteReaderAsync(sql, param) as DbDataReader
+            using var reader = await _db.MtgConnection.ExecuteReaderAsync(sql, param) as DbDataReader
                 ?? throw new InvalidOperationException("Failed to create DbDataReader.");
             return await readFunc(reader);
         }

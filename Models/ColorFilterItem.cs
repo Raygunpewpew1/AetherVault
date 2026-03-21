@@ -8,7 +8,7 @@ namespace AetherVault.Models;
 public partial class ColorFilterItem : ObservableObject
 {
     [ObservableProperty]
-    private bool isSelected;
+    private bool _isSelected;
 
     public string Code { get; }
 

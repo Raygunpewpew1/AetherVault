@@ -8,7 +8,7 @@ namespace AetherVault.Models;
 /// </summary>
 public class DeckCard
 {
-    public string CardUUID { get; set; } = "";
+    public string CardUuid { get; set; } = "";
     public string CardName { get; set; } = "";
     public int Quantity { get; set; }
     public string Category { get; set; } = "";
@@ -17,7 +17,7 @@ public class DeckCard
     public bool IsMainDeck { get; set; } = true;
     public bool IsSideboard { get; set; }
 
-    public bool IsValid => !string.IsNullOrEmpty(CardUUID) && Quantity > 0;
+    public bool IsValid => !string.IsNullOrEmpty(CardUuid) && Quantity > 0;
 
     public string GetDisplayText()
     {
@@ -42,7 +42,7 @@ public class DeckStats
     public int Artifacts { get; set; }
     public int Enchantments { get; set; }
     public int Planeswalkers { get; set; }
-    public double AvgCMC { get; set; }
+    public double AvgCmc { get; set; }
     public int RampCount { get; set; }
     public int CardDrawCount { get; set; }
     public int RemovalCount { get; set; }
@@ -53,16 +53,16 @@ public class DeckStats
 
     public int GetManaCurvePeak()
     {
-        int maxCount = 0, peakCMC = 0;
+        int maxCount = 0, peakCmc = 0;
         for (int i = 0; i < ManaCurve.Length; i++)
         {
             if (ManaCurve[i] > maxCount)
             {
                 maxCount = ManaCurve[i];
-                peakCMC = i;
+                peakCmc = i;
             }
         }
-        return peakCMC;
+        return peakCmc;
     }
 
     public override string ToString()
@@ -77,7 +77,7 @@ public class DeckStats
         return $"Total Cards: {TotalCards}\n" +
                $"Lands: {Lands} | Creatures: {Creatures} | Instants: {Instants} | Sorceries: {Sorceries}\n" +
                $"Artifacts: {Artifacts} | Enchantments: {Enchantments} | Planeswalkers: {Planeswalkers}\n" +
-               $"Avg CMC: {AvgCMC:F2}\n" +
+               $"Avg CMC: {AvgCmc:F2}\n" +
                $"Colors: {ColorIdentity.AsString()}\n" +
                $"Mana Curve: {string.Join(", ", curveParts)}";
     }
@@ -114,7 +114,7 @@ public abstract class BaseDeck
 /// </summary>
 public class CommanderDeck : BaseDeck
 {
-    public int DeckID { get; set; }
+    public int DeckId { get; set; }
     public string CommanderName { get; set; } = "";
     public string PartnerName { get; set; } = "";
     public string Companion { get; set; } = "";

@@ -28,7 +28,7 @@ public enum CardLayout
     Split,
     Flip,
     Transform,
-    ModalDFC,
+    ModalDfc,
     Meld,
     Leveler,
     Saga,
@@ -106,7 +106,7 @@ public enum CollectionSortMode
 {
     Manual = 0,
     Name = 1,
-    CMC = 2,
+    Cmc = 2,
     Rarity = 3,
     Color = 4,
 }
@@ -192,15 +192,15 @@ public static class EnumExtensions
         LayoutStrings[(int)layout];
 
     public static bool IsDoubleFaced(this CardLayout layout) =>
-        layout is CardLayout.Transform or CardLayout.ModalDFC or
+        layout is CardLayout.Transform or CardLayout.ModalDfc or
                   CardLayout.Meld or CardLayout.DoubleFacedToken or
                   CardLayout.ReversibleCard;
 
     public static bool IsTransform(this CardLayout layout) =>
         layout == CardLayout.Transform;
 
-    public static bool IsMDFC(this CardLayout layout) =>
-        layout == CardLayout.ModalDFC;
+    public static bool IsMdfc(this CardLayout layout) =>
+        layout == CardLayout.ModalDfc;
 
     public static CardLayout ParseCardLayout(string? value)
     {

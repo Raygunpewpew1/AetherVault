@@ -135,10 +135,10 @@
                                IsVisible="{Binding IsPriceVisible}" />
 
                         <Label x:Name="PTLabel"
-                               Text="{Binding PTText}"
+                               Text="{Binding PtText}"
                                FontSize="14"
                                TextColor="{StaticResource TextPrimary}"
-                               IsVisible="{Binding IsPTVisible}" />
+                               IsVisible="{Binding IsPtVisible}" />
                     </VerticalStackLayout>
                 </Border>
 

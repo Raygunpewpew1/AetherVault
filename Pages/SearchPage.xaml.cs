@@ -140,7 +140,7 @@ public partial class SearchPage : ContentPage
         else if (action == "Add to Deck")
         {
             var deckPage = _serviceProvider.GetRequiredService<AddToDeckPage>();
-            deckPage.CardUuid = card.UUID;
+            deckPage.CardUuid = card.Uuid;
             deckPage.CardName = card.Name;
             await Navigation.PushModalAsync(deckPage);
             var deckResult = await deckPage.WaitForResultAsync();
@@ -148,7 +148,7 @@ public partial class SearchPage : ContentPage
             if (deckResult != null)
             {
                 var validation = await _deckService.AddCardAsync(
-                    deckResult.DeckId, card.UUID, deckResult.Quantity, deckResult.Section);
+                    deckResult.DeckId, card.Uuid, deckResult.Quantity, deckResult.Section);
                 if (validation.IsError)
                 {
                     _viewModel.StatusIsError = true;

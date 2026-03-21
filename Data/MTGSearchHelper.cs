@@ -7,9 +7,9 @@ namespace AetherVault.Data;
 /// Port of TMTGSearchHelper from MTGSearchHelper.pas.
 /// Builds parameterized SQL without holding a connection.
 /// </summary>
-public class MTGSearchHelper
+public class MtgSearchHelper
 {
-    private string _baseSQL = "";
+    private string _baseSql = "";
     private bool _includeAllFaces;
     private string _limitClause = "";
     private string _offsetClause = "";
@@ -32,7 +32,7 @@ public class MTGSearchHelper
     public (string sql, List<(string name, object value)> parameters) Build()
     {
         EnsureSideFilter();
-        var sql = GetSQL();
+        var sql = GetSql();
         var paramList = _params.Select(kv => (kv.Key, kv.Value)).ToList();
         return (sql, paramList);
     }
@@ -43,30 +43,30 @@ public class MTGSearchHelper
     public (string sql, List<(string name, object value)> parameters) BuildCount()
     {
         EnsureSideFilter();
-        var countSQL = SQLQueries.CountWrapper + GetBaseWhereSQL() + ")";
+        var countSql = SqlQueries.CountWrapper + GetBaseWhereSql() + ")";
         var paramList = _params.Select(kv => (kv.Key, kv.Value)).ToList();
-        return (countSQL, paramList);
+        return (countSql, paramList);
     }
 
     // ════════════════════════════════════════════════════════════════
     // Base Query Selection
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper SearchCards(bool includeTokens = false)
+    public MtgSearchHelper SearchCards(bool includeTokens = false)
     {
-        _baseSQL = includeTokens ? SQLQueries.BaseCardsAndTokens : SQLQueries.BaseCards;
+        _baseSql = includeTokens ? SqlQueries.BaseCardsAndTokens : SqlQueries.BaseCards;
         return this;
     }
 
-    public MTGSearchHelper SearchMyCollection()
+    public MtgSearchHelper SearchMyCollection()
     {
-        _baseSQL = SQLQueries.BaseCollection;
+        _baseSql = SqlQueries.BaseCollection;
         return this;
     }
 
-    public MTGSearchHelper SearchSets()
+    public MtgSearchHelper SearchSets()
     {
-        _baseSQL = SQLQueries.BaseSets;
+        _baseSql = SqlQueries.BaseSets;
         return this;
     }
 
@@ -74,26 +74,26 @@ public class MTGSearchHelper
     // Result Modifiers
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper Limit(int count)
+    public MtgSearchHelper Limit(int count)
     {
-        _limitClause = SQLQueries.SqlLimit + count;
+        _limitClause = SqlQueries.SqlLimit + count;
         return this;
     }
 
-    public MTGSearchHelper Offset(int count)
+    public MtgSearchHelper Offset(int count)
     {
-        _offsetClause = SQLQueries.SqlOffset + count;
+        _offsetClause = SqlQueries.SqlOffset + count;
         return this;
     }
 
-    public MTGSearchHelper OrderBy(string field, bool desc = false)
+    public MtgSearchHelper OrderBy(string field, bool desc = false)
     {
-        _orderByClause = SQLQueries.SqlOrderBy + field;
-        if (desc) _orderByClause += SQLQueries.SqlDesc;
+        _orderByClause = SqlQueries.SqlOrderBy + field;
+        if (desc) _orderByClause += SqlQueries.SqlDesc;
         return this;
     }
 
-    public MTGSearchHelper IncludeAllFaces(bool include = true)
+    public MtgSearchHelper IncludeAllFaces(bool include = true)
     {
         _includeAllFaces = include;
         return this;
@@ -103,15 +103,15 @@ public class MTGSearchHelper
     // Text Filters (all use _params dictionary — never concatenate user input into SQL)
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereNameContains(string name)
+    public MtgSearchHelper WhereNameContains(string name)
     {
         var param = NextParam("Name");
-        _whereConditions.Add(SQLQueries.CondName + param);
+        _whereConditions.Add(SqlQueries.CondName + param);
         _params.Add(param, "%" + name + "%");
         return this;
     }
 
-    public MTGSearchHelper WhereNameEquals(string name)
+    public MtgSearchHelper WhereNameEquals(string name)
     {
         var param = NextParam("NameEq");
         _whereConditions.Add($"(c.name = @{param} OR c.faceName = @{param})");
@@ -119,10 +119,10 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereTextContains(string text)
+    public MtgSearchHelper WhereTextContains(string text)
     {
         var param = NextParam("Text");
-        _whereConditions.Add(SQLQueries.CondText + param);
+        _whereConditions.Add(SqlQueries.CondText + param);
         _params.Add(param, "%" + text + "%");
         return this;
     }
@@ -131,27 +131,27 @@ public class MTGSearchHelper
     /// Restricts results to rows matching the FTS query (name, faceName, text, type, artist, setName).
     /// Only use when av_cards_fts exists. Escapes double-quotes in the query for FTS5 MATCH.
     /// </summary>
-    public MTGSearchHelper WhereFts(string query)
+    public MtgSearchHelper WhereFts(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return this;
         var param = NextParam("Fts");
-        _whereConditions.Add(SQLQueries.CondFtsMatchPrefix + param + ")");
+        _whereConditions.Add(SqlQueries.CondFtsMatchPrefix + param + ")");
         _params.Add(param, EscapeFtsQuery(query.Trim()));
         UsedFts = true;
         return this;
     }
 
     /// <summary>Orders by FTS relevance (bm25) then c.name. Call when FTS filter is active.</summary>
-    public MTGSearchHelper OrderByFtsRelevance()
+    public MtgSearchHelper OrderByFtsRelevance()
     {
-        _orderByClause = " " + SQLQueries.OrderByFtsRelevanceThenName;
+        _orderByClause = " " + SqlQueries.OrderByFtsRelevanceThenName;
         return this;
     }
 
-    public MTGSearchHelper WhereArtist(string artist)
+    public MtgSearchHelper WhereArtist(string artist)
     {
         var param = NextParam("Artist");
-        _whereConditions.Add(SQLQueries.CondArtist + param);
+        _whereConditions.Add(SqlQueries.CondArtist + param);
         _params.Add(param, "%" + artist + "%");
         return this;
     }
@@ -160,15 +160,15 @@ public class MTGSearchHelper
     // Type Filters
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereType(string type)
+    public MtgSearchHelper WhereType(string type)
     {
         var param = NextParam("Type");
-        _whereConditions.Add(SQLQueries.CondType + param);
+        _whereConditions.Add(SqlQueries.CondType + param);
         _params.Add(param, "%" + type + "%");
         return this;
     }
 
-    public MTGSearchHelper WhereType(string[] types)
+    public MtgSearchHelper WhereType(string[] types)
     {
         if (types.Length == 0) return this;
 
@@ -176,14 +176,14 @@ public class MTGSearchHelper
         foreach (var t in types)
         {
             var param = NextParam("Type");
-            conditions.Add(SQLQueries.CondType + param);
+            conditions.Add(SqlQueries.CondType + param);
             _params.Add(param, "%" + t + "%");
         }
         _whereConditions.Add("(" + string.Join(" OR ", conditions) + ")");
         return this;
     }
 
-    public MTGSearchHelper WhereTypeFull(string typeLine)
+    public MtgSearchHelper WhereTypeFull(string typeLine)
     {
         var param = NextParam("Type");
         _whereConditions.Add("c.type LIKE @" + param);
@@ -191,7 +191,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereSubtype(string subtype)
+    public MtgSearchHelper WhereSubtype(string subtype)
     {
         if (string.IsNullOrEmpty(subtype)) return this;
         var param = NextParam("Subtype");
@@ -200,7 +200,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereSubtype(string[] subtypes)
+    public MtgSearchHelper WhereSubtype(string[] subtypes)
     {
         if (subtypes.Length == 0) return this;
 
@@ -217,7 +217,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereSupertype(string supertype)
+    public MtgSearchHelper WhereSupertype(string supertype)
     {
         if (string.IsNullOrEmpty(supertype)) return this;
         var param = NextParam("Supertype");
@@ -226,7 +226,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereSupertype(string[] supertypes)
+    public MtgSearchHelper WhereSupertype(string[] supertypes)
     {
         if (supertypes.Length == 0) return this;
 
@@ -247,17 +247,17 @@ public class MTGSearchHelper
     // Attribute Filters
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereScryfallId(string scryfallId)
+    public MtgSearchHelper WhereScryfallId(string scryfallId)
     {
         var param = NextParam("ScryfallId");
         // Union base (cards+tokens) only exposes alias "c"; cards-only base has "ci" from JOIN.
-        var column = _baseSQL.Contains("UNION ALL") ? "c.scryfallId" : "ci.scryfallId";
+        var column = _baseSql.Contains("UNION ALL") ? "c.scryfallId" : "ci.scryfallId";
         _whereConditions.Add($"{column} = @{param}");
         _params.Add(param, scryfallId);
         return this;
     }
 
-    public MTGSearchHelper WhereNumber(string number)
+    public MtgSearchHelper WhereNumber(string number)
     {
         var param = NextParam("Number");
         _whereConditions.Add($"c.number = @{param}");
@@ -265,7 +265,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereColors(string colors)
+    public MtgSearchHelper WhereColors(string colors)
     {
         if (string.IsNullOrWhiteSpace(colors)) return this;
 
@@ -279,11 +279,11 @@ public class MTGSearchHelper
             // Colorless: MTGJSON uses empty colors for colorless cards, not "C"
             if (string.Equals(trimmed, "C", StringComparison.OrdinalIgnoreCase))
             {
-                conditions.Add(SQLQueries.CondColorless);
+                conditions.Add(SqlQueries.CondColorless);
                 continue;
             }
             var param = NextParam("Color" + trimmed);
-            conditions.Add(SQLQueries.CondColors + param);
+            conditions.Add(SqlQueries.CondColors + param);
             _params.Add(param, "%" + trimmed + "%");
         }
 
@@ -292,7 +292,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereColorIdentity(string identity)
+    public MtgSearchHelper WhereColorIdentity(string identity)
     {
         if (string.IsNullOrEmpty(identity)) return this;
         var param = NextParam("ColorId");
@@ -302,43 +302,43 @@ public class MTGSearchHelper
     }
 
     /// <summary>Restricts results to cards that can be a commander (Legendary Creature or "can be your commander").</summary>
-    public MTGSearchHelper WhereCommanderOnly()
+    public MtgSearchHelper WhereCommanderOnly()
     {
-        _whereConditions.Add(SQLQueries.CondCommanderOnly);
+        _whereConditions.Add(SqlQueries.CondCommanderOnly);
         return this;
     }
 
-    public MTGSearchHelper WhereRarity(CardRarity rarity)
+    public MtgSearchHelper WhereRarity(CardRarity rarity)
     {
         AddInClause("rarity", [rarity.ToDbString()], "Rarity");
         return this;
     }
 
-    public MTGSearchHelper WhereRarity(CardRarity[] rarities)
+    public MtgSearchHelper WhereRarity(CardRarity[] rarities)
     {
         AddInClause("rarity", rarities.Select(r => r.ToDbString()).ToArray(), "Rarity");
         return this;
     }
 
-    public MTGSearchHelper WhereSet(string setCode)
+    public MtgSearchHelper WhereSet(string setCode)
     {
         AddInClause("setCode", [setCode], "SetCode");
         return this;
     }
 
-    public MTGSearchHelper WhereSet(string[] setCodes)
+    public MtgSearchHelper WhereSet(string[] setCodes)
     {
         AddInClause("setCode", setCodes, "SetCode");
         return this;
     }
 
-    public MTGSearchHelper WhereLayout(CardLayout layout)
+    public MtgSearchHelper WhereLayout(CardLayout layout)
     {
         AddInClause("layout", [layout.ToDbString()], "Layout");
         return this;
     }
 
-    public MTGSearchHelper WhereLayout(CardLayout[] layouts)
+    public MtgSearchHelper WhereLayout(CardLayout[] layouts)
     {
         AddInClause("layout", layouts.Select(l => l.ToDbString()).ToArray(), "Layout");
         return this;
@@ -348,25 +348,25 @@ public class MTGSearchHelper
     // Numeric Filters
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereCMC(double value)
+    public MtgSearchHelper WhereCmc(double value)
     {
         var param = NextParam("CMC");
-        _whereConditions.Add(SQLQueries.CondManaValue + param);
+        _whereConditions.Add(SqlQueries.CondManaValue + param);
         _params.Add(param, value);
         return this;
     }
 
-    public MTGSearchHelper WhereCMCBetween(double min, double max)
+    public MtgSearchHelper WhereCmcBetween(double min, double max)
     {
         var p1 = NextParam("CMCMin");
         var p2 = NextParam("CMCMax");
-        _whereConditions.Add(SQLQueries.CondManaValueBetween + p1 + " AND @" + p2);
+        _whereConditions.Add(SqlQueries.CondManaValueBetween + p1 + " AND @" + p2);
         _params.Add(p1, min);
         _params.Add(p2, max);
         return this;
     }
 
-    public MTGSearchHelper WhereManaValue(double value, string op = "=")
+    public MtgSearchHelper WhereManaValue(double value, string op = "=")
     {
         var param = NextParam("MV");
         _whereConditions.Add($"c.manaValue {op} @{param}");
@@ -374,18 +374,18 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WherePower(string power)
+    public MtgSearchHelper WherePower(string power)
     {
         var param = NextParam("Power");
-        _whereConditions.Add(SQLQueries.CondPower + param);
+        _whereConditions.Add(SqlQueries.CondPower + param);
         _params.Add(param, power);
         return this;
     }
 
-    public MTGSearchHelper WhereToughness(string toughness)
+    public MtgSearchHelper WhereToughness(string toughness)
     {
         var param = NextParam("Toughness");
-        _whereConditions.Add(SQLQueries.CondToughness + param);
+        _whereConditions.Add(SqlQueries.CondToughness + param);
         _params.Add(param, toughness);
         return this;
     }
@@ -394,7 +394,7 @@ public class MTGSearchHelper
     // Legality Filters
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereLegalIn(DeckFormat format, LegalityStatus status = LegalityStatus.Legal)
+    public MtgSearchHelper WhereLegalIn(DeckFormat format, LegalityStatus status = LegalityStatus.Legal)
     {
         var param = NextParam("Leg");
         var column = format.ToDbField();
@@ -403,7 +403,7 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereLegalInAny(DeckFormat[] formats)
+    public MtgSearchHelper WhereLegalInAny(DeckFormat[] formats)
     {
         if (formats.Length == 0) return this;
 
@@ -418,42 +418,42 @@ public class MTGSearchHelper
         return this;
     }
 
-    public MTGSearchHelper WhereBannedIn(DeckFormat format) =>
+    public MtgSearchHelper WhereBannedIn(DeckFormat format) =>
         WhereLegalIn(format, LegalityStatus.Banned);
 
-    public MTGSearchHelper WhereNotLegalIn(DeckFormat format) =>
+    public MtgSearchHelper WhereNotLegalIn(DeckFormat format) =>
         WhereLegalIn(format, LegalityStatus.NotLegal);
 
-    public MTGSearchHelper WhereRestrictedIn(DeckFormat format) =>
+    public MtgSearchHelper WhereRestrictedIn(DeckFormat format) =>
         WhereLegalIn(format, LegalityStatus.Restricted);
 
     // ════════════════════════════════════════════════════════════════
     // Special Filters
     // ════════════════════════════════════════════════════════════════
 
-    public MTGSearchHelper WhereUUID(string uuid)
+    public MtgSearchHelper WhereUuid(string uuid)
     {
         var param = NextParam("UUID");
-        _whereConditions.Add(SQLQueries.CondUuid + param);
+        _whereConditions.Add(SqlQueries.CondUuid + param);
         _params.Add(param, uuid);
         return this;
     }
 
-    public MTGSearchHelper WhereInCollection()
+    public MtgSearchHelper WhereInCollection()
     {
-        _whereConditions.Add(SQLQueries.CondInCollection);
+        _whereConditions.Add(SqlQueries.CondInCollection);
         return this;
     }
 
-    public MTGSearchHelper WhereNoVariations()
+    public MtgSearchHelper WhereNoVariations()
     {
-        _whereConditions.Add(SQLQueries.CondNoVariations);
+        _whereConditions.Add(SqlQueries.CondNoVariations);
         return this;
     }
 
-    public MTGSearchHelper WherePrimarySideOnly()
+    public MtgSearchHelper WherePrimarySideOnly()
     {
-        _whereConditions.Add(SQLQueries.CondSidePrimary);
+        _whereConditions.Add(SqlQueries.CondSidePrimary);
         return this;
     }
 
@@ -493,17 +493,17 @@ public class MTGSearchHelper
             _whereConditions.Add($"c.{column} IN ({string.Join(",", paramNames)})");
     }
 
-    private string GetBaseWhereSQL()
+    private string GetBaseWhereSql()
     {
-        var sql = _baseSQL;
+        var sql = _baseSql;
         if (_whereConditions.Count > 0)
-            sql += SQLQueries.SqlWhere + string.Join(SQLQueries.SqlAnd, _whereConditions);
+            sql += SqlQueries.SqlWhere + string.Join(SqlQueries.SqlAnd, _whereConditions);
         return sql;
     }
 
-    private string GetSQL()
+    private string GetSql()
     {
-        var sql = GetBaseWhereSQL();
+        var sql = GetBaseWhereSql();
 
         if (!string.IsNullOrEmpty(_orderByClause))
             sql += " " + _orderByClause;
@@ -520,9 +520,9 @@ public class MTGSearchHelper
         if (_includeAllFaces) return;
 
         // Only add if no side filter already exists
-        var currentSQL = GetSQL();
-        if (!currentSQL.Contains("c.side"))
-            _whereConditions.Add(SQLQueries.CondSidePrimary);
+        var currentSql = GetSql();
+        if (!currentSql.Contains("c.side"))
+            _whereConditions.Add(SqlQueries.CondSidePrimary);
     }
 
     /// <summary>Escapes double-quote for FTS5 MATCH query string.</summary>

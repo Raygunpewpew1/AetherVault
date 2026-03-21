@@ -482,3 +482,4 @@ $RECYCLE.BIN/
 *.swp
 ONBOARDING.md
 delete-merged-branches.ps1
+qodana.yaml

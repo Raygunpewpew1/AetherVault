@@ -16,7 +16,7 @@ internal sealed class SvgCacheEngine
     private readonly object _lock = new();
 
     // Reusable paints for DrawPictureInRect to avoid per-call allocations (FPS).
-    private static readonly object _paintLock = new();
+    private static readonly object PaintLock = new();
     private static SKPaint? _paintNoTint;
     private static SKPaint? _paintGrayTint;
     private static SKPaint? _paintWhiteTint;
@@ -143,7 +143,7 @@ internal sealed class SvgCacheEngine
     {
         if (!tint.HasValue)
         {
-            lock (_paintLock)
+            lock (PaintLock)
             {
                 _paintNoTint ??= new SKPaint { IsAntialias = true };
                 return _paintNoTint;
@@ -152,7 +152,7 @@ internal sealed class SvgCacheEngine
 
         if (tint.Value == GrayTintColor)
         {
-            lock (_paintLock)
+            lock (PaintLock)
             {
                 _filterGrayTint ??= SKColorFilter.CreateBlendMode(GrayTintColor, SKBlendMode.SrcIn);
                 _paintGrayTint ??= new SKPaint { IsAntialias = true, ColorFilter = _filterGrayTint };
@@ -162,7 +162,7 @@ internal sealed class SvgCacheEngine
 
         if (tint.Value == SKColors.White)
         {
-            lock (_paintLock)
+            lock (PaintLock)
             {
                 _filterWhiteTint ??= SKColorFilter.CreateBlendMode(SKColors.White, SKBlendMode.SrcIn);
                 _paintWhiteTint ??= new SKPaint { IsAntialias = true, ColorFilter = _filterWhiteTint };

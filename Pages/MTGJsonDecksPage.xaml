@@ -5,10 +5,10 @@
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:models="clr-namespace:AetherVault.Models"
-             x:Class="AetherVault.Pages.MTGJsonDecksPage"
+             x:Class="AetherVault.Pages.MtgJsonDecksPage"
              Title="Sample Decks"
              BackgroundColor="{StaticResource Background}"
-             x:DataType="vm:MTGJsonDecksViewModel">
+             x:DataType="vm:MtgJsonDecksViewModel">
 
     <Grid RowDefinitions="Auto,Auto,*">
         <!-- Toolbar: Refresh -->

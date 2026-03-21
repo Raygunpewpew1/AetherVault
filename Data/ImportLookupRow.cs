@@ -5,7 +5,7 @@ namespace AetherVault.Data;
 /// </summary>
 public sealed class ImportLookupRow
 {
-    public string UUID { get; set; } = "";
+    public string Uuid { get; set; } = "";
     public string Name { get; set; } = "";
     public string? FaceName { get; set; }
     public string SetCode { get; set; } = "";

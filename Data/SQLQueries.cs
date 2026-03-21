@@ -4,7 +4,7 @@ namespace AetherVault.Data;
 /// Centralized SQL query and schema definitions. All SQL used by repositories lives here so we avoid
 /// scattered string literals and keep parameterized queries in one place. Never build SQL by concatenating user input.
 /// </summary>
-public static class SQLQueries
+public static class SqlQueries
 {
     // ============================================================================
     // SCHEMA DEFINITIONS (Collection DB — run on first connect)

@@ -2,54 +2,54 @@ namespace AetherVault.Models;
 
 public class TokenEntity
 {
-    public string artist { get; set; } = string.Empty;
-    public string[] artistIds { get; set; } = [];
-    public string asciiName { get; set; } = string.Empty;
-    public string[] attractionLights { get; set; } = [];
-    public string[] availability { get; set; } = [];
-    public string[] boosterTypes { get; set; } = [];
-    public string borderColor { get; set; } = string.Empty;
-    public string[] colorIdentity { get; set; } = [];
-    public string[] colorIndicator { get; set; } = [];
-    public string[] colors { get; set; } = [];
-    public double? edhrecSaltiness { get; set; }
-    public string faceName { get; set; } = string.Empty;
-    public string[] finishes { get; set; } = [];
-    public string flavorName { get; set; } = string.Empty;
-    public string flavorText { get; set; } = string.Empty;
-    public string[] frameEffects { get; set; } = [];
-    public string frameVersion { get; set; } = string.Empty;
-    public bool? isFullArt { get; set; }
-    public bool? isFunny { get; set; }
-    public bool? isOversized { get; set; }
-    public bool? isPromo { get; set; }
-    public bool? isReprint { get; set; }
-    public bool? isTextless { get; set; }
-    public string[] keywords { get; set; } = [];
-    public string language { get; set; } = string.Empty;
-    public string layout { get; set; } = string.Empty;
-    public string manaCost { get; set; } = string.Empty;
-    public string name { get; set; } = string.Empty;
-    public string number { get; set; } = string.Empty;
-    public string orientation { get; set; } = string.Empty;
-    public string originalText { get; set; } = string.Empty;
-    public string[] otherFaceIds { get; set; } = [];
-    public string power { get; set; } = string.Empty;
-    public string printedType { get; set; } = string.Empty;
-    public string[] producedMana { get; set; } = [];
-    public string[] promoTypes { get; set; } = [];
-    public string[] relatedCards { get; set; } = [];
-    public string securityStamp { get; set; } = string.Empty;
-    public string setCode { get; set; } = string.Empty;
-    public string side { get; set; } = string.Empty;
-    public string signature { get; set; } = string.Empty;
-    public string[] sourceProducts { get; set; } = [];
-    public string[] subtypes { get; set; } = [];
-    public string[] supertypes { get; set; } = [];
-    public string text { get; set; } = string.Empty;
-    public string toughness { get; set; } = string.Empty;
-    public string type { get; set; } = string.Empty;
-    public string[] types { get; set; } = [];
-    public string uuid { get; set; } = string.Empty;
-    public string watermark { get; set; } = string.Empty;
+    public string Artist { get; set; } = string.Empty;
+    public string[] ArtistIds { get; set; } = [];
+    public string AsciiName { get; set; } = string.Empty;
+    public string[] AttractionLights { get; set; } = [];
+    public string[] Availability { get; set; } = [];
+    public string[] BoosterTypes { get; set; } = [];
+    public string BorderColor { get; set; } = string.Empty;
+    public string[] ColorIdentity { get; set; } = [];
+    public string[] ColorIndicator { get; set; } = [];
+    public string[] Colors { get; set; } = [];
+    public double? EdhrecSaltiness { get; set; }
+    public string FaceName { get; set; } = string.Empty;
+    public string[] Finishes { get; set; } = [];
+    public string FlavorName { get; set; } = string.Empty;
+    public string FlavorText { get; set; } = string.Empty;
+    public string[] FrameEffects { get; set; } = [];
+    public string FrameVersion { get; set; } = string.Empty;
+    public bool? IsFullArt { get; set; }
+    public bool? IsFunny { get; set; }
+    public bool? IsOversized { get; set; }
+    public bool? IsPromo { get; set; }
+    public bool? IsReprint { get; set; }
+    public bool? IsTextless { get; set; }
+    public string[] Keywords { get; set; } = [];
+    public string Language { get; set; } = string.Empty;
+    public string Layout { get; set; } = string.Empty;
+    public string ManaCost { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Number { get; set; } = string.Empty;
+    public string Orientation { get; set; } = string.Empty;
+    public string OriginalText { get; set; } = string.Empty;
+    public string[] OtherFaceIds { get; set; } = [];
+    public string Power { get; set; } = string.Empty;
+    public string PrintedType { get; set; } = string.Empty;
+    public string[] ProducedMana { get; set; } = [];
+    public string[] PromoTypes { get; set; } = [];
+    public string[] RelatedCards { get; set; } = [];
+    public string SecurityStamp { get; set; } = string.Empty;
+    public string SetCode { get; set; } = string.Empty;
+    public string Side { get; set; } = string.Empty;
+    public string Signature { get; set; } = string.Empty;
+    public string[] SourceProducts { get; set; } = [];
+    public string[] Subtypes { get; set; } = [];
+    public string[] Supertypes { get; set; } = [];
+    public string Text { get; set; } = string.Empty;
+    public string Toughness { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public string[] Types { get; set; } = [];
+    public string Uuid { get; set; } = string.Empty;
+    public string Watermark { get; set; } = string.Empty;
 }

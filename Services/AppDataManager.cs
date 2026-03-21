@@ -14,7 +14,7 @@ public static class AppDataManager
     private const string VersionFile = "main_db_version.txt";
 
     // 1. ADDED: The Semaphore to prevent concurrent downloads
-    private static readonly SemaphoreSlim _downloadLock = new SemaphoreSlim(1, 1);
+    private static readonly SemaphoreSlim DownloadLock = new SemaphoreSlim(1, 1);
 
     private static string? _appDataPath;
 
@@ -31,7 +31,7 @@ public static class AppDataManager
 
         _appDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            MTGConstants.AppRootFolder);
+            MtgConstants.AppRootFolder);
 
         if (!Directory.Exists(_appDataPath))
             Directory.CreateDirectory(_appDataPath);
@@ -39,14 +39,14 @@ public static class AppDataManager
         return _appDataPath;
     }
 
-    public static string GetMTGDatabasePath() =>
-        Path.Combine(GetAppDataPath(), MTGConstants.FileAllPrintings);
+    public static string GetMtgDatabasePath() =>
+        Path.Combine(GetAppDataPath(), MtgConstants.FileAllPrintings);
 
     public static string GetCollectionDatabasePath() =>
-        Path.Combine(GetAppDataPath(), MTGConstants.FileCollectionDb);
+        Path.Combine(GetAppDataPath(), MtgConstants.FileCollectionDb);
 
     public static string GetPricesDatabasePath() =>
-        Path.Combine(GetAppDataPath(), MTGConstants.FilePricesDb);
+        Path.Combine(GetAppDataPath(), MtgConstants.FilePricesDb);
 
     public static string GetLogPath() =>
         Path.Combine(GetAppDataPath(), "mtgfetch.log");
@@ -68,9 +68,9 @@ public static class AppDataManager
         File.WriteAllText(GetVersionFilePath(), version);
     }
 
-    public static bool MTGDatabaseExists()
+    public static bool MtgDatabaseExists()
     {
-        var path = GetMTGDatabasePath();
+        var path = GetMtgDatabasePath();
         if (!File.Exists(path)) return false;
         return new FileInfo(path).Length > MinValidDatabaseSize;
     }
@@ -79,9 +79,9 @@ public static class AppDataManager
     /// Performs a lightweight integrity and sanity check on the MTG master database.
     /// Returns true if the database appears valid; false otherwise.
     /// </summary>
-    public static async Task<bool> ValidateMTGDatabaseAsync(CancellationToken ct = default)
+    public static async Task<bool> ValidateMtgDatabaseAsync(CancellationToken ct = default)
     {
-        var path = GetMTGDatabasePath();
+        var path = GetMtgDatabasePath();
         if (!File.Exists(path))
             return false;
 
@@ -170,7 +170,7 @@ public static class AppDataManager
             using var handler = new HttpClientHandler { AllowAutoRedirect = false };
             // Shorter timeout to avoid ANR window (10s) when device is offline; HEAD request is quick when online.
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(8), handler);
-            using var request = new HttpRequestMessage(HttpMethod.Head, MTGConstants.DatabaseDownloadUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Head, MtgConstants.DatabaseDownloadUrl);
             using var response = await client.SendAsync(request);
 
             var location = response.Headers.Location;
@@ -203,9 +203,9 @@ public static class AppDataManager
     public static async Task<bool> DownloadDatabaseAsync(CancellationToken ct = default)
     {
         // 2. ADDED: Wait for the lock before doing anything
-        await _downloadLock.WaitAsync(ct);
+        await DownloadLock.WaitAsync(ct);
 
-        var zipPath = Path.Combine(GetAppDataPath(), MTGConstants.FileAllPrintingsZip);
+        var zipPath = Path.Combine(GetAppDataPath(), MtgConstants.FileAllPrintingsZip);
         string? remoteVersion = null;
 
         try
@@ -218,7 +218,7 @@ public static class AppDataManager
             UpdateProgress("Connecting to GitHub...", 5);
 
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(ResponseTimeoutSeconds));
-            using var response = await client.GetAsync(MTGConstants.DatabaseDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await client.GetAsync(MtgConstants.DatabaseDownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
             var totalBytes = response.Content.Headers.ContentLength ?? -1L;
@@ -260,7 +260,7 @@ public static class AppDataManager
 
             UpdateProgress("Verifying database...", 97);
 
-            var valid = await ValidateMTGDatabaseAsync(ct);
+            var valid = await ValidateMtgDatabaseAsync(ct);
             if (!valid)
             {
                 UpdateProgress("Database is corrupted after download. Please try again.", 0);
@@ -268,7 +268,7 @@ public static class AppDataManager
                 // Best-effort cleanup of the bad DB so the next attempt starts fresh
                 try
                 {
-                    var mtgPath = GetMTGDatabasePath();
+                    var mtgPath = GetMtgDatabasePath();
                     if (File.Exists(mtgPath))
                     {
                         File.Delete(mtgPath);
@@ -284,15 +284,15 @@ public static class AppDataManager
 
             UpdateProgress("Download complete.", 100);
 
-            if (!string.IsNullOrEmpty(remoteVersion) && MTGDatabaseExists())
+            if (!string.IsNullOrEmpty(remoteVersion) && MtgDatabaseExists())
             {
                 SetLocalDatabaseVersion(remoteVersion);
             }
 
-            var exists = MTGDatabaseExists();
+            var exists = MtgDatabaseExists();
             if (exists)
             {
-                var dbSize = new FileInfo(GetMTGDatabasePath()).Length / (1024.0 * 1024.0);
+                var dbSize = new FileInfo(GetMtgDatabasePath()).Length / (1024.0 * 1024.0);
                 Logger.LogStuff($"MTG master database download completed successfully ({dbSize:F1} MB).", LogLevel.Info);
             }
 
@@ -316,7 +316,7 @@ public static class AppDataManager
             catch (Exception ex) { Logger.LogStuff($"Cleanup: could not delete temp zip: {ex.Message}", LogLevel.Warning); }
 
             // 5. CRITICAL: Release the lock so the next attempt can proceed (or not)
-            _downloadLock.Release();
+            DownloadLock.Release();
         }
     }
 
@@ -325,7 +325,7 @@ public static class AppDataManager
         try
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(ResponseTimeoutSeconds));
-            using var request = new HttpRequestMessage(HttpMethod.Head, MTGConstants.DatabaseDownloadUrl);
+            using var request = new HttpRequestMessage(HttpMethod.Head, MtgConstants.DatabaseDownloadUrl);
             using var response = await client.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
         }
@@ -339,14 +339,14 @@ public static class AppDataManager
 
     private static void ExtractDatabase(string zipPath)
     {
-        var targetPath = GetMTGDatabasePath();
+        var targetPath = GetMtgDatabasePath();
 
         // Use a temp file for extraction to avoid locking the real DB if the app crashes mid-extract
         var tempDbPath = targetPath + ".tmp";
 
         using (var archive = ZipFile.OpenRead(zipPath))
         {
-            var entry = archive.Entries.FirstOrDefault(e => e.Name.Equals(MTGConstants.FileAllPrintings, StringComparison.OrdinalIgnoreCase));
+            var entry = archive.Entries.FirstOrDefault(e => e.Name.Equals(MtgConstants.FileAllPrintings, StringComparison.OrdinalIgnoreCase));
 
             if (entry == null)
                 throw new FileNotFoundException("AllPrintings.sqlite not found in downloaded archive.");

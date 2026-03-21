@@ -46,14 +46,14 @@ public partial class AddToDeckPage : ContentPage
         QuantitySelector.Maximum = 999;
         QuantitySelector.QuantityChanged += OnQuantitySelectorQuantityChanged;
         QuantitySelector.EditRequested += OnQuantitySelectorEditRequested;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
         await LoadDecksAsync();
     }
 
     private void OnQuantitySelectorQuantityChanged(object? sender, int newQuantity)
     {
         _quantity = newQuantity;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     private async void OnQuantitySelectorEditRequested(object? sender, EventArgs e)
@@ -74,7 +74,7 @@ public partial class AddToDeckPage : ContentPage
         {
             _quantity = Math.Min(value, QuantitySelector.Maximum);
             QuantitySelector.Quantity = _quantity;
-            UpdateQuantityUI();
+            UpdateQuantityUi();
         }
     }
 
@@ -149,7 +149,7 @@ public partial class AddToDeckPage : ContentPage
             _tcs.TrySetResult(null);
     }
 
-    private void UpdateQuantityUI()
+    private void UpdateQuantityUi()
     {
         UpdateConfirmText();
     }
@@ -167,21 +167,21 @@ public partial class AddToDeckPage : ContentPage
     {
         _quantity = Math.Min(_quantity + 1, QuantitySelector.Maximum);
         QuantitySelector.Quantity = _quantity;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     private void OnQuickAddTwoClicked(object? sender, EventArgs e)
     {
         _quantity = Math.Min(_quantity + 2, QuantitySelector.Maximum);
         QuantitySelector.Quantity = _quantity;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     private void OnQuickAddFourClicked(object? sender, EventArgs e)
     {
         _quantity = Math.Min(_quantity + 4, QuantitySelector.Maximum);
         QuantitySelector.Quantity = _quantity;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     private async void OnCreateDeckClicked(object? sender, EventArgs e)

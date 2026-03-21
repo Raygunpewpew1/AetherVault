@@ -16,7 +16,7 @@ public static class CardMapper
 
     public sealed class CardOrdinals
     {
-        public readonly int UUID, ScryfallId, Name, AsciiName, PrintedName;
+        public readonly int Uuid, ScryfallId, Name, AsciiName, PrintedName;
         public readonly int ManaCost, CardType, Text, OriginalText, FlavorText, FlavorName;
         public readonly int Colors, ColorIdentity, ColorIndicator, Keywords, ProducedMana;
         public readonly int Subtypes, Supertypes, OtherFaceIds, FrameEffects, PromoTypes;
@@ -26,7 +26,7 @@ public static class CardMapper
         public readonly int FrameVersion, SecurityStamp, Signature, Artist, BorderColor;
         public readonly int Language, LeadershipSkills, SourceProducts;
         public readonly int SetCode, SetName, Number, KeyruneCode;
-        public readonly int CMC, FaceManaValue, EDHRecRank, EDHRecSaltiness;
+        public readonly int Cmc, FaceManaValue, EdhRecRank, EdhRecSaltiness;
         public readonly int HasFoil, HasNonFoil;
         public readonly int IsPromo, IsReprint, IsAlternative, IsReserved, IsFullArt;
         public readonly int IsFunny, IsOnlineOnly, IsOversized, IsRebalanced;
@@ -40,7 +40,7 @@ public static class CardMapper
 
         public CardOrdinals(DbDataReader reader)
         {
-            UUID = Ord(reader, "uuid");
+            Uuid = Ord(reader, "uuid");
             ScryfallId = Ord(reader, "scryfallId");
             Name = Ord(reader, "name");
             AsciiName = Ord(reader, "asciiName");
@@ -87,10 +87,10 @@ public static class CardMapper
             SetName = Ord(reader, "setName");
             Number = Ord(reader, "number");
             KeyruneCode = Ord(reader, "keyruneCode");
-            CMC = Ord(reader, "manaValue");
+            Cmc = Ord(reader, "manaValue");
             FaceManaValue = Ord(reader, "faceManaValue");
-            EDHRecRank = Ord(reader, "edhrecRank");
-            EDHRecSaltiness = Ord(reader, "edhrecSaltiness");
+            EdhRecRank = Ord(reader, "edhrecRank");
+            EdhRecSaltiness = Ord(reader, "edhrecSaltiness");
             HasFoil = Ord(reader, "hasFoil");
             HasNonFoil = Ord(reader, "hasNonFoil");
             IsPromo = Ord(reader, "isPromo");
@@ -142,7 +142,7 @@ public static class CardMapper
         var card = new Card();
 
         // ── Identifiers & Basic Info ────────────────────────────────
-        card.UUID = Str(reader, o.UUID);
+        card.Uuid = Str(reader, o.Uuid);
         card.ScryfallId = Str(reader, o.ScryfallId);
         card.Name = Str(reader, o.Name);
         card.AsciiName = Str(reader, o.AsciiName);
@@ -203,10 +203,10 @@ public static class CardMapper
         card.KeyruneCode = string.IsNullOrEmpty(keyrune) ? card.SetCode : keyrune;
 
         // ── Numeric values ─────────────────────────────────────────
-        card.CMC = Dbl(reader, o.CMC);
+        card.Cmc = Dbl(reader, o.Cmc);
         card.FaceManaValue = Dbl(reader, o.FaceManaValue);
-        card.EDHRecRank = Int(reader, o.EDHRecRank);
-        card.EDHRecSaltiness = Dbl(reader, o.EDHRecSaltiness);
+        card.EdhRecRank = Int(reader, o.EdhRecRank);
+        card.EdhRecSaltiness = Dbl(reader, o.EdhRecSaltiness);
 
         // ── Boolean flags ──────────────────────────────────────────
         // hasFoil/hasNonFoil removed in MTGJSON v5.3+, derive from finishes if absent
@@ -251,17 +251,17 @@ public static class CardMapper
         }
 
         // ── Purchase URLs ──────────────────────────────────────────
-        card.cardKingdom = Str(reader, o.CardKingdom);
-        card.cardKingdomFoil = Str(reader, o.CardKingdomFoil);
-        card.cardKingdomEtched = Str(reader, o.CardKingdomEtched);
-        card.cardmarket = Str(reader, o.Cardmarket);
-        card.tcgplayer = Str(reader, o.Tcgplayer);
-        card.tcgplayerEtched = Str(reader, o.TcgplayerEtched);
+        card.CardKingdom = Str(reader, o.CardKingdom);
+        card.CardKingdomFoil = Str(reader, o.CardKingdomFoil);
+        card.CardKingdomEtched = Str(reader, o.CardKingdomEtched);
+        card.Cardmarket = Str(reader, o.Cardmarket);
+        card.Tcgplayer = Str(reader, o.Tcgplayer);
+        card.TcgplayerEtched = Str(reader, o.TcgplayerEtched);
 
         // Scryfall CDN image URL for list/grid thumbnails (small front face)
-        card.ImageUrl = string.IsNullOrEmpty(card.UUID)
+        card.ImageUrl = string.IsNullOrEmpty(card.Uuid)
             ? ""
-            : ScryfallCDN.GetImageUrl(card.UUID, ScryfallSize.Small, ScryfallFace.Front);
+            : ScryfallCdn.GetImageUrl(card.Uuid, ScryfallSize.Small, ScryfallFace.Front);
 
         return card;
     }

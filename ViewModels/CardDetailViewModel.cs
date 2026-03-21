@@ -83,10 +83,10 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     public partial bool IsTextVisible { get; set; }
 
     [ObservableProperty]
-    public partial string PTText { get; set; } = "";
+    public partial string PtText { get; set; } = "";
 
     [ObservableProperty]
-    public partial bool IsPTVisible { get; set; }
+    public partial bool IsPtVisible { get; set; }
 
     [ObservableProperty]
     public partial string SetInfoText { get; set; } = "";
@@ -143,7 +143,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     private async void HandlePricesUpdated()
     {
-        if (Card != null && !string.IsNullOrEmpty(Card.UUID))
+        if (Card != null && !string.IsNullOrEmpty(Card.Uuid))
         {
             await LoadPriceAsync();
             MainThread.BeginInvokeOnMainThread(() =>
@@ -164,7 +164,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     {
         try
         {
-            return await _cardManager.GetQuantityAsync(Card.UUID);
+            return await _cardManager.GetQuantityAsync(Card.Uuid);
         }
         catch
         {
@@ -197,7 +197,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
                 {
                     var filtered = new List<Card>();
                     // Add current piece
-                    var current = package.FirstOrDefault(f => f.UUID == uuid);
+                    var current = package.FirstOrDefault(f => f.Uuid == uuid);
                     if (current != null) filtered.Add(current);
                     // Add meld result (side 'b')
                     var result = package.FirstOrDefault(f => f.Side == 'b');
@@ -211,7 +211,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
                 // Tokens usually have layout == Token or their ScryfallId differs.
                 // We keep a face if it's the main face, OR if its ScryfallId is different, OR if it's explicitly a Token, OR if it's a double-faced layout (Transform, MDFC).
                 var filteredFaces = package.Where(face =>
-                    face.UUID == uuid ||
+                    face.Uuid == uuid ||
                     face.Layout.IsDoubleFaced() ||
                     face.Layout == CardLayout.Token ||
                     face.ScryfallId != mainCard.ScryfallId
@@ -222,7 +222,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
                 CurrentFaceIndex = 0;
                 for (int i = 0; i < filteredFaces.Length; i++)
                 {
-                    if (filteredFaces[i].UUID == uuid) { CurrentFaceIndex = i; break; }
+                    if (filteredFaces[i].Uuid == uuid) { CurrentFaceIndex = i; break; }
                 }
             }
             else
@@ -277,23 +277,23 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         var pt = CurrentFace.GetPowerToughness();
         if (!string.IsNullOrEmpty(pt))
         {
-            PTText = pt;
-            IsPTVisible = true;
+            PtText = pt;
+            IsPtVisible = true;
         }
         else if (!string.IsNullOrEmpty(CurrentFace.Loyalty))
         {
-            PTText = $"Loyalty: {CurrentFace.Loyalty}";
-            IsPTVisible = true;
+            PtText = $"Loyalty: {CurrentFace.Loyalty}";
+            IsPtVisible = true;
         }
         else if (!string.IsNullOrEmpty(CurrentFace.Defense))
         {
-            PTText = $"Defense: {CurrentFace.Defense}";
-            IsPTVisible = true;
+            PtText = $"Defense: {CurrentFace.Defense}";
+            IsPtVisible = true;
         }
         else
         {
-            PTText = "";
-            IsPTVisible = false;
+            PtText = "";
+            IsPtVisible = false;
         }
 
         // Set Info
@@ -325,7 +325,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        var tcgHistory = PriceData.Paper.TCGPlayer.RetailNormalHistory;
+        var tcgHistory = PriceData.Paper.TcgPlayer.RetailNormalHistory;
         var cmHistory = PriceData.Paper.Cardmarket.RetailNormalHistory;
 
         if (tcgHistory.Count > 0)
@@ -366,7 +366,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
                 faceParam = "back";
         }
 
-        var cached = await _cardManager.GetCachedCardImageAsync(currentFace.ScryfallId, MTGConstants.ImageSizeNormal, faceParam);
+        var cached = await _cardManager.GetCachedCardImageAsync(currentFace.ScryfallId, MtgConstants.ImageSizeNormal, faceParam);
         if (cached != null)
         {
             CardImage = cached;
@@ -382,12 +382,12 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
                 else
                     CardImageLoadFailed = true;
             });
-        }, MTGConstants.ImageSizeNormal, faceParam);
+        }, MtgConstants.ImageSizeNormal, faceParam);
     }
 
     private async Task LoadPriceAsync()
     {
-        var (found, prices) = await _cardManager.GetCardPricesAsync(Card.UUID);
+        var (found, prices) = await _cardManager.GetCardPricesAsync(Card.Uuid);
         if (!found) { PriceDisplay = ""; PriceData = CardPriceData.Empty; IsPriceVisible = false; return; }
 
         PriceData = prices;
@@ -440,22 +440,22 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     [RelayCommand]
     private async Task AddToCollection(int quantity)
     {
-        await _cardManager.AddCardToCollectionAsync(Card.UUID, quantity);
+        await _cardManager.AddCardToCollectionAsync(Card.Uuid, quantity);
         IsInCollection = true;
-        AddedToCollection?.Invoke(Card.UUID);
+        AddedToCollection?.Invoke(Card.Uuid);
     }
 
     public async Task AddToCollectionWithFinishAsync(int quantity, bool isFoil, bool isEtched)
     {
-        await _cardManager.UpdateCardQuantityAsync(Card.UUID, quantity, isFoil, isEtched);
+        await _cardManager.UpdateCardQuantityAsync(Card.Uuid, quantity, isFoil, isEtched);
         IsInCollection = quantity > 0;
-        AddedToCollection?.Invoke(Card.UUID);
+        AddedToCollection?.Invoke(Card.Uuid);
     }
 
     [RelayCommand]
     private async Task RemoveFromCollection()
     {
-        await _cardManager.RemoveCardFromCollectionAsync(Card.UUID);
+        await _cardManager.RemoveCardFromCollectionAsync(Card.Uuid);
         IsInCollection = false;
     }
 
@@ -464,12 +464,12 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         var links = new List<PurchaseLink>();
         if (Card == null) return links;
 
-        if (!string.IsNullOrEmpty(Card.tcgplayer)) links.Add(new PurchaseLink("TCGPlayer", Card.tcgplayer));
-        if (!string.IsNullOrEmpty(Card.tcgplayerEtched)) links.Add(new PurchaseLink("TCGPlayer \u2014 Etched", Card.tcgplayerEtched));
-        if (!string.IsNullOrEmpty(Card.cardmarket)) links.Add(new PurchaseLink("Cardmarket", Card.cardmarket));
-        if (!string.IsNullOrEmpty(Card.cardKingdom)) links.Add(new PurchaseLink("Card Kingdom", Card.cardKingdom));
-        if (!string.IsNullOrEmpty(Card.cardKingdomFoil)) links.Add(new PurchaseLink("Card Kingdom \u2014 Foil", Card.cardKingdomFoil));
-        if (!string.IsNullOrEmpty(Card.cardKingdomEtched)) links.Add(new PurchaseLink("Card Kingdom \u2014 Etched", Card.cardKingdomEtched));
+        if (!string.IsNullOrEmpty(Card.Tcgplayer)) links.Add(new PurchaseLink("TCGPlayer", Card.Tcgplayer));
+        if (!string.IsNullOrEmpty(Card.TcgplayerEtched)) links.Add(new PurchaseLink("TCGPlayer \u2014 Etched", Card.TcgplayerEtched));
+        if (!string.IsNullOrEmpty(Card.Cardmarket)) links.Add(new PurchaseLink("Cardmarket", Card.Cardmarket));
+        if (!string.IsNullOrEmpty(Card.CardKingdom)) links.Add(new PurchaseLink("Card Kingdom", Card.CardKingdom));
+        if (!string.IsNullOrEmpty(Card.CardKingdomFoil)) links.Add(new PurchaseLink("Card Kingdom \u2014 Foil", Card.CardKingdomFoil));
+        if (!string.IsNullOrEmpty(Card.CardKingdomEtched)) links.Add(new PurchaseLink("Card Kingdom \u2014 Etched", Card.CardKingdomEtched));
         return links;
     }
 
@@ -506,7 +506,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         string separator = Card.Layout switch
         {
             CardLayout.Transform => "\n\u2015\u2015\u2015 \u21C4 Transform \u21C4 \u2015\u2015\u2015\n",
-            CardLayout.ModalDFC => "\n\u2015\u2015\u2015 // \u2015\u2015\u2015\n",
+            CardLayout.ModalDfc => "\n\u2015\u2015\u2015 // \u2015\u2015\u2015\n",
             CardLayout.Adventure => "\n\u2015\u2015\u2015 \u2694 Adventure \u2694 \u2015\u2015\u2015\n",
             CardLayout.Split => "\n\u2015\u2015\u2015 // \u2015\u2015\u2015\n",
             _ => "\n\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\n"

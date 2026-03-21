@@ -73,8 +73,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<CollectionExporter>();
         builder.Services.AddSingleton<DeckImporter>();
         builder.Services.AddSingleton<DeckExporter>();
-        builder.Services.AddSingleton<MTGJsonDeckListService>();
-        builder.Services.AddSingleton<MTGJsonDeckImporter>();
+        builder.Services.AddSingleton<MtgJsonDeckListService>();
+        builder.Services.AddSingleton<MtgJsonDeckImporter>();
         builder.Services.AddSingleton<CardGalleryContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();
@@ -91,7 +91,7 @@ public static class MauiProgram
         builder.Services.AddTransient<LoadingViewModel>();
         builder.Services.AddTransient<CardSearchPickerViewModel>();
         builder.Services.AddTransient<SearchFiltersViewModel>();
-        builder.Services.AddTransient<MTGJsonDecksViewModel>();
+        builder.Services.AddTransient<MtgJsonDecksViewModel>();
         builder.Services.AddSingleton<LogViewViewModel>();
         builder.Services.AddSingleton<ISearchFilterTarget>(sp => sp.GetRequiredService<SearchViewModel>());
         builder.Services.AddSingleton<Services.ISearchFiltersOpener, Services.SearchFiltersOpenerService>();
@@ -110,7 +110,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CreateDeckPage>();
         builder.Services.AddTransient<AddToDeckPage>();
         builder.Services.AddTransient<CollectionAddPage>();
-        builder.Services.AddTransient<MTGJsonDecksPage>();
+        builder.Services.AddTransient<MtgJsonDecksPage>();
         builder.Services.AddSingleton<LogViewPage>();
 
         return builder.Build();

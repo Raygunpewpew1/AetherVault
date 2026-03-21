@@ -6,21 +6,21 @@ using SkiaSharp.Views.Maui;
 
 namespace AetherVault.Pages;
 
-[QueryProperty(nameof(CardUUID), "uuid")]
+[QueryProperty(nameof(CardUuid), "uuid")]
 public partial class CardDetailPage : ContentPage
 {
     private readonly CardDetailViewModel _viewModel;
     private readonly DeckBuilderService _deckService;
     private readonly IServiceProvider _serviceProvider;
-    private string _cardUUID = "";
+    private string _cardUuid = "";
     private bool _isSwipeAnimating;
 
-    public string CardUUID
+    public string CardUuid
     {
-        get => _cardUUID;
+        get => _cardUuid;
         set
         {
-            _cardUUID = value;
+            _cardUuid = value;
             _ = LoadCard();
         }
     }
@@ -46,9 +46,9 @@ public partial class CardDetailPage : ContentPage
 
     private async Task LoadCard()
     {
-        if (string.IsNullOrEmpty(_cardUUID)) return;
+        if (string.IsNullOrEmpty(_cardUuid)) return;
 
-        await _viewModel.LoadCardAsync(_cardUUID);
+        await _viewModel.LoadCardAsync(_cardUuid);
 
         if (_viewModel.ShowGalleryNavigation)
             ShowSwipeHintIfNeededAsync();
@@ -137,14 +137,14 @@ public partial class CardDetailPage : ContentPage
     private async void OnAddToDeckClicked(object? sender, EventArgs e)
     {
         var page = _serviceProvider.GetRequiredService<AddToDeckPage>();
-        page.CardUuid = _viewModel.Card.UUID;
+        page.CardUuid = _viewModel.Card.Uuid;
         page.CardName = _viewModel.Card.Name;
         await Navigation.PushModalAsync(page);
         var result = await page.WaitForResultAsync();
 
         if (result != null)
         {
-            var validation = await _deckService.AddCardAsync(result.DeckId, _viewModel.Card.UUID, result.Quantity, result.Section);
+            var validation = await _deckService.AddCardAsync(result.DeckId, _viewModel.Card.Uuid, result.Quantity, result.Section);
             if (validation.IsError)
             {
                 _viewModel.StatusIsError = true;

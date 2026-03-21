@@ -31,7 +31,7 @@ public class CardTypeInfo
 /// Collection of MTG metadata (card types, subtypes, supertypes).
 /// Port of TMTGDataCollection from MTGDataTypes.pas.
 /// </summary>
-public class MTGDataCollection
+public class MtgDataCollection
 {
     public List<CardTypeInfo> CardTypes { get; set; } = [];
     public DateTime MetaDate { get; set; }

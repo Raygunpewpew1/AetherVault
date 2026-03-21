@@ -24,11 +24,11 @@ public class SearchOptions
     public string SetFilter { get; set; } = "";
 
     // Numeric filters
-    public double CMCMin { get; set; }
-    public double CMCMax { get; set; }
-    public double CMCExact { get; set; }
-    public bool UseCMCRange { get; set; }
-    public bool UseCMCExact { get; set; }
+    public double CmcMin { get; set; }
+    public double CmcMax { get; set; }
+    public double CmcExact { get; set; }
+    public bool UseCmcRange { get; set; }
+    public bool UseCmcExact { get; set; }
     public string PowerFilter { get; set; } = "";
     public string ToughnessFilter { get; set; } = "";
 
@@ -56,11 +56,11 @@ public class SearchOptions
         ColorIdentityFilter = "";
         RarityFilter = [];
         SetFilter = "";
-        CMCMin = 0;
-        CMCMax = 0;
-        CMCExact = 0;
-        UseCMCRange = false;
-        UseCMCExact = false;
+        CmcMin = 0;
+        CmcMax = 0;
+        CmcExact = 0;
+        UseCmcRange = false;
+        UseCmcExact = false;
         PowerFilter = "";
         ToughnessFilter = "";
         LegalFormat = DeckFormat.Standard;
@@ -86,7 +86,7 @@ public class SearchOptions
             if (!string.IsNullOrWhiteSpace(ColorIdentityFilter)) count++;
             if (RarityFilter.Count > 0) count++;
             if (!string.IsNullOrWhiteSpace(SetFilter)) count++;
-            if (UseCMCRange || UseCMCExact) count++;
+            if (UseCmcRange || UseCmcExact) count++;
             if (!string.IsNullOrWhiteSpace(PowerFilter)) count++;
             if (!string.IsNullOrWhiteSpace(ToughnessFilter)) count++;
             if (UseLegalFormat) count++;
@@ -108,8 +108,8 @@ public class SearchOptions
         !string.IsNullOrEmpty(ColorIdentityFilter) ||
         RarityFilter.Count > 0 ||
         !string.IsNullOrEmpty(SetFilter) ||
-        UseCMCRange ||
-        UseCMCExact ||
+        UseCmcRange ||
+        UseCmcExact ||
         !string.IsNullOrEmpty(PowerFilter) ||
         !string.IsNullOrEmpty(ToughnessFilter) ||
         UseLegalFormat ||

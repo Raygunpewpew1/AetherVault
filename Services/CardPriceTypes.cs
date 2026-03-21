@@ -18,7 +18,7 @@ public enum PriceCategory { Retail, Buylist }
 /// Supported currencies.
 /// Port of TCurrency from CardPriceTypes.pas.
 /// </summary>
-public enum PriceCurrency { USD, EUR }
+public enum PriceCurrency { Usd, Eur }
 
 /// <summary>
 /// A single price data point with date.
@@ -59,7 +59,7 @@ public record VendorPrices
         RetailEtched = PriceEntry.Empty,
         BuylistNormal = PriceEntry.Empty,
         BuylistEtched = PriceEntry.Empty,
-        Currency = PriceCurrency.USD
+        Currency = PriceCurrency.Usd
     };
 }
 
@@ -69,7 +69,7 @@ public record VendorPrices
 /// </summary>
 public enum PriceVendor
 {
-    TCGPlayer,
+    TcgPlayer,
     Cardmarket,
     CardKingdom,
     ManaPool
@@ -81,7 +81,7 @@ public enum PriceVendor
 /// </summary>
 public record PaperPlatform
 {
-    public VendorPrices TCGPlayer { get; init; } = VendorPrices.Empty;
+    public VendorPrices TcgPlayer { get; init; } = VendorPrices.Empty;
     public VendorPrices Cardmarket { get; init; } = VendorPrices.Empty;
     public VendorPrices CardKingdom { get; init; } = VendorPrices.Empty;
     public VendorPrices ManaPool { get; init; } = VendorPrices.Empty;
@@ -93,7 +93,7 @@ public record PaperPlatform
 /// </summary>
 public record CardPriceData
 {
-    public string UUID { get; init; } = "";
+    public string Uuid { get; init; } = "";
     public PaperPlatform Paper { get; init; } = new();
     public DateTime LastUpdated { get; init; }
 
@@ -114,7 +114,7 @@ public record MetaInfo(string Date, string Version)
 /// </summary>
 public static class PriceDateParser
 {
-    public static DateTime ParseISO8601Date(string s)
+    public static DateTime ParseIso8601Date(string s)
     {
         if (DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                 DateTimeStyles.None, out var result))

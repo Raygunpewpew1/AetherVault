@@ -9,7 +9,7 @@ namespace AetherVault.Services;
 public class CardPriceManager : IDisposable
 {
     private readonly CardPriceDatabase _database = new();
-    private readonly CardPriceSQLiteSync _sync = new();
+    private readonly CardPriceSqLiteSync _sync = new();
     private Timer? _checkTimer;
     private volatile bool _isChecking;
     private readonly SemaphoreSlim _updateLock = new(1, 1);
@@ -253,7 +253,7 @@ public class CardPriceManager : IDisposable
 
     private async Task<bool> DoDownloadAndSyncAsync()
     {
-        var zipPath = Path.Combine(AppDataManager.GetAppDataPath(), MTGConstants.FilePricesTempZip);
+        var zipPath = Path.Combine(AppDataManager.GetAppDataPath(), MtgConstants.FilePricesTempZip);
 
         try
         {

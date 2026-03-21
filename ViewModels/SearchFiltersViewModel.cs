@@ -329,9 +329,9 @@ public partial class SearchFiltersViewModel : BaseViewModel
 
         if (CmcMin > 0 || CmcMax < 16)
         {
-            options.UseCMCRange = true;
-            options.CMCMin = (int)CmcMin;
-            options.CMCMax = (int)CmcMax;
+            options.UseCmcRange = true;
+            options.CmcMin = (int)CmcMin;
+            options.CmcMax = (int)CmcMax;
         }
 
         options.PowerFilter = Power ?? "";
@@ -388,15 +388,15 @@ public partial class SearchFiltersViewModel : BaseViewModel
         ChkRare = options.RarityFilter.Contains(CardRarity.Rare);
         ChkMythic = options.RarityFilter.Contains(CardRarity.Mythic);
 
-        if (options.UseCMCRange)
+        if (options.UseCmcRange)
         {
-            CmcMin = options.CMCMin;
-            CmcMax = options.CMCMax;
+            CmcMin = options.CmcMin;
+            CmcMax = options.CmcMax;
         }
-        else if (options.UseCMCExact)
+        else if (options.UseCmcExact)
         {
-            CmcMin = options.CMCExact;
-            CmcMax = options.CMCExact;
+            CmcMin = options.CmcExact;
+            CmcMax = options.CmcExact;
         }
         else
         {
@@ -425,7 +425,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
         var parts = new List<string>();
         AddTextAndTypeSummary(parts, options);
         AddColorAndRaritySummary(parts, options);
-        AddCMCSummary(parts, options);
+        AddCmcSummary(parts, options);
         AddPowerToughnessSummary(parts, options);
         AddFormatSetArtistSummary(parts, options);
         AddSpecialSummary(parts, options);
@@ -462,12 +462,12 @@ public partial class SearchFiltersViewModel : BaseViewModel
             parts.Add($"Rarity: {string.Join("/", options.RarityFilter)}");
     }
 
-    private static void AddCMCSummary(List<string> parts, SearchOptions options)
+    private static void AddCmcSummary(List<string> parts, SearchOptions options)
     {
-        if (options.UseCMCRange)
-            parts.Add($"CMC: {options.CMCMin}-{options.CMCMax}");
-        else if (options.UseCMCExact)
-            parts.Add($"CMC: {options.CMCExact}");
+        if (options.UseCmcRange)
+            parts.Add($"CMC: {options.CmcMin}-{options.CmcMax}");
+        else if (options.UseCmcExact)
+            parts.Add($"CMC: {options.CmcExact}");
     }
 
     private static void AddPowerToughnessSummary(List<string> parts, SearchOptions options)

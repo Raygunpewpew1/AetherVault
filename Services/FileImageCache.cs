@@ -17,13 +17,13 @@ public class FileImageCache : IDisposable
     private const int CleanupCheckIntervalMs = 60_000;
     private const string FileExtension = ".webp";
 
-    public int MaxCacheSizeMB { get; set; }
+    public int MaxCacheSizeMb { get; set; }
     public int MaxCacheAgeDays { get; set; }
     public string CacheDir => _cacheDir;
 
-    public FileImageCache(string? cacheDir = null, int maxCacheSizeMB = 300, int maxCacheAgeDays = 30)
+    public FileImageCache(string? cacheDir = null, int maxCacheSizeMb = 300, int maxCacheAgeDays = 30)
     {
-        MaxCacheSizeMB = maxCacheSizeMB;
+        MaxCacheSizeMb = maxCacheSizeMb;
         MaxCacheAgeDays = maxCacheAgeDays;
 
         _cacheDir = cacheDir ?? Path.Combine(FileSystem.CacheDirectory, "ImageCache");
@@ -221,12 +221,12 @@ public class FileImageCache : IDisposable
         {
             InitializeCacheStats();
             Logger.LogStuff(
-                $"Initialized image file cache stats: {_fileCount} images, {_currentCacheSize / (1024.0 * 1024.0):F1}/{MaxCacheSizeMB} MB.",
+                $"Initialized image file cache stats: {_fileCount} images, {_currentCacheSize / (1024.0 * 1024.0):F1}/{MaxCacheSizeMb} MB.",
                 LogLevel.Info);
         }
 
-        var sizeMB = _currentCacheSize / (1024.0 * 1024.0);
-        return $"File Cache: {_fileCount} images, {sizeMB:F1}/{MaxCacheSizeMB} MB";
+        var sizeMb = _currentCacheSize / (1024.0 * 1024.0);
+        return $"File Cache: {_fileCount} images, {sizeMb:F1}/{MaxCacheSizeMb} MB";
     }
 
     public void Dispose()
@@ -254,7 +254,7 @@ public class FileImageCache : IDisposable
         if (_currentCacheSize < 0)
             InitializeCacheStats();
 
-        var maxBytes = (long)MaxCacheSizeMB * 1024 * 1024;
+        var maxBytes = (long)MaxCacheSizeMb * 1024 * 1024;
         if (_currentCacheSize <= maxBytes) return;
 
         // Delete oldest 25% of files

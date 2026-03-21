@@ -18,8 +18,8 @@ public class TokenRepository : ITokenRepository
         await _lock.WaitAsync();
         try
         {
-            return await _db.MTGConnection.QueryFirstOrDefaultAsync<TokenEntity>(
-                SQLQueries.SelectTokenByUuid, new { uuid });
+            return await _db.MtgConnection.QueryFirstOrDefaultAsync<TokenEntity>(
+                SqlQueries.SelectTokenByUuid, new { uuid });
         }
         finally
         {
@@ -32,8 +32,8 @@ public class TokenRepository : ITokenRepository
         await _lock.WaitAsync();
         try
         {
-            return await _db.MTGConnection.QueryFirstOrDefaultAsync<TokenIdentifierEntity>(
-                SQLQueries.SelectTokenIdentifierByUuid, new { uuid });
+            return await _db.MtgConnection.QueryFirstOrDefaultAsync<TokenIdentifierEntity>(
+                SqlQueries.SelectTokenIdentifierByUuid, new { uuid });
         }
         finally
         {
@@ -46,8 +46,8 @@ public class TokenRepository : ITokenRepository
         await _lock.WaitAsync();
         try
         {
-            return await _db.MTGConnection.QueryAsync<TokenEntity>(
-                SQLQueries.SelectTokensBySetCode, new { setCode });
+            return await _db.MtgConnection.QueryAsync<TokenEntity>(
+                SqlQueries.SelectTokensBySetCode, new { setCode });
         }
         finally
         {

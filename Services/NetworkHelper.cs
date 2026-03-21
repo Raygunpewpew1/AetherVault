@@ -15,7 +15,7 @@ public static class NetworkHelper
     {
         var client = handler != null ? new HttpClient(handler) : new HttpClient();
         client.Timeout = timeout;
-        client.DefaultRequestHeaders.UserAgent.ParseAdd(MTGConstants.ScryfallUserAgent);
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(MtgConstants.ScryfallUserAgent);
         return client;
     }
 }

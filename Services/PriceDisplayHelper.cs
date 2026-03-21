@@ -10,7 +10,7 @@ public static class PriceDisplayHelper
     private const string DefaultOrder = "TCGPlayer,Cardmarket,CardKingdom,ManaPool";
 
     private static readonly PriceVendor[] DefaultVendorOrder =
-    [PriceVendor.TCGPlayer, PriceVendor.Cardmarket, PriceVendor.CardKingdom, PriceVendor.ManaPool];
+    [PriceVendor.TcgPlayer, PriceVendor.Cardmarket, PriceVendor.CardKingdom, PriceVendor.ManaPool];
 
     /// <summary>
     /// Gets the current vendor priority order from preferences.
@@ -75,7 +75,7 @@ public static class PriceDisplayHelper
         if (preferEtchedLabel && isEtched) suffix = " (Etched)";
         else if (preferFoilLabel && isFoil) suffix = " (Foil)";
 
-        return currency == PriceCurrency.EUR ? $"€{price:F2}{suffix}" : $"${price:F2}{suffix}";
+        return currency == PriceCurrency.Eur ? $"€{price:F2}{suffix}" : $"${price:F2}{suffix}";
     }
 
     /// <summary>
@@ -115,14 +115,14 @@ public static class PriceDisplayHelper
                 return (v.RetailEtched.Price, false, true, cur);
         }
 
-        return (0, false, false, PriceCurrency.USD);
+        return (0, false, false, PriceCurrency.Usd);
     }
 
     private static VendorPrices? GetVendorPrices(PaperPlatform paper, PriceVendor vendor)
     {
         return vendor switch
         {
-            PriceVendor.TCGPlayer => paper.TCGPlayer,
+            PriceVendor.TcgPlayer => paper.TcgPlayer,
             PriceVendor.Cardmarket => paper.Cardmarket,
             PriceVendor.CardKingdom => paper.CardKingdom,
             PriceVendor.ManaPool => paper.ManaPool,

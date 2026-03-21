@@ -35,7 +35,7 @@ public partial class LoadingViewModel : BaseViewModel
     ];
 
     [ObservableProperty]
-    private string? tipText;
+    private string? _tipText;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProgressPercent))]
@@ -104,10 +104,10 @@ public partial class LoadingViewModel : BaseViewModel
 
             // Run file/network/DB I/O on thread pool to avoid blocking the main thread and causing ANR.
             // Sync file I/O (MTGDatabaseExists, GetLocalDatabaseVersion) and network timeouts can block for seconds.
-            bool dbExists = await Task.Run(AppDataManager.MTGDatabaseExists);
+            bool dbExists = await Task.Run(AppDataManager.MtgDatabaseExists);
             var updateCheckTask = Task.Run(CheckForUpdateSafeAsync);
             var validationTask = dbExists
-                ? Task.Run(() => AppDataManager.ValidateMTGDatabaseAsync())
+                ? Task.Run(() => AppDataManager.ValidateMtgDatabaseAsync())
                 : Task.FromResult(false);
 
             // Await the update check first — its result determines whether we even need validation.
@@ -216,7 +216,7 @@ public partial class LoadingViewModel : BaseViewModel
         }
         else
         {
-            if (AppDataManager.MTGDatabaseExists())
+            if (AppDataManager.MtgDatabaseExists())
             {
                 bool useExisting = await _dialogService.DisplayAlertAsync(UserMessages.DownloadFailedTitle,
                     UserMessages.DownloadFailedContinueMessage,

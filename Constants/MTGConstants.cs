@@ -6,7 +6,7 @@ namespace AetherVault;
 /// Centralized constants for the AetherVault application.
 /// Port of MTGConstants.pas.
 /// </summary>
-public static class MTGConstants
+public static class MtgConstants
 {
     // ── Card Type Keywords ──────────────────────────────────────────
 
@@ -78,13 +78,13 @@ public static class MTGConstants
     // ── MTGJSON Decks (catalog + individual deck download) ──────────────
 
     /// <summary>URL to download the full deck list catalog (zip containing DeckList.json).</summary>
-    public const string MTGJsonDeckListUrl = "https://mtgjson.com/api/v5/DeckList.json.zip";
+    public const string MtgJsonDeckListUrl = "https://mtgjson.com/api/v5/DeckList.json.zip";
     /// <summary>Direct URL to DeckList.json (uncompressed fallback when zip fails).</summary>
-    public const string MTGJsonDeckListJsonUrl = "https://mtgjson.com/api/v5/DeckList.json";
+    public const string MtgJsonDeckListJsonUrl = "https://mtgjson.com/api/v5/DeckList.json";
     /// <summary>Base URL for a single deck JSON. Append fileName + ".json" e.g. "Commander_2021_Arcane_Maelstrom_C21.json".</summary>
-    public const string MTGJsonDeckBaseUrl = "https://mtgjson.com/api/v5/decks/";
+    public const string MtgJsonDeckBaseUrl = "https://mtgjson.com/api/v5/decks/";
     /// <summary>Local cache filename for the deck list catalog (stored in app data).</summary>
-    public const string MTGJsonDeckListCacheFile = "DeckList.json";
+    public const string MtgJsonDeckListCacheFile = "DeckList.json";
 
     // ── File / Path Constants ──────────────────────────────────────
 

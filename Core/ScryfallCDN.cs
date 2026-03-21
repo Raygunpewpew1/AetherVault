@@ -22,7 +22,7 @@ public enum ScryfallFace
 /// Helper for constructing Scryfall CDN image URLs.
 /// Port of ScryfallCDN.pas.
 /// </summary>
-public static class ScryfallCDN
+public static class ScryfallCdn
 {
     private static readonly string[] SizeStrings =
         ["small", "normal", "large", "png", "art_crop", "border_crop"];
