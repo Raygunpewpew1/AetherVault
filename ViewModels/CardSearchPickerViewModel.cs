@@ -97,7 +97,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
     [RelayCommand]
     private async Task SelectCardAsync(Card card)
     {
-        var fullCard = await GetCardDetailsAsync(card.UUID);
+        var fullCard = await GetCardDetailsAsync(card.Uuid);
         if (fullCard != null)
         {
             CardSelected?.Invoke(fullCard);
@@ -121,7 +121,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
             try
             {
                 var first = _allCards[0];
-                var full = await GetCardDetailsAsync(first.UUID);
+                var full = await GetCardDetailsAsync(first.Uuid);
                 if (full != null)
                 {
                     CardSelected?.Invoke(full);
@@ -170,11 +170,11 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     ColorIdentityFilter = CurrentOptions.ColorIdentityFilter,
                     RarityFilter = [.. CurrentOptions.RarityFilter],
                     SetFilter = CurrentOptions.SetFilter,
-                    CMCMin = CurrentOptions.CMCMin,
-                    CMCMax = CurrentOptions.CMCMax,
-                    CMCExact = CurrentOptions.CMCExact,
-                    UseCMCRange = CurrentOptions.UseCMCRange,
-                    UseCMCExact = CurrentOptions.UseCMCExact,
+                    CmcMin = CurrentOptions.CmcMin,
+                    CmcMax = CurrentOptions.CmcMax,
+                    CmcExact = CurrentOptions.CmcExact,
+                    UseCmcRange = CurrentOptions.UseCmcRange,
+                    UseCmcExact = CurrentOptions.UseCmcExact,
                     PowerFilter = CurrentOptions.PowerFilter,
                     ToughnessFilter = CurrentOptions.ToughnessFilter,
                     LegalFormat = CurrentOptions.LegalFormat,

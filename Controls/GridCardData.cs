@@ -21,7 +21,7 @@ public enum ImageQuality
 /// </summary>
 public class GridCardData
 {
-    public string UUID { get; set; } = "";
+    public string Uuid { get; set; } = "";
     public string Name { get; set; } = "";
     public string SetCode { get; set; } = "";
     public string Number { get; set; } = "";
@@ -68,7 +68,7 @@ public class GridCardData
 
     public static GridCardData FromCard(Card card, int quantity = 0) => new()
     {
-        UUID = card.UUID,
+        Uuid = card.Uuid,
         Name = card.Name,
         SetCode = card.SetCode,
         Number = card.Number,

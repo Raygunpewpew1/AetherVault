@@ -50,13 +50,13 @@ public partial class CollectionAddPage : ContentPage
         CollectionInfoLabel.Text = CurrentQty > 0
             ? $"Currently in collection: {CurrentQty}"
             : "Not in collection yet";
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     private void OnQuantitySelectorQuantityChanged(object? sender, int newQuantity)
     {
         _quantity = newQuantity;
-        UpdateQuantityUI();
+        UpdateQuantityUi();
     }
 
     public Task<CollectionAddResult?> WaitForResultAsync()
@@ -78,7 +78,7 @@ public partial class CollectionAddPage : ContentPage
             _tcs.TrySetResult(null);
     }
 
-    private void UpdateQuantityUI()
+    private void UpdateQuantityUi()
     {
         RemoveWarningLabel.IsVisible = _quantity == 0 && _currentInCollection > 0;
 

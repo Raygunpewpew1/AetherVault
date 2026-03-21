@@ -10,7 +10,7 @@ namespace AetherVault.Services;
 /// Uses SQLite's ATTACH DATABASE to copy rows directly without any JSON parsing.
 /// Replaces the old CardPriceImporter streaming JSON approach.
 /// </summary>
-public class CardPriceSQLiteSync
+public class CardPriceSqLiteSync
 {
     public Action<bool, int, string>? OnComplete { get; set; }
     public Action<string, int>? OnProgress { get; set; }
@@ -29,7 +29,7 @@ public class CardPriceSQLiteSync
     {
         var tempSqlitePath = Path.Combine(
             Path.GetDirectoryName(zipPath)!,
-            MTGConstants.FilePricesTempSqlite);
+            MtgConstants.FilePricesTempSqlite);
 
         try
         {
@@ -84,10 +84,10 @@ public class CardPriceSQLiteSync
         // Migrate old wide-column schema if present
         await MigrateIfNeededAsync(conn);
 
-        await ExecuteAsync(conn, SQLQueries.CreatePricesTable);
-        await ExecuteAsync(conn, SQLQueries.CreatePriceHistoryTable);
-        await ExecuteAsync(conn, SQLQueries.CreatePricesIndex);
-        await ExecuteAsync(conn, SQLQueries.CreatePriceHistoryIndex);
+        await ExecuteAsync(conn, SqlQueries.CreatePricesTable);
+        await ExecuteAsync(conn, SqlQueries.CreatePriceHistoryTable);
+        await ExecuteAsync(conn, SqlQueries.CreatePricesIndex);
+        await ExecuteAsync(conn, SqlQueries.CreatePriceHistoryIndex);
 
         // ATTACH outside the transaction — SQLite allows this but keep it clean
         var escapedPath = sourceSqlitePath.Replace("'", "''");
@@ -114,38 +114,38 @@ public class CardPriceSQLiteSync
             using var trans = conn.BeginTransaction();
 
             Logger.LogStuff("[PriceSync] Step 1: DELETE old prices", LogLevel.Info);
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.PricesDeleteAll);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.PricesDeleteAll);
             // Drop secondary index before bulk insert — rebuilt in a single pass at the end
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.DropPricesIndex);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.DropPricesIndex);
 
             Logger.LogStuff("[PriceSync] Step 2: INSERT from attached DB", LogLevel.Info);
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.PricesSyncFromAttached);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.PricesSyncFromAttached);
 
             // Drop history secondary index before bulk insert — rebuilt at end
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.DropPriceHistoryIndex);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.DropPriceHistoryIndex);
 
             if (collectionAttached)
             {
                 Logger.LogStuff("[PriceSync] Step 3: DELETE non-collection history", LogLevel.Info);
-                await ExecuteTransactedAsync(conn, trans, SQLQueries.PriceHistoryDeleteNonCollection);
+                await ExecuteTransactedAsync(conn, trans, SqlQueries.PriceHistoryDeleteNonCollection);
 
                 Logger.LogStuff("[PriceSync] Step 4: INSERT history for owned cards only", LogLevel.Info);
-                await ExecuteTransactedAsync(conn, trans, SQLQueries.PriceHistorySyncCollectionOnly);
+                await ExecuteTransactedAsync(conn, trans, SqlQueries.PriceHistorySyncCollectionOnly);
             }
             else
             {
                 Logger.LogStuff("[PriceSync] Step 3/4: INSERT history (unfiltered fallback)", LogLevel.Info);
-                await ExecuteTransactedAsync(conn, trans, SQLQueries.PriceHistorySyncFromAttached);
+                await ExecuteTransactedAsync(conn, trans, SqlQueries.PriceHistorySyncFromAttached);
             }
 
             Logger.LogStuff("[PriceSync] Step 5: Trim old history", LogLevel.Info);
             await ExecuteTransactedAsync(conn, trans,
-                string.Format(SQLQueries.PriceHistoryTrimOld, MTGConstants.PriceHistoryRetentionDays));
+                string.Format(SqlQueries.PriceHistoryTrimOld, MtgConstants.PriceHistoryRetentionDays));
 
             // Rebuild both secondary indexes in a single pass now that all data is in place
             Logger.LogStuff("[PriceSync] Rebuilding indexes...", LogLevel.Info);
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.CreatePricesIndex);
-            await ExecuteTransactedAsync(conn, trans, SQLQueries.CreatePriceHistoryIndex);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.CreatePricesIndex);
+            await ExecuteTransactedAsync(conn, trans, SqlQueries.CreatePriceHistoryIndex);
 
             Logger.LogStuff("[PriceSync] Committing transaction...", LogLevel.Info);
             await trans.CommitAsync();
@@ -178,15 +178,15 @@ public class CardPriceSQLiteSync
         }
 
         // Report row count from the now-updated local table
-        var count = await conn.ExecuteScalarAsync<long>(SQLQueries.PricesCount);
+        var count = await conn.ExecuteScalarAsync<long>(SqlQueries.PricesCount);
 
         OnProgress?.Invoke("Sync complete.", 100);
         OnComplete?.Invoke(true, (int)count, "");
         Logger.LogStuff($"Price sync complete: {count} rows in card_prices.", LogLevel.Info);
     }
 
-    private class TableInfo { public string name { get; set; } = ""; }
-    private class ColumnInfo { public string name { get; set; } = ""; }
+    private class TableInfo { public string Name { get; set; } = ""; }
+    private class ColumnInfo { public string Name { get; set; } = ""; }
 
     /// <summary>
     /// Probes the attached MTGJSON database and logs its table names, column names, and row count.
@@ -196,14 +196,14 @@ public class CardPriceSQLiteSync
     {
         var tables = (await conn.QueryAsync<TableInfo>(
             "SELECT name FROM today.sqlite_master WHERE type='table' ORDER BY name"
-        )).Select(t => t.name).ToList();
+        )).Select(t => t.Name).ToList();
 
         Logger.LogStuff($"[PriceSync] Attached DB tables: {string.Join(", ", tables)}", LogLevel.Info);
 
         if (tables.Contains("prices"))
         {
             var cols = (await conn.QueryAsync<ColumnInfo>("PRAGMA today.table_info('prices')"))
-                .Select(c => c.name).ToList();
+                .Select(c => c.Name).ToList();
             Logger.LogStuff($"[PriceSync] today.prices columns: {string.Join(", ", cols)}", LogLevel.Info);
 
             var count = await conn.ExecuteScalarAsync<long>("SELECT COUNT(*) FROM today.prices");
@@ -221,7 +221,7 @@ public class CardPriceSQLiteSync
     /// </summary>
     private static async Task MigrateIfNeededAsync(SqliteConnection conn)
     {
-        var oldColumnCount = await conn.ExecuteScalarAsync<long>(SQLQueries.PricesSchemaCheck);
+        var oldColumnCount = await conn.ExecuteScalarAsync<long>(SqlQueries.PricesSchemaCheck);
 
         if (oldColumnCount > 0)
         {

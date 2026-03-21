@@ -37,7 +37,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     // ── Bindable properties (XAML uses these via {Binding PropertyName}) ──
 
     [ObservableProperty]
-    private string filtersSummaryText = "";
+    private string _filtersSummaryText = "";
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -53,7 +53,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
     /// <summary>When true, the inline filter strip below the search bar is visible.</summary>
     [ObservableProperty]
-    private bool isFilterStripExpanded;
+    private bool _isFilterStripExpanded;
 
     public SearchOptions CurrentOptions { get; set; } = new();
 
@@ -63,7 +63,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     public IList<string> TypeOptions { get; }
 
     [ObservableProperty]
-    private int selectedTypeIndex;
+    private int _selectedTypeIndex;
 
     public string FiltersButtonText
     {
@@ -462,7 +462,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         var parts = new List<string>();
         AddTextAndTypeSummary(parts, options);
         AddColorAndRaritySummary(parts, options);
-        AddCMCSummary(parts, options);
+        AddCmcSummary(parts, options);
         AddPowerToughnessSummary(parts, options);
         AddFormatSetArtistSummary(parts, options);
         AddSpecialSummary(parts, options);
@@ -499,12 +499,12 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             parts.Add($"Rarity: {string.Join("/", options.RarityFilter)}");
     }
 
-    private static void AddCMCSummary(List<string> parts, SearchOptions options)
+    private static void AddCmcSummary(List<string> parts, SearchOptions options)
     {
-        if (options.UseCMCRange)
-            parts.Add($"CMC: {options.CMCMin}-{options.CMCMax}");
-        else if (options.UseCMCExact)
-            parts.Add($"CMC: {options.CMCExact}");
+        if (options.UseCmcRange)
+            parts.Add($"CMC: {options.CmcMin}-{options.CmcMax}");
+        else if (options.UseCmcExact)
+            parts.Add($"CMC: {options.CmcExact}");
     }
 
     private static void AddPowerToughnessSummary(List<string> parts, SearchOptions options)

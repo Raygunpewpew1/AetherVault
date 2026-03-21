@@ -3,11 +3,11 @@ using AetherVault.ViewModels;
 
 namespace AetherVault.Pages;
 
-public partial class MTGJsonDecksPage : ContentPage
+public partial class MtgJsonDecksPage : ContentPage
 {
-    private readonly MTGJsonDecksViewModel _viewModel;
+    private readonly MtgJsonDecksViewModel _viewModel;
 
-    public MTGJsonDecksPage(MTGJsonDecksViewModel viewModel)
+    public MtgJsonDecksPage(MtgJsonDecksViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;

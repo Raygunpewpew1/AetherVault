@@ -9,7 +9,7 @@ namespace AetherVault.Data;
 /// </summary>
 public interface ICardRepository
 {
-    Task<Card> GetCardByUUIDAsync(string uuid);
+    Task<Card> GetCardByUuidAsync(string uuid);
     Task<Card> GetCardDetailsAsync(string uuid);
     Task<Card> GetCardWithLegalitiesAsync(string uuid);
     Task<Card> GetCardWithRulingsAsync(string uuid);
@@ -17,19 +17,19 @@ public interface ICardRepository
     Task<Card?> GetCardByNameAndSetAsync(string name, string setCode);
     Task<Card?> GetCardByScryfallIdAsync(string scryfallId);
 
-    Task<string> GetScryfallIdAsync(string cardUUID);
+    Task<string> GetScryfallIdAsync(string cardUuid);
     Task<CardRuling[]> GetCardRulingsAsync(string uuid);
 
     Task<string[]> GetOtherFaceIdsAsync(string uuid);
     Task<Card[]> GetCardWithOtherFacesAsync(string uuid);
     Task<Card[]> GetFullCardPackageAsync(string uuid);
-    Task<Dictionary<string, Card>> GetCardsByUUIDsAsync(string[] uuids);
+    Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids);
     Task<IReadOnlyList<ImportLookupRow>> GetImportLookupRowsAsync();
 
     Task<Card[]> SearchCardsAsync(string searchText, int limit = 100);
-    Task<Card[]> SearchCardsAdvancedAsync(MTGSearchHelper searchHelper);
-    Task<int> GetCountAdvancedAsync(MTGSearchHelper searchHelper);
-    MTGSearchHelper CreateSearchHelper();
+    Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper);
+    Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper);
+    MtgSearchHelper CreateSearchHelper();
 
     /// <summary>Returns all sets (code + name) for filter dropdowns, ordered by name.</summary>
     Task<IReadOnlyList<SetInfo>> GetAllSetsAsync();

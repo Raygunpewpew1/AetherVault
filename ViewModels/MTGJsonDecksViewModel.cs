@@ -6,10 +6,10 @@ using System.Collections.ObjectModel;
 
 namespace AetherVault.ViewModels;
 
-public partial class MTGJsonDecksViewModel : BaseViewModel
+public partial class MtgJsonDecksViewModel : BaseViewModel
 {
-    private readonly MTGJsonDeckListService _deckListService;
-    private readonly MTGJsonDeckImporter _importer;
+    private readonly MtgJsonDeckListService _deckListService;
+    private readonly MtgJsonDeckImporter _importer;
     private readonly IToastService _toast;
 
     [ObservableProperty]
@@ -32,7 +32,7 @@ public partial class MTGJsonDecksViewModel : BaseViewModel
 
     private List<MtgJsonDeckListEntry> _allDecks = [];
 
-    public MTGJsonDecksViewModel(MTGJsonDeckListService deckListService, MTGJsonDeckImporter importer, IToastService toast)
+    public MtgJsonDecksViewModel(MtgJsonDeckListService deckListService, MtgJsonDeckImporter importer, IToastService toast)
     {
         _deckListService = deckListService;
         _importer = importer;
@@ -110,7 +110,7 @@ public partial class MTGJsonDecksViewModel : BaseViewModel
         if (IsBusy) return;
         IsBusy = true;
         StatusIsError = false;
-        StatusMessage = UserMessages.ImportingMTGJsonDeck;
+        StatusMessage = UserMessages.ImportingMtgJsonDeck;
 
         try
         {
@@ -118,8 +118,8 @@ public partial class MTGJsonDecksViewModel : BaseViewModel
             if (deck == null)
             {
                 StatusIsError = true;
-                StatusMessage = UserMessages.MTGJsonDeckImportFailed;
-                _toast?.Show(UserMessages.MTGJsonDeckImportFailed);
+                StatusMessage = UserMessages.MtgJsonDeckImportFailed;
+                _toast?.Show(UserMessages.MtgJsonDeckImportFailed);
                 return;
             }
 
@@ -129,13 +129,13 @@ public partial class MTGJsonDecksViewModel : BaseViewModel
             if (!result.Success)
             {
                 StatusIsError = true;
-                StatusMessage = UserMessages.MTGJsonDeckImportFailed;
-                _toast?.Show(UserMessages.MTGJsonDeckImportFailed);
+                StatusMessage = UserMessages.MtgJsonDeckImportFailed;
+                _toast?.Show(UserMessages.MtgJsonDeckImportFailed);
                 return;
             }
 
             StatusMessage = UserMessages.StatusClear;
-            _toast?.Show(UserMessages.MTGJsonDeckImportedToast(deck.Name, result.CardsAdded));
+            _toast?.Show(UserMessages.MtgJsonDeckImportedToast(deck.Name, result.CardsAdded));
             if (result.MissingUuids.Count > 0)
                 Logger.LogStuff($"MTGJSON import: {result.MissingUuids.Count} UUIDs not in local DB.", LogLevel.Warning);
 
@@ -146,7 +146,7 @@ public partial class MTGJsonDecksViewModel : BaseViewModel
             Logger.LogStuff($"MTGJSON deck import failed: {ex.Message}", LogLevel.Error);
             StatusIsError = true;
             StatusMessage = UserMessages.ImportFailed(ex.Message);
-            _toast?.Show(UserMessages.MTGJsonDeckImportFailed);
+            _toast?.Show(UserMessages.MtgJsonDeckImportFailed);
         }
         finally
         {

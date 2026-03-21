@@ -154,7 +154,7 @@ public partial class StatsViewModel : BaseViewModel
         try
         {
             var cacheStats = await _cardManager.GetImageCacheStatsAsync();
-            var mtgSize = GetFileSize(AppDataManager.GetMTGDatabasePath());
+            var mtgSize = GetFileSize(AppDataManager.GetMtgDatabasePath());
             var collSize = GetFileSize(AppDataManager.GetCollectionDatabasePath());
             var pricesSize = GetFileSize(AppDataManager.GetPricesDatabasePath());
             var cacheSize = _cardManager.ImageService.Cache.GetTotalCacheSize();

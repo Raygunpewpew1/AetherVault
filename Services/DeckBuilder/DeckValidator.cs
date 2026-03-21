@@ -49,7 +49,7 @@ public class DeckValidator
                 if (format == DeckFormat.Vintage && card.Legalities[format] == LegalityStatus.Restricted)
                 {
                     // Validate restricted (max 1)
-                    int currentQty = GetTotalQuantity(card.UUID, currentCards);
+                    int currentQty = GetTotalQuantity(card.Uuid, currentCards);
                     if (currentQty + quantityToAdd > 1)
                     {
                         return ValidationResult.Error($"Card '{card.Name}' is Restricted in Vintage (Max 1).");
@@ -63,7 +63,7 @@ public class DeckValidator
         }
 
         // 2. Quantity Limits
-        int existingQuantity = GetTotalQuantity(card.UUID, currentCards);
+        int existingQuantity = GetTotalQuantity(card.Uuid, currentCards);
         int totalQuantity = existingQuantity + quantityToAdd;
 
         bool isBasicLand = card.IsBasicLand;

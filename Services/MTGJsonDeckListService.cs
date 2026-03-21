@@ -7,7 +7,7 @@ namespace AetherVault.Services;
 /// <summary>
 /// Fetches and caches the MTGJSON deck list catalog (DeckList.json) and individual deck JSON files.
 /// </summary>
-public class MTGJsonDeckListService
+public class MtgJsonDeckListService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -18,9 +18,9 @@ public class MTGJsonDeckListService
     private readonly string _cachePath;
     private List<MtgJsonDeckListEntry>? _cachedList;
 
-    public MTGJsonDeckListService()
+    public MtgJsonDeckListService()
     {
-        _cachePath = Path.Combine(AppDataManager.GetAppDataPath(), MTGConstants.MTGJsonDeckListCacheFile);
+        _cachePath = Path.Combine(AppDataManager.GetAppDataPath(), MtgConstants.MtgJsonDeckListCacheFile);
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public class MTGJsonDeckListService
         try
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(60));
-            using var response = await client.GetAsync(MTGConstants.MTGJsonDeckListUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var response = await client.GetAsync(MtgConstants.MtgJsonDeckListUrl, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
 
             await using var zipStream = await response.Content.ReadAsStreamAsync(ct);
@@ -128,7 +128,7 @@ public class MTGJsonDeckListService
         try
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(60));
-            var json = await client.GetStringAsync(MTGConstants.MTGJsonDeckListJsonUrl, ct);
+            var json = await client.GetStringAsync(MtgConstants.MtgJsonDeckListJsonUrl, ct);
             if (!string.IsNullOrWhiteSpace(json))
                 Logger.LogStuff("DeckList loaded via direct JSON URL.", LogLevel.Info);
             return json;
@@ -275,7 +275,7 @@ public class MTGJsonDeckListService
         if (!name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             name += ".json";
 
-        var url = MTGConstants.MTGJsonDeckBaseUrl + name;
+        var url = MtgConstants.MtgJsonDeckBaseUrl + name;
         try
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(30));

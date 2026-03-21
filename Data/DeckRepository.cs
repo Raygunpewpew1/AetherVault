@@ -25,7 +25,7 @@ public class DeckRepository : IDeckRepository
         return await WithDeckTransactionAsync(async (conn, transaction) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.DeckInsert,
+                SqlQueries.DeckInsert,
                 new
                 {
                     deck.Name,
@@ -40,7 +40,7 @@ public class DeckRepository : IDeckRepository
                 transaction);
 
             var newId = await conn.QuerySingleAsync<long>(
-                SQLQueries.DeckGetLastId,
+                SqlQueries.DeckGetLastId,
                 transaction: transaction);
 
             return (int)newId;
@@ -55,7 +55,7 @@ public class DeckRepository : IDeckRepository
         try
         {
             await _databaseManager.CollectionConnection.ExecuteAsync(
-                SQLQueries.DeckUpdate,
+                SqlQueries.DeckUpdate,
                 new
                 {
                     deck.Name,
@@ -81,12 +81,12 @@ public class DeckRepository : IDeckRepository
         await WithDeckTransactionAsync(async (conn, transaction) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.DeckDeleteCards,
+                SqlQueries.DeckDeleteCards,
                 new { Id = deckId },
                 transaction);
 
             await conn.ExecuteAsync(
-                SQLQueries.DeckDelete,
+                SqlQueries.DeckDelete,
                 new { Id = deckId },
                 transaction);
         });
@@ -100,7 +100,7 @@ public class DeckRepository : IDeckRepository
         try
         {
             return await _databaseManager.CollectionConnection.QueryFirstOrDefaultAsync<DeckEntity>(
-                SQLQueries.DeckGet,
+                SqlQueries.DeckGet,
                 new { Id = deckId });
         }
         finally
@@ -116,7 +116,7 @@ public class DeckRepository : IDeckRepository
         await _databaseManager.ConnectionLock.WaitAsync();
         try
         {
-            var result = await _databaseManager.CollectionConnection.QueryAsync<DeckEntity>(SQLQueries.DeckGetAll);
+            var result = await _databaseManager.CollectionConnection.QueryAsync<DeckEntity>(SqlQueries.DeckGetAll);
             return result.ToList();
         }
         finally
@@ -132,7 +132,7 @@ public class DeckRepository : IDeckRepository
         await WithDeckTransactionAsync(async (conn, transaction) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.DeckAddCard,
+                SqlQueries.DeckAddCard,
                 new
                 {
                     card.DeckId,
@@ -152,7 +152,7 @@ public class DeckRepository : IDeckRepository
         await WithDeckTransactionAsync(async (conn, transaction) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.DeckRemoveCard,
+                SqlQueries.DeckRemoveCard,
                 new
                 {
                     DeckId = deckId,
@@ -170,7 +170,7 @@ public class DeckRepository : IDeckRepository
         await WithDeckTransactionAsync(async (conn, transaction) =>
         {
             await conn.ExecuteAsync(
-                SQLQueries.DeckUpdateCardQuantity,
+                SqlQueries.DeckUpdateCardQuantity,
                 new
                 {
                     DeckId = deckId,
@@ -190,7 +190,7 @@ public class DeckRepository : IDeckRepository
         try
         {
             var result = await _databaseManager.CollectionConnection.QueryAsync<DeckCardEntity>(
-                SQLQueries.DeckGetCards,
+                SqlQueries.DeckGetCards,
                 new { DeckId = deckId });
             return result.ToList();
         }
@@ -208,7 +208,7 @@ public class DeckRepository : IDeckRepository
         try
         {
             var conn = _databaseManager.CollectionConnection;
-            return await conn.ExecuteScalarAsync<int>(SQLQueries.DeckGetCardCount, new { DeckId = deckId });
+            return await conn.ExecuteScalarAsync<int>(SqlQueries.DeckGetCardCount, new { DeckId = deckId });
         }
         finally
         {
@@ -227,7 +227,7 @@ public class DeckRepository : IDeckRepository
         try
         {
             var conn = _databaseManager.CollectionConnection;
-            var rows = await conn.QueryAsync<(int DeckId, int Total)>(SQLQueries.DeckGetCardCountsBatch, new { DeckIds = deckIdsList });
+            var rows = await conn.QueryAsync<(int DeckId, int Total)>(SqlQueries.DeckGetCardCountsBatch, new { DeckIds = deckIdsList });
             var dict = deckIdsList.ToDictionary(id => id, _ => 0);
             foreach (var row in rows)
                 dict[row.DeckId] = row.Total;

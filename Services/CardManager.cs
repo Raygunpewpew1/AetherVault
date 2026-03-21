@@ -92,7 +92,7 @@ public class CardManager : IDisposable
     /// </summary>
     public async Task<bool> InitializeAsync()
     {
-        var mtgPath = AppDataManager.GetMTGDatabasePath();
+        var mtgPath = AppDataManager.GetMtgDatabasePath();
         var collectionPath = AppDataManager.GetCollectionDatabasePath();
         return await _databaseManager.ConnectAsync(mtgPath, collectionPath);
     }
@@ -318,17 +318,17 @@ public class CardManager : IDisposable
         return await _cardRepository.SearchCardsAdvancedAsync(helper);
     }
 
-    public MTGSearchHelper CreateSearchHelper() => _cardRepository.CreateSearchHelper();
+    public MtgSearchHelper CreateSearchHelper() => _cardRepository.CreateSearchHelper();
 
     /// <summary>Returns all sets (code + name) for filter dropdowns, ordered by name.</summary>
     public async Task<IReadOnlyList<SetInfo>> GetAllSetsAsync() => await _cardRepository.GetAllSetsAsync();
 
-    public async Task<Card[]> ExecuteSearchAsync(MTGSearchHelper searchHelper)
+    public async Task<Card[]> ExecuteSearchAsync(MtgSearchHelper searchHelper)
     {
         return await _cardRepository.SearchCardsAdvancedAsync(searchHelper);
     }
 
-    public async Task<int> GetCountAdvancedAsync(MTGSearchHelper searchHelper)
+    public async Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper)
     {
         return await _cardRepository.GetCountAdvancedAsync(searchHelper);
     }
@@ -357,9 +357,9 @@ public class CardManager : IDisposable
 
     // ── Collection Methods ───────────────────────────────────────────
 
-    public async Task AddCardToCollectionAsync(string cardUUID, int quantity = 1, bool isFoil = false, bool isEtched = false)
+    public async Task AddCardToCollectionAsync(string cardUuid, int quantity = 1, bool isFoil = false, bool isEtched = false)
     {
-        await _collectionRepository.AddCardAsync(cardUUID, quantity, isFoil, isEtched);
+        await _collectionRepository.AddCardAsync(cardUuid, quantity, isFoil, isEtched);
         InvalidateTotalValueCache();
     }
 
@@ -369,26 +369,26 @@ public class CardManager : IDisposable
         InvalidateTotalValueCache();
     }
 
-    public async Task RemoveCardFromCollectionAsync(string cardUUID)
+    public async Task RemoveCardFromCollectionAsync(string cardUuid)
     {
-        await _collectionRepository.RemoveCardAsync(cardUUID);
+        await _collectionRepository.RemoveCardAsync(cardUuid);
         InvalidateTotalValueCache();
     }
 
-    public async Task UpdateCardQuantityAsync(string cardUUID, int quantity, bool isFoil = false, bool isEtched = false)
+    public async Task UpdateCardQuantityAsync(string cardUuid, int quantity, bool isFoil = false, bool isEtched = false)
     {
-        await _collectionRepository.UpdateQuantityAsync(cardUUID, quantity, isFoil, isEtched);
+        await _collectionRepository.UpdateQuantityAsync(cardUuid, quantity, isFoil, isEtched);
         InvalidateTotalValueCache();
     }
 
-    public async Task<bool> IsInCollectionAsync(string cardUUID)
+    public async Task<bool> IsInCollectionAsync(string cardUuid)
     {
-        return await _collectionRepository.IsInCollectionAsync(cardUUID);
+        return await _collectionRepository.IsInCollectionAsync(cardUuid);
     }
 
-    public async Task<int> GetQuantityAsync(string cardUUID)
+    public async Task<int> GetQuantityAsync(string cardUuid)
     {
-        return await _collectionRepository.GetQuantityAsync(cardUUID);
+        return await _collectionRepository.GetQuantityAsync(cardUuid);
     }
 
     public async Task<CollectionItem[]> GetCollectionAsync()

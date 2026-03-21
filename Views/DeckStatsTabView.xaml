@@ -32,7 +32,7 @@
                     </Border>
                     <Border Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="1">
                         <VerticalStackLayout HorizontalOptions="Center">
-                            <Label Text="{Binding Stats.AvgCMC, StringFormat='{0:F1}'}" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource Accent}" />
+                            <Label Text="{Binding Stats.AvgCmc, StringFormat='{0:F1}'}" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource Accent}" />
                             <Label Text="Avg CMC" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>

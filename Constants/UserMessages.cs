@@ -100,10 +100,10 @@ public static class UserMessages
 
     public const string DeckImportFailed = "Deck import failed.";
     public const string LoadingDeckList = "Loading deck list...";
-    public const string ImportingMTGJsonDeck = "Importing deck...";
-    public static string MTGJsonDeckImportedToast(string deckName, int cardCount) =>
+    public const string ImportingMtgJsonDeck = "Importing deck...";
+    public static string MtgJsonDeckImportedToast(string deckName, int cardCount) =>
         $"Imported \"{deckName}\" ({cardCount} cards).";
-    public const string MTGJsonDeckImportFailed = "Could not import deck.";
+    public const string MtgJsonDeckImportFailed = "Could not import deck.";
     public const string NoDecksToExport = "No decks to export.";
     public const string NothingToExport = "Nothing to export.";
     public const string ExportFailedToast = "Export failed.";

@@ -13,9 +13,9 @@ public static class CardTypesJsonData
     /// Parses the card types JSON (from MTGJSON CardTypes endpoint) into
     /// an MTGDataCollection.
     /// </summary>
-    public static MTGDataCollection Parse(string json)
+    public static MtgDataCollection Parse(string json)
     {
-        var result = new MTGDataCollection();
+        var result = new MtgDataCollection();
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 

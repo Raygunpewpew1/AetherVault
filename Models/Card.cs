@@ -9,7 +9,7 @@ namespace AetherVault.Models;
 public class Card
 {
     // ── Identifiers ─────────────────────────────────────────────────
-    public string UUID { get; set; } = "";
+    public string Uuid { get; set; } = "";
     public string ScryfallId { get; set; } = "";
     public string BackScryfallId { get; set; } = "";
 
@@ -17,7 +17,7 @@ public class Card
     public string Name { get; set; } = "";
     public string PrintedName { get; set; } = "";
     public string ManaCost { get; set; } = "";
-    public double CMC { get; set; }
+    public double Cmc { get; set; }
     public string CardType { get; set; } = "";
     public string Text { get; set; } = "";
     public string OriginalText { get; set; } = "";
@@ -25,12 +25,12 @@ public class Card
     public CardRarity Rarity { get; set; } = CardRarity.Common;
 
     // ── Purchase Urls ────────────────────────────────────────────────────
-    public string cardKingdom { get; set; } = "";
-    public string cardKingdomFoil { get; set; } = "";
-    public string cardKingdomEtched { get; set; } = "";
-    public string cardmarket { get; set; } = "";
-    public string tcgplayer { get; set; } = "";
-    public string tcgplayerEtched { get; set; } = "";
+    public string CardKingdom { get; set; } = "";
+    public string CardKingdomFoil { get; set; } = "";
+    public string CardKingdomEtched { get; set; } = "";
+    public string Cardmarket { get; set; } = "";
+    public string Tcgplayer { get; set; } = "";
+    public string TcgplayerEtched { get; set; } = "";
 
 
     // ── Set Info ────────────────────────────────────────────────────
@@ -79,8 +79,8 @@ public class Card
     public string CardParts { get; set; } = "";
 
     // ── EDH/Commander Data ──────────────────────────────────────────
-    public int EDHRecRank { get; set; }
-    public double EDHRecSaltiness { get; set; }
+    public int EdhRecRank { get; set; }
+    public double EdhRecSaltiness { get; set; }
 
     // ── Visual/Frame Properties ─────────────────────────────────────
     public string Watermark { get; set; } = "";
@@ -93,7 +93,7 @@ public class Card
     public List<CardRuling> Rulings { get; set; } = [];
     public string ImageUrl { get; set; } = "";
     /// <summary>ID to use for image cache/CDN (ScryfallId when set, else UUID).</summary>
-    public string ImageId => string.IsNullOrEmpty(ScryfallId) ? UUID : ScryfallId;
+    public string ImageId => string.IsNullOrEmpty(ScryfallId) ? Uuid : ScryfallId;
     public string[] RelatedCards { get; set; } = [];
 
     public string Finishes { get; set; } = "";
@@ -121,16 +121,16 @@ public class Card
     private bool HasCardType(string typeName) =>
         CardType.Contains(typeName, StringComparison.OrdinalIgnoreCase);
 
-    public bool IsCreature => HasCardType(MTGConstants.CardTypeCreature);
-    public bool IsLand => HasCardType(MTGConstants.CardTypeLand);
-    public bool IsBasicLand => HasCardType(MTGConstants.CardTypeBasicLand);
-    public bool IsArtifact => HasCardType(MTGConstants.CardTypeArtifact);
-    public bool IsEnchantment => HasCardType(MTGConstants.CardTypeEnchantment);
-    public bool IsInstant => HasCardType(MTGConstants.CardTypeInstant);
-    public bool IsSorcery => HasCardType(MTGConstants.CardTypeSorcery);
-    public bool IsPlaneswalker => HasCardType(MTGConstants.CardTypePlaneswalker);
-    public bool IsBattle => HasCardType(MTGConstants.CardTypeBattle);
-    public bool IsLegendary => HasCardType(MTGConstants.CardTypeLegendary);
+    public bool IsCreature => HasCardType(MtgConstants.CardTypeCreature);
+    public bool IsLand => HasCardType(MtgConstants.CardTypeLand);
+    public bool IsBasicLand => HasCardType(MtgConstants.CardTypeBasicLand);
+    public bool IsArtifact => HasCardType(MtgConstants.CardTypeArtifact);
+    public bool IsEnchantment => HasCardType(MtgConstants.CardTypeEnchantment);
+    public bool IsInstant => HasCardType(MtgConstants.CardTypeInstant);
+    public bool IsSorcery => HasCardType(MtgConstants.CardTypeSorcery);
+    public bool IsPlaneswalker => HasCardType(MtgConstants.CardTypePlaneswalker);
+    public bool IsBattle => HasCardType(MtgConstants.CardTypeBattle);
+    public bool IsLegendary => HasCardType(MtgConstants.CardTypeLegendary);
 
     // ── Card Analysis ───────────────────────────────────────────────
 
@@ -149,23 +149,23 @@ public class Card
 
     public string GetCardTypeCategory()
     {
-        if (IsCreature) return MTGConstants.CardTypeCreature;
-        if (IsLand) return MTGConstants.CardTypeLand;
-        if (IsPlaneswalker) return MTGConstants.CardTypePlaneswalker;
-        if (IsBattle) return MTGConstants.CardTypeBattle;
-        if (IsArtifact) return MTGConstants.CardTypeArtifact;
-        if (IsEnchantment) return MTGConstants.CardTypeEnchantment;
-        if (IsInstant) return MTGConstants.CardTypeInstant;
-        if (IsSorcery) return MTGConstants.CardTypeSorcery;
-        return MTGConstants.CardTypeOther;
+        if (IsCreature) return MtgConstants.CardTypeCreature;
+        if (IsLand) return MtgConstants.CardTypeLand;
+        if (IsPlaneswalker) return MtgConstants.CardTypePlaneswalker;
+        if (IsBattle) return MtgConstants.CardTypeBattle;
+        if (IsArtifact) return MtgConstants.CardTypeArtifact;
+        if (IsEnchantment) return MtgConstants.CardTypeEnchantment;
+        if (IsInstant) return MtgConstants.CardTypeInstant;
+        if (IsSorcery) return MtgConstants.CardTypeSorcery;
+        return MtgConstants.CardTypeOther;
     }
 
     public bool HasKeyword(string keyword) =>
         Keywords.Contains(keyword, StringComparison.OrdinalIgnoreCase);
 
-    public string[] GetKeywordsArray() => SplitAndTrimCSV(Keywords);
-    public string[] GetSubtypesArray() => SplitAndTrimCSV(Subtypes);
-    public string[] GetSupertypesArray() => SplitAndTrimCSV(Supertypes);
+    public string[] GetKeywordsArray() => SplitAndTrimCsv(Keywords);
+    public string[] GetSubtypesArray() => SplitAndTrimCsv(Subtypes);
+    public string[] GetSupertypesArray() => SplitAndTrimCsv(Supertypes);
 
     public bool ProducesManaColor(string manaColor) =>
         ProducedMana.Contains(manaColor, StringComparison.OrdinalIgnoreCase);
@@ -174,7 +174,7 @@ public class Card
 
     public bool IsDoubleFaced => Layout.IsDoubleFaced();
     public bool IsTransformCard => Layout.IsTransform();
-    public bool IsMDFC => Layout.IsMDFC();
+    public bool IsMdfc => Layout.IsMdfc();
 
     public string GetFirstOtherFaceId()
     {
@@ -218,7 +218,7 @@ public class Card
 
     // ── Helpers ─────────────────────────────────────────────────────
 
-    private static string[] SplitAndTrimCSV(string? value)
+    private static string[] SplitAndTrimCsv(string? value)
     {
         if (string.IsNullOrEmpty(value)) return [];
         return value.Split(',').Select(s => s.Trim()).ToArray();

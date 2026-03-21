@@ -41,12 +41,12 @@ public class CardPriceDatabase : IDisposable
         await ExecuteAsync("PRAGMA synchronous=OFF");
 
         // Create schema (no-ops if already correct; migration handled by sync)
-        await ExecuteAsync(SQLQueries.CreatePricesTable);
-        await ExecuteAsync(SQLQueries.CreatePriceHistoryTable);
-        await ExecuteAsync(SQLQueries.CreatePricesIndex);
-        await ExecuteAsync(SQLQueries.CreatePriceHistoryIndex);
-        await ExecuteAsync(SQLQueries.CreatePricesUuidSourceIndex);
-        await ExecuteAsync(SQLQueries.CreatePriceHistoryUuidSourceIndex);
+        await ExecuteAsync(SqlQueries.CreatePricesTable);
+        await ExecuteAsync(SqlQueries.CreatePriceHistoryTable);
+        await ExecuteAsync(SqlQueries.CreatePricesIndex);
+        await ExecuteAsync(SqlQueries.CreatePriceHistoryIndex);
+        await ExecuteAsync(SqlQueries.CreatePricesUuidSourceIndex);
+        await ExecuteAsync(SqlQueries.CreatePriceHistoryUuidSourceIndex);
     }
 
     /// <summary>
@@ -60,16 +60,16 @@ public class CardPriceDatabase : IDisposable
             if (!IsConnected) return (false, CardPriceData.Empty);
 
             var currentRows = (await _connection!.QueryAsync<PriceRow>(
-                SQLQueries.PricesGetByUuid, new { uuid })).ToList();
+                SqlQueries.PricesGetByUuid, new { uuid })).ToList();
 
             if (currentRows.Count == 0) return (false, CardPriceData.Empty);
 
             var historyRows = (await _connection!.QueryAsync<HistoryRow>(
-                SQLQueries.PricesGetHistoryByUuid, new { uuid })).ToList();
+                SqlQueries.PricesGetHistoryByUuid, new { uuid })).ToList();
 
             return (true, new CardPriceData
             {
-                UUID = uuid,
+                Uuid = uuid,
                 Paper = BuildPaperPlatform(currentRows, historyRows),
                 LastUpdated = DateTime.Now
             });
@@ -87,7 +87,7 @@ public class CardPriceDatabase : IDisposable
 
     public class BulkPriceRow : PriceRow
     {
-        public string uuid { get; set; } = "";
+        public string Uuid { get; set; } = "";
     }
 
     /// <summary>
@@ -158,15 +158,15 @@ public class CardPriceDatabase : IDisposable
             paramNames.Add(p);
         }
 
-        var sql = string.Format(SQLQueries.PricesGetBulkByUuids, string.Join(",", paramNames));
+        var sql = string.Format(SqlQueries.PricesGetBulkByUuids, string.Join(",", paramNames));
         var rows = await conn.QueryAsync<BulkPriceRow>(sql, dynamicParams);
 
         var result = new Dictionary<string, CardPriceData>();
-        foreach (var g in rows.GroupBy(r => r.uuid))
+        foreach (var g in rows.GroupBy(r => r.Uuid))
         {
             result[g.Key] = new CardPriceData
             {
-                UUID = g.Key,
+                Uuid = g.Key,
                 Paper = BuildPaperPlatform(g.Cast<PriceRow>().ToList(), []),
                 LastUpdated = DateTime.Now
             };
@@ -184,7 +184,7 @@ public class CardPriceDatabase : IDisposable
         try
         {
             if (!IsConnected) return false;
-            var result = await _connection!.ExecuteScalarAsync<long>(SQLQueries.PricesCount);
+            var result = await _connection!.ExecuteScalarAsync<long>(SqlQueries.PricesCount);
             return result > 0;
         }
         catch
@@ -227,27 +227,27 @@ public class CardPriceDatabase : IDisposable
 
     public class PriceRow
     {
-        public string provider { get; set; } = "";
-        public string price_type { get; set; } = "";
-        public string finish { get; set; } = "";
-        public string currency { get; set; } = "";
-        public double price { get; set; }
+        public string Provider { get; set; } = "";
+        public string PriceType { get; set; } = "";
+        public string Finish { get; set; } = "";
+        public string Currency { get; set; } = "";
+        public double Price { get; set; }
     }
 
     public class HistoryRow
     {
-        public string provider { get; set; } = "";
-        public string price_type { get; set; } = "";
-        public string finish { get; set; } = "";
-        public string date { get; set; } = "";
-        public double price { get; set; }
+        public string Provider { get; set; } = "";
+        public string PriceType { get; set; } = "";
+        public string Finish { get; set; } = "";
+        public string Date { get; set; } = "";
+        public double Price { get; set; }
     }
 
     // ── Pivot Helpers ─────────────────────────────────────────────────
 
     private static PaperPlatform BuildPaperPlatform(List<PriceRow> rows, List<HistoryRow> history) => new()
     {
-        TCGPlayer = BuildVendorPrices(rows, history, "tcgplayer"),
+        TcgPlayer = BuildVendorPrices(rows, history, "tcgplayer"),
         Cardmarket = BuildVendorPrices(rows, history, "cardmarket"),
         CardKingdom = BuildVendorPrices(rows, history, "cardkingdom"),
         ManaPool = BuildVendorPrices(rows, history, "manapool")
@@ -255,11 +255,11 @@ public class CardPriceDatabase : IDisposable
 
     private static VendorPrices BuildVendorPrices(List<PriceRow> rows, List<HistoryRow> history, string provider)
     {
-        var vendorRows = rows.Where(r => r.provider == provider).ToList();
+        var vendorRows = rows.Where(r => r.Provider == provider).ToList();
         if (vendorRows.Count == 0) return VendorPrices.Empty;
 
         double Get(string priceType, string finish) =>
-            vendorRows.FirstOrDefault(r => r.price_type == priceType && r.finish == finish)?.price ?? 0;
+            vendorRows.FirstOrDefault(r => r.PriceType == priceType && r.Finish == finish)?.Price ?? 0;
 
         return new VendorPrices
         {
@@ -268,7 +268,7 @@ public class CardPriceDatabase : IDisposable
             RetailEtched = new PriceEntry(DateTime.Now, Get("retail", "etched")),
             BuylistNormal = new PriceEntry(DateTime.Now, Get("buylist", "normal")),
             BuylistEtched = new PriceEntry(DateTime.Now, Get("buylist", "etched")),
-            Currency = ParseCurrency(vendorRows[0].currency),
+            Currency = ParseCurrency(vendorRows[0].Currency),
             RetailNormalHistory = BuildHistoryList(history, provider, "retail", "normal"),
             RetailFoilHistory = BuildHistoryList(history, provider, "retail", "foil"),
             RetailEtchedHistory = BuildHistoryList(history, provider, "retail", "etched"),
@@ -280,11 +280,11 @@ public class CardPriceDatabase : IDisposable
     private static List<PriceEntry> BuildHistoryList(
         List<HistoryRow> history, string provider, string priceType, string finish) =>
         [.. history
-            .Where(h => h.provider == provider && h.price_type == priceType && h.finish == finish)
-            .Select(h => new PriceEntry(PriceDateParser.ParseISO8601Date(h.date), h.price))];
+            .Where(h => h.Provider == provider && h.PriceType == priceType && h.Finish == finish)
+            .Select(h => new PriceEntry(PriceDateParser.ParseIso8601Date(h.Date), h.Price))];
 
     private static PriceCurrency ParseCurrency(string s) =>
-        s.Equals("EUR", StringComparison.OrdinalIgnoreCase) ? PriceCurrency.EUR : PriceCurrency.USD;
+        s.Equals("EUR", StringComparison.OrdinalIgnoreCase) ? PriceCurrency.Eur : PriceCurrency.Usd;
 
     private async Task ExecuteAsync(string sql)
     {

@@ -8,7 +8,7 @@ namespace AetherVault.Services;
 /// </summary>
 public static class SetSvgCache
 {
-    private static readonly SvgCacheEngine _engine = new(
+    private static readonly SvgCacheEngine Engine = new(
         typeof(SetSvgCache).Assembly,
         s => s.ToLowerInvariant(),
         name => name.Contains("Assets.SVGSets", StringComparison.OrdinalIgnoreCase),
@@ -25,7 +25,7 @@ public static class SetSvgCache
     /// Gets the cached SKPicture for a set symbol, loading it if necessary.
     /// Returns null if the symbol SVG doesn't exist.
     /// </summary>
-    public static SKPicture? GetSymbol(string setCode) => _engine.GetSymbol(setCode);
+    public static SKPicture? GetSymbol(string setCode) => Engine.GetSymbol(setCode);
 
     /// <summary>
     /// Draws a set symbol SVG onto the canvas at the specified position and size.
@@ -50,5 +50,5 @@ public static class SetSvgCache
     /// <summary>
     /// Clears all cached SVGs and failed lookups.
     /// </summary>
-    public static void ClearCache() => _engine.ClearCache();
+    public static void ClearCache() => Engine.ClearCache();
 }

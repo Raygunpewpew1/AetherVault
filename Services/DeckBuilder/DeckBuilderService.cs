@@ -205,7 +205,7 @@ public class DeckBuilderService
         var entities = await _repository.GetDeckCardsAsync(deckId);
         var uuids = entities.Select(e => e.CardId).Distinct().ToArray();
         Dictionary<string, Card> cardMap = uuids.Length > 0
-            ? await _cardRepository.GetCardsByUUIDsAsync(uuids)
+            ? await _cardRepository.GetCardsByUuiDsAsync(uuids)
             : [];
 
         int currentLands = 0;
@@ -228,7 +228,7 @@ public class DeckBuilderService
             // Some older decks may have a commander but no cached ColorIdentity.
             // Derive it from commander and persist for future operations.
             var commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
-            if (!string.IsNullOrEmpty(commander?.UUID))
+            if (!string.IsNullOrEmpty(commander?.Uuid))
             {
                 identity = commander.GetColorIdentity().AsString();
                 deck.ColorIdentity = identity;
@@ -287,7 +287,7 @@ public class DeckBuilderService
                     continue;
                 }
 
-                var result = await AddCardAsync(deckId, landCard.UUID, kvp.Value, "Main");
+                var result = await AddCardAsync(deckId, landCard.Uuid, kvp.Value, "Main");
                 if (result.IsSuccess)
                 {
                     added += kvp.Value;

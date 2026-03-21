@@ -69,14 +69,14 @@ public partial class StatsPage : ContentPage
         _viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is nameof(StatsViewModel.Stats) or nameof(StatsViewModel.Storage) or nameof(StatsViewModel.CacheStats))
-                MainThread.BeginInvokeOnMainThread(UpdateStatsUI);
+                MainThread.BeginInvokeOnMainThread(UpdateStatsUi);
         };
 
         InitPriceVendorPicker();
     }
 
     private static readonly string[] PriceVendorNames = ["TCG Player", "Cardmarket", "Card Kingdom", "ManaPool"];
-    private static readonly PriceVendor[] PriceVendorValues = [PriceVendor.TCGPlayer, PriceVendor.Cardmarket, PriceVendor.CardKingdom, PriceVendor.ManaPool];
+    private static readonly PriceVendor[] PriceVendorValues = [PriceVendor.TcgPlayer, PriceVendor.Cardmarket, PriceVendor.CardKingdom, PriceVendor.ManaPool];
 
     private void InitPriceVendorPicker()
     {
@@ -85,7 +85,7 @@ public partial class StatsPage : ContentPage
         {
             PriceVendorPicker.ItemsSource = PriceVendorNames;
             var priority = PriceDisplayHelper.GetVendorPriority();
-            var first = priority.Length > 0 ? priority[0] : PriceVendor.TCGPlayer;
+            var first = priority.Length > 0 ? priority[0] : PriceVendor.TcgPlayer;
             var idx = Array.IndexOf(PriceVendorValues, first);
             PriceVendorPicker.SelectedIndex = idx >= 0 ? idx : 0;
         }
@@ -114,7 +114,7 @@ public partial class StatsPage : ContentPage
             DbStatusLabel.TextColor = Color.FromArgb("#4CAF50");
             DownloadDbBtn.IsVisible = false;
         }
-        else if (!AppDataManager.MTGDatabaseExists())
+        else if (!AppDataManager.MtgDatabaseExists())
         {
             DbStatusLabel.Text = "Database not downloaded";
             DbStatusLabel.TextColor = Color.FromArgb("#F44336");
@@ -129,17 +129,17 @@ public partial class StatsPage : ContentPage
         if (_viewModel.IsStatsStale)
         {
             await _viewModel.LoadStatsAsync();
-            UpdateStatsUI();
+            UpdateStatsUi();
         }
     }
 
-    private void UpdateStatsUI()
+    private void UpdateStatsUi()
     {
         var stats = _viewModel.Stats;
         TotalCardsLabel.Text = stats.TotalCards.ToString();
         UniqueCardsLabel.Text = stats.UniqueCards.ToString();
         TotalValueLabel.Text = stats.TotalValue > 0 ? $"${stats.TotalValue:F2}" : "—";
-        AvgCMCLabel.Text = stats.AvgCMC.ToString("F2");
+        AvgCMCLabel.Text = stats.AvgCmc.ToString("F2");
         FoilCountLabel.Text = stats.FoilCount.ToString();
 
         CreatureCountLabel.Text = stats.CreatureCount.ToString();

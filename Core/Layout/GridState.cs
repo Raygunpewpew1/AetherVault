@@ -30,7 +30,7 @@ public record CardState(
     public static CardState FromCard(Card card, int quantity = 0, CardPriceData? prices = null)
     {
         var state = new CardState(
-            new CardId(card.UUID),
+            new CardId(card.Uuid),
             card.Name,
             card.SetCode,
             card.Number,

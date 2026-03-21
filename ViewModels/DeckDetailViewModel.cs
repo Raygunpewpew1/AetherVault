@@ -21,11 +21,11 @@ public class DeckCardDisplayItem
     public string ManaCostText => Card?.ManaCost ?? "";
     public string CardTypeText => Card?.CardType ?? "";
     public string ImageId => Card?.ImageId ?? "";
-    public double CMC => Card?.FaceManaValue ?? 0;
+    public double Cmc => Card?.FaceManaValue ?? 0;
     /// <summary>Rules text for quick-detail popup.</summary>
     public string RulesText => Card?.Text ?? "";
     /// <summary>Power/toughness or loyalty for quick-detail popup.</summary>
-    public string PTOrLoyaltyText =>
+    public string PtOrLoyaltyText =>
         Card == null ? "" :
         !string.IsNullOrEmpty(Card.Power) && !string.IsNullOrEmpty(Card.Toughness) ? $"{Card.Power}/{Card.Toughness}" :
         !string.IsNullOrEmpty(Card.Loyalty) ? $"Loyalty: {Card.Loyalty}" : "";
@@ -269,7 +269,7 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
 
         if (SelectedSectionIndex == 0) // Commander
         {
-            var result = await _deckService.SetCommanderAsync(Deck.Id, card.UUID);
+            var result = await _deckService.SetCommanderAsync(Deck.Id, card.Uuid);
             if (result.IsError)
             {
                 StatusIsError = true;
@@ -285,7 +285,7 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
         }
 
         string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
-        var addResult = await _deckService.AddCardAsync(Deck.Id, card.UUID, 1, section);
+        var addResult = await _deckService.AddCardAsync(Deck.Id, card.Uuid, 1, section);
         if (addResult.IsError)
         {
             StatusIsError = true;
@@ -295,7 +295,7 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
         {
             StatusIsError = false;
             StatusMessage = UserMessages.CardsAddedToSection(1, card.Name, section);
-            RegisterLastAdded(card.UUID, card.Name, section, 1);
+            RegisterLastAdded(card.Uuid, card.Name, section, 1);
             await ReloadAsync(preserveState: true);
         }
     }
@@ -371,7 +371,7 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
             var uuids = cardEntities.Select(c => c.CardId).Distinct().ToArray();
 
             Dictionary<string, Card> cardMap = uuids.Length > 0
-                ? await _cardRepository.GetCardsByUUIDsAsync(uuids)
+                ? await _cardRepository.GetCardsByUuiDsAsync(uuids)
                 : [];
 
             var (commander, main, sideboard) = MapEntitiesToSectionLists(cardEntities, cardMap);
@@ -629,7 +629,7 @@ public partial class DeckDetailViewModel(DeckBuilderService deckService, ICardRe
             }
         }
 
-        stats.AvgCMC = cmcCount > 0 ? Math.Round(totalCmc / cmcCount, 2) : 0;
+        stats.AvgCmc = cmcCount > 0 ? Math.Round(totalCmc / cmcCount, 2) : 0;
         return stats;
     }
 

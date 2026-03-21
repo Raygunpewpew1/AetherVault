@@ -9,7 +9,7 @@ namespace AetherVault.Services;
 /// </summary>
 public static class ManaSvgCache
 {
-    private static readonly SvgCacheEngine _engine = new(
+    private static readonly SvgCacheEngine Engine = new(
         typeof(ManaSvgCache).Assembly,
         s => s.Replace("/", "_").ToUpperInvariant(),
         name => name.Contains(".mana_", StringComparison.OrdinalIgnoreCase),
@@ -28,7 +28,7 @@ public static class ManaSvgCache
     /// Gets the cached SKPicture for a mana symbol, loading it if necessary.
     /// Returns null if the symbol SVG doesn't exist.
     /// </summary>
-    public static SKPicture? GetSymbol(string symbolName) => _engine.GetSymbol(symbolName);
+    public static SKPicture? GetSymbol(string symbolName) => Engine.GetSymbol(symbolName);
 
     /// <summary>
     /// Draws a mana symbol SVG onto the canvas at the specified position and size.
@@ -44,5 +44,5 @@ public static class ManaSvgCache
     /// <summary>
     /// Clears all cached SVGs and failed lookups.
     /// </summary>
-    public static void ClearCache() => _engine.ClearCache();
+    public static void ClearCache() => Engine.ClearCache();
 }
