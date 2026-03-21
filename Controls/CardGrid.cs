@@ -129,6 +129,10 @@ public class CardGrid : ContentView
         var grid = new Grid();
         grid.Add(_canvas);
         grid.Add(_scrollView);
+        // Android GLTextureView can composite above later siblings after pause/resume; keep the
+        // ScrollView (gesture catcher) definitively on top for hit-testing. See SkiaSharp #2445.
+        _canvas.ZIndex = 0;
+        _scrollView.ZIndex = 1;
         Content = grid;
 
         _renderer = new CardGridRenderer(() => _canvas.InvalidateSurface(), cacheKey => _imageCache?.GetMemoryImage(cacheKey));
@@ -192,10 +196,8 @@ public class CardGrid : ContentView
     // Resets both our gesture state machine and the AppoMobi library's internal
     // pointer-tracking state so the next touch works cleanly.
     private void OnWindowFocusGained(object? sender, EventArgs e)
-    {
-        _gestures.HandleCancel();
-        _spacer.ResetEffect();
-    }
+        => RestoreInteractionAfterForeground();
+
 #endif
 
     // ── Public API ─────────────────────────────────────────────────────
@@ -300,11 +302,7 @@ public class CardGrid : ContentView
 
     public void OnResume()
     {
-        // Reset the gesture state machine in case the app was minimized mid-gesture.
-        // On Android 14+ (e.g. S24), ACTION_CANCEL is not reliably delivered when
-        // the activity loses focus, so the state machine can be left in DragArmed
-        // or Dragging with WIllLock = Locked, blocking subsequent touch events.
-        _gestures.HandleCancel();
+        RestoreInteractionAfterForeground();
 
         Task.Run(async () =>
         {
@@ -325,6 +323,32 @@ public class CardGrid : ContentView
             }
 
             MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
+        });
+    }
+
+    /// <summary>
+    /// After minimize/restore, Android can leave AppoMobi touch state stuck and/or SkiaSharp's
+    /// GL surface without a layout pass (#2445), so touches hit the GL view instead of the spacer.
+    /// </summary>
+    private void RestoreInteractionAfterForeground()
+    {
+        _gestures.HandleCancel();
+        _spacer.ResetEffect();
+
+        void BumpLayout()
+        {
+            if (!_isLoaded) return;
+            _canvas.InvalidateMeasure();
+            InvalidateMeasure();
+            _canvas.InvalidateSurface();
+        }
+
+        MainThread.BeginInvokeOnMainThread(BumpLayout);
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(100);
+            MainThread.BeginInvokeOnMainThread(BumpLayout);
         });
     }
 
@@ -627,6 +651,12 @@ public class CardGrid : ContentView
             {
                 var effect = TouchEffect.GetFrom(this);
                 if (effect != null) effect.WIllLock = ShareLockState.Unlocked;
+            };
+            _handler.ResetScrollShareForGestureStart = () =>
+            {
+                if (TouchEffect.GetFrom(this) is not { } e) return;
+                e.WIllLock = ShareLockState.Unlocked;
+                e.WIllLock = ShareLockState.Initial;
             };
         }
 

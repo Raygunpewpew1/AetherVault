@@ -40,6 +40,7 @@
     <Compile Include="..\Core\Layout\GridLayoutEngine.cs" Link="Core\Layout\GridLayoutEngine.cs" />
     <Compile Include="..\Core\Layout\GridState.cs" Link="Core\Layout\GridState.cs" />
     <Compile Include="..\Services\CardPriceTypes.cs" Link="Services\CardPriceTypes.cs" />
+    <Compile Include="..\Services\PriceDisplayHelper.cs" Link="Services\PriceDisplayHelper.cs" />
     <Compile Include="..\Models\Card.cs" Link="Models\Card.cs" />
     <Compile Include="..\Core\ColorIdentity.cs" Link="Core\ColorIdentity.cs" />
     <Compile Include="..\Constants\MTGConstants.cs" Link="Constants\MTGConstants.cs" />

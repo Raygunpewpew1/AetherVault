@@ -5,13 +5,13 @@ namespace AetherVault.Controls;
 internal sealed class CardGridGestureHandler
 {
     /// <summary>Minimum list scroll (Y) between touch down and up to treat the gesture as a scroll, not a tap.</summary>
-    private const double ScrollDeltaSuppressTap = 10d;
+    private const double ScrollDeltaSuppressTap = 8d;
 
     /// <summary>Squared distance (DIP) finger must move from press point to cancel a tap (thumb slop).</summary>
-    private const float TapCancelDistanceSquared = 10f * 10f;
+    private const float TapCancelDistanceSquared = 8f * 8f;
 
     /// <summary>Axis drift (DIP) that cancels long-press arming so ScrollView can take the pan.</summary>
-    private const float LongPressCancelAxisSlop = 8f;
+    private const float LongPressCancelAxisSlop = 5f;
 
     public event Action<string>? Tapped;
     public event Action<string>? LongPressed;
@@ -26,6 +26,8 @@ internal sealed class CardGridGestureHandler
     // interception via AppoMobi.Maui.Gestures WIllLock.
     internal Action? DisallowScrollIntercept;
     internal Action? AllowScrollIntercept;
+    /// <summary>Reset share-touch state at pointer down (see SwipeGestureContainer).</summary>
+    internal Action? ResetScrollShareForGestureStart;
 
     public bool IsDragEnabled { get; set; } = true;
 
@@ -71,10 +73,9 @@ internal sealed class CardGridGestureHandler
 
     internal void HandleDown(float x, float y)
     {
-        // Always unlock scroll at the start of a new gesture sequence.
-        // Guards against stale Locked state if a previous gesture was
-        // interrupted without a matching Up/Cancel (e.g. app backgrounded on S24).
-        AllowScrollIntercept?.Invoke();
+        // Unlocked clears a stale Locked state; Initial lets the parent ScrollView
+        // compete for vertical pans (same pattern as SwipeGestureContainer).
+        ResetScrollShareForGestureStart?.Invoke();
 
         _pressPoint = new Point(x, y);
         _hasMovedBeyondTapThreshold = false;
@@ -165,11 +166,19 @@ internal sealed class CardGridGestureHandler
                 bool scrolled = _scrolledSinceDown || Math.Abs(_getScrollY() - _scrollYAtPress) >= ScrollDeltaSuppressTap;
                 if (!_hasMovedBeyondTapThreshold && !scrolled)
                 {
+                    // ScrollY and Scrolled often update one or more UI ticks after finger-up when
+                    // the parent ScrollView owns the pan. Re-check after two main-thread posts so
+                    // we do not open CardDetail on a scroll that committed just after HandleUp.
                     var tapPoint = _pressPoint;
+                    double scrollSnap = _getScrollY();
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        var (uuid, _) = _hitTest((float)tapPoint.X, (float)tapPoint.Y);
-                        if (uuid != null) Tapped?.Invoke(uuid);
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            if (Math.Abs(_getScrollY() - scrollSnap) >= ScrollDeltaSuppressTap) return;
+                            var (uuid, _) = _hitTest((float)tapPoint.X, (float)tapPoint.Y);
+                            if (uuid != null) Tapped?.Invoke(uuid);
+                        });
                     });
                 }
                 break;

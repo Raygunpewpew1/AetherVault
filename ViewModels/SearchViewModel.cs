@@ -21,7 +21,6 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     private readonly IGridPriceLoadService _gridPriceLoadService;
     private readonly ISearchFiltersOpener _filtersOpener;
     private CancellationTokenSource? _searchDebounceCts;
-    private CancellationTokenSource? _stripCmcDebounceCts;
     private int _currentPage;
     private bool _isLoadingPage;
     private CardGrid? _grid;
@@ -64,32 +63,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     public IList<string> TypeOptions { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CmcMinLabel))]
-    [NotifyPropertyChangedFor(nameof(CmcMaxLabel))]
-    private double stripCmcMin;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CmcMinLabel))]
-    [NotifyPropertyChangedFor(nameof(CmcMaxLabel))]
-    private double stripCmcMax = 16;
-
-    public string CmcMinLabel => $"Min: {(int)StripCmcMin}";
-    public string CmcMaxLabel => StripCmcMax >= 16 ? "Max: 16+" : $"Max: {(int)StripCmcMax}";
-
-    [ObservableProperty]
     private int selectedTypeIndex;
-
-    [ObservableProperty]
-    private bool chkCommon;
-
-    [ObservableProperty]
-    private bool chkUncommon;
-
-    [ObservableProperty]
-    private bool chkRare;
-
-    [ObservableProperty]
-    private bool chkMythic;
 
     public string FiltersButtonText
     {
@@ -192,7 +166,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     [RelayCommand]
     private async Task SearchAsync()
     {
-        await PerformSearchAsync();
+        await PerformSearchAsync(options: null, collapseFilterStrip: true);
     }
 
     /// <summary>Clear search box, filters, grid, and reset state. Bound to the Clear button.</summary>
@@ -239,7 +213,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         }
     }
 
-    /// <summary>Syncs strip state (colors, type, CMC, rarity) into CurrentOptions and runs search. Call after strip changes.</summary>
+    /// <summary>Syncs strip state (colors, type only; CMC/rarity live in the filters sheet) into CurrentOptions and runs search.</summary>
     private void SyncStripToOptionsAndSearch()
     {
         var selectedColors = ColorFilters.Where(c => c.IsSelected).Select(c => c.Code).ToList();
@@ -249,23 +223,6 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             CurrentOptions.TypeFilter = TypeOptions[SelectedTypeIndex];
         else
             CurrentOptions.TypeFilter = "";
-
-        if (StripCmcMin > 0 || StripCmcMax < 16)
-        {
-            CurrentOptions.UseCMCRange = true;
-            CurrentOptions.CMCMin = (int)StripCmcMin;
-            CurrentOptions.CMCMax = (int)StripCmcMax;
-        }
-        else
-        {
-            CurrentOptions.UseCMCRange = false;
-        }
-
-        CurrentOptions.RarityFilter.Clear();
-        if (ChkCommon) CurrentOptions.RarityFilter.Add(CardRarity.Common);
-        if (ChkUncommon) CurrentOptions.RarityFilter.Add(CardRarity.Uncommon);
-        if (ChkRare) CurrentOptions.RarityFilter.Add(CardRarity.Rare);
-        if (ChkMythic) CurrentOptions.RarityFilter.Add(CardRarity.Mythic);
 
         UpdateFilterState();
         _ = PerformSearchAsync();
@@ -294,13 +251,6 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
                 SelectedTypeIndex = idx >= 0 ? idx : 0;
             }
 
-            StripCmcMin = CurrentOptions.UseCMCRange ? CurrentOptions.CMCMin : 0;
-            StripCmcMax = CurrentOptions.UseCMCRange ? CurrentOptions.CMCMax : 16;
-
-            ChkCommon = CurrentOptions.RarityFilter.Contains(CardRarity.Common);
-            ChkUncommon = CurrentOptions.RarityFilter.Contains(CardRarity.Uncommon);
-            ChkRare = CurrentOptions.RarityFilter.Contains(CardRarity.Rare);
-            ChkMythic = CurrentOptions.RarityFilter.Contains(CardRarity.Mythic);
         }
         finally
         {
@@ -314,44 +264,14 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         SyncStripToOptionsAndSearch();
     }
 
-    partial void OnChkCommonChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
-    partial void OnChkUncommonChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
-    partial void OnChkRareChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
-    partial void OnChkMythicChanged(bool value) { if (!_isLoadingFromOptions) SyncStripToOptionsAndSearch(); }
-
-    partial void OnStripCmcMinChanged(double value)
-    {
-        if (_isLoadingFromOptions) return;
-        if (value > StripCmcMax) StripCmcMax = value;
-        DebounceStripCmcAndSearch();
-    }
-
-    partial void OnStripCmcMaxChanged(double value)
-    {
-        if (_isLoadingFromOptions) return;
-        if (value < StripCmcMin) StripCmcMin = value;
-        DebounceStripCmcAndSearch();
-    }
-
-    private void DebounceStripCmcAndSearch()
-    {
-        _stripCmcDebounceCts?.Cancel();
-        _stripCmcDebounceCts = new CancellationTokenSource();
-        var token = _stripCmcDebounceCts.Token;
-        Task.Delay(400, token).ContinueWith(t =>
-        {
-            if (t.IsCanceled) return;
-            MainThread.BeginInvokeOnMainThread(() => SyncStripToOptionsAndSearch());
-        });
-    }
-
     public async Task ApplyFiltersAndSearchAsync(SearchOptions options)
     {
-        await PerformSearchAsync(options);
+        await PerformSearchAsync(options, collapseFilterStrip: true);
     }
 
     /// <summary>Runs the search: builds query via MTGSearchHelper, executes via CardManager, then updates the grid. Handles first page and total count.</summary>
-    public async Task PerformSearchAsync(SearchOptions? options = null)
+    /// <param name="collapseFilterStrip">When true, collapses the inline filter strip so results get more screen space (search bar / sheet apply; not strip tweaks).</param>
+    public async Task PerformSearchAsync(SearchOptions? options = null, bool collapseFilterStrip = false)
     {
         if (IsBusy) return;
 
@@ -375,6 +295,9 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         // Ensure prices are initialized
         await _cardManager.InitializePricesAsync();
 
+        if (collapseFilterStrip)
+            IsFilterStripExpanded = false;
+
         IsBusy = true;
         IsEmpty = false;
         StatusIsError = false;
@@ -383,6 +306,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         if (options != null)
         {
             CurrentOptions = options;
+            RefreshFilterStripFromOptions();
         }
         UpdateFilterState();
 

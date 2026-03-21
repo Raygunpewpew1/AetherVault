@@ -5,255 +5,128 @@
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
-             xmlns:models="clr-namespace:AetherVault.Models"
              x:Class="AetherVault.Pages.SearchPage"
              x:Name="SearchPageRoot"
              Title="Search"
              BackgroundColor="{StaticResource Background}">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <DataTemplate x:Key="StripColorFilterItemTemplate" x:DataType="models:ColorFilterItem">
-                <Grid WidthRequest="36" HeightRequest="36" Margin="2"
-                      Opacity="0.5" Scale="1">
-                    <Grid.GestureRecognizers>
-                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ToggleColorCommand}"
-                                              CommandParameter="{Binding Code}" />
-                    </Grid.GestureRecognizers>
-                    <controls:ManaSymbolView Symbol="{Binding Code}"
-                                            InputTransparent="True"
-                                            VerticalOptions="Fill"
-                                            HorizontalOptions="Fill" />
-                    <Grid.Triggers>
-                        <DataTrigger TargetType="Grid" Binding="{Binding IsSelected}" Value="True">
-                            <DataTrigger.Setters>
-                                <Setter Property="Opacity" Value="1" />
-                                <Setter Property="Scale" Value="1.1" />
-                            </DataTrigger.Setters>
-                        </DataTrigger>
-                    </Grid.Triggers>
-                </Grid>
-            </DataTemplate>
-        </ResourceDictionary>
-    </ContentPage.Resources>
-
     <Grid>
-        <Grid RowDefinitions="Auto,Auto,Auto,*">
+        <Grid RowDefinitions="Auto,Auto,*">
 
-        <!-- Search + Status Card -->
-        <Border Grid.Row="0"
-                Style="{StaticResource CardStyle}"
-                Margin="8,8,8,4">
-            <Grid RowDefinitions="Auto,Auto,Auto"
-                  ColumnDefinitions="*,Auto,Auto"
-                  ColumnSpacing="8">
+            <!-- Search + status + active filters (single card) -->
+            <Border Grid.Row="0"
+                    Style="{StaticResource CardStyle}"
+                    Margin="8,8,8,4">
+                <Grid RowDefinitions="Auto,Auto,Auto"
+                      ColumnDefinitions="*,Auto,Auto"
+                      ColumnSpacing="8">
 
-                <!-- Search Bar -->
-                <controls:CardSearchBar Grid.Row="0"
-                                        Grid.ColumnSpan="3"
-                                        x:Name="SearchBar"
-                                        FiltersCommand="{Binding ToggleFilterStripCommand}" />
+                    <controls:CardSearchBar Grid.Row="0"
+                                            Grid.ColumnSpan="3"
+                                            x:Name="SearchBar"
+                                            FiltersCommand="{Binding ToggleFilterStripCommand}" />
 
-                <!-- Status Bar -->
-                <Label Grid.Row="1"
-                       Grid.Column="0"
-                       x:Name="StatusLabel"
-                       Text="{Binding StatusDisplayText}"
-                       TextColor="{Binding StatusTextColor}"
-                       FontSize="12"
-                       VerticalOptions="Center" />
-
-                <HorizontalStackLayout Grid.Row="1"
-                                       Grid.Column="1"
-                                       IsVisible="{Binding IsImportingPrices}"
-                                       Spacing="4"
-                                       VerticalOptions="Center"
-                                       Margin="0,0,8,0">
-                    <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
-                                       HeightRequest="12"
-                                       WidthRequest="12"
-                                       Color="{StaticResource TextSecondary}" />
-                    <Label Text="Syncing Prices..."
-                           TextColor="{StaticResource TextSecondary}"
-                           FontSize="10"
+                    <Label Grid.Row="1"
+                           Grid.Column="0"
+                           x:Name="StatusLabel"
+                           Text="{Binding StatusDisplayText}"
+                           TextColor="{Binding StatusTextColor}"
+                           FontSize="12"
                            VerticalOptions="Center" />
-                </HorizontalStackLayout>
 
-                <ActivityIndicator Grid.Row="1"
-                                   Grid.Column="2"
-                                   x:Name="LoadingIndicator"
-                                   IsRunning="{Binding IsBusy}"
-                                   IsVisible="{Binding IsBusy}"
-                                   HeightRequest="20"
-                                   WidthRequest="20"
-                                   Color="{StaticResource Primary}" />
+                    <HorizontalStackLayout Grid.Row="1"
+                                           Grid.Column="1"
+                                           IsVisible="{Binding IsImportingPrices}"
+                                           Spacing="4"
+                                           VerticalOptions="Center"
+                                           Margin="0,0,8,0">
+                        <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
+                                           HeightRequest="12"
+                                           WidthRequest="12"
+                                           Color="{StaticResource TextSecondary}" />
+                        <Label Text="Syncing Prices..."
+                               TextColor="{StaticResource TextSecondary}"
+                               FontSize="10"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
-                <!-- Active Filters Summary -->
-                <Label Grid.Row="2"
-                       Grid.ColumnSpan="3"
-                       Text="{Binding FiltersSummaryText}"
-                       IsVisible="{Binding HasNonTextFilters}"
-                       FontSize="11"
-                       TextColor="{StaticResource TextSecondary}"
-                       Margin="0,4,0,0"
-                       LineBreakMode="TailTruncation" />
+                    <ActivityIndicator Grid.Row="1"
+                                       Grid.Column="2"
+                                       x:Name="LoadingIndicator"
+                                       IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
+                                       HeightRequest="20"
+                                       WidthRequest="20"
+                                       Color="{StaticResource Primary}" />
 
-            </Grid>
-        </Border>
+                    <Grid Grid.Row="2"
+                          Grid.ColumnSpan="3"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10"
+                          Margin="0,6,0,0"
+                          IsVisible="{Binding HasNonTextFilters}">
+                        <Label Text="{Binding FiltersSummaryText}"
+                               FontSize="11"
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center"
+                               LineBreakMode="TailTruncation" />
+                        <Button Grid.Column="1"
+                                Text="Clear"
+                                Command="{Binding ClearCommand}"
+                                BackgroundColor="{StaticResource Surface}"
+                                TextColor="{StaticResource TextSecondary}"
+                                Padding="12,6"
+                                FontSize="12"
+                                CornerRadius="8" />
+                    </Grid>
+                </Grid>
+            </Border>
 
-        <!-- Active filters summary -->
-        <Border Grid.Row="1"
-                Margin="8,0,8,4"
-                Style="{StaticResource CardStyle}"
-                IsVisible="{Binding HasNonTextFilters}">
-            <Grid ColumnDefinitions="*,Auto"
-                  ColumnSpacing="8">
-                <Label Text="{Binding FiltersSummaryText}"
-                       FontSize="12"
-                       TextColor="{StaticResource TextSecondary}"
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation" />
-                <Button Grid.Column="1"
-                        Text="Clear filters"
-                        Command="{Binding ClearCommand}"
-                        BackgroundColor="{StaticResource CardBackground}"
-                        Padding="12,4"
-                        FontSize="12" />
-            </Grid>
-        </Border>
+            <!-- Quick strip: colors + type + open full sheet -->
+            <Border Grid.Row="1"
+                    Margin="8,0,8,4"
+                    Style="{StaticResource CardStyle}"
+                    IsVisible="{Binding IsFilterStripExpanded}">
+                <VerticalStackLayout Spacing="14" Padding="6,4">
+                    <Label Text="Colors"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource TextSecondary}" />
+                    <controls:ManaColorFilterRow ItemsSource="{Binding ColorFilters}"
+                                                 ToggleColorCommand="{Binding ToggleColorCommand}" />
 
-        <!-- Expandable filter strip: colors, type, CMC, rarity, More -->
-        <Border Grid.Row="2"
-                Margin="8,0,8,4"
-                Style="{StaticResource CardStyle}"
-                IsVisible="{Binding IsFilterStripExpanded}">
-            <Grid>
-                <ScrollView MaximumHeightRequest="260"
-                           VerticalScrollBarVisibility="Default">
-                    <VerticalStackLayout Spacing="16" Padding="4">
-                    <!-- Colors -->
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Colors"
-                               FontSize="12"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource TextSecondary}" />
-                        <FlexLayout BindableLayout.ItemsSource="{Binding ColorFilters}"
-                                    BindableLayout.ItemTemplate="{StaticResource StripColorFilterItemTemplate}"
-                                    Wrap="Wrap"
-                                    JustifyContent="Start" />
-                    </VerticalStackLayout>
-
-                    <!-- Card type -->
                     <material:PickerField SelectedIndex="{Binding SelectedTypeIndex, Mode=TwoWay}"
                                           ItemsSource="{Binding TypeOptions}"
                                           Title="Card type"
                                           TextColor="{StaticResource TextPrimary}"
                                           TitleColor="{StaticResource TextSecondary}"
-                                          AccentColor="{StaticResource Primary}" />
+                                          AccentColor="{StaticResource Primary}"
+                                          MinimumHeightRequest="52" />
 
-                    <!-- CMC range -->
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Mana value (CMC)"
-                               FontSize="12"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource TextSecondary}" />
-                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                            <VerticalStackLayout>
-                                <Label Text="{Binding CmcMinLabel}"
-                                       FontSize="11"
-                                       TextColor="{StaticResource TextSecondary}" />
-                                <Slider Minimum="0" Maximum="16"
-                                        Value="{Binding StripCmcMin, Mode=TwoWay}"
-                                        ThumbColor="{StaticResource Primary}"
-                                        MinimumTrackColor="{StaticResource Primary}" />
-                            </VerticalStackLayout>
-                            <Label Grid.Column="1"
-                                   Text="to"
-                                   VerticalOptions="End"
-                                   Margin="0,0,0,8"
-                                   FontSize="12"
-                                   TextColor="{StaticResource TextSecondary}" />
-                            <VerticalStackLayout Grid.Column="2">
-                                <Label Text="{Binding CmcMaxLabel}"
-                                       FontSize="11"
-                                       TextColor="{StaticResource TextSecondary}" />
-                                <Slider Minimum="0" Maximum="16"
-                                        Value="{Binding StripCmcMax, Mode=TwoWay}"
-                                        ThumbColor="{StaticResource Primary}"
-                                        MinimumTrackColor="{StaticResource Primary}" />
-                            </VerticalStackLayout>
-                        </Grid>
-                    </VerticalStackLayout>
-
-                    <!-- Rarity -->
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Rarity"
-                               FontSize="12"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource TextSecondary}" />
-                        <Grid RowDefinitions="Auto,Auto"
-                              ColumnDefinitions="Auto,Auto"
-                              ColumnSpacing="16"
-                              RowSpacing="4">
-                            <material:CheckBox Grid.Row="0" Grid.Column="0"
-                                               IsChecked="{Binding ChkCommon, Mode=TwoWay}"
-                                               Text="Common"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="0" Grid.Column="1"
-                                               IsChecked="{Binding ChkUncommon, Mode=TwoWay}"
-                                               Text="Uncommon"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="1" Grid.Column="0"
-                                               IsChecked="{Binding ChkRare, Mode=TwoWay}"
-                                               Text="Rare"
-                                               Color="{StaticResource Primary}" />
-                            <material:CheckBox Grid.Row="1" Grid.Column="1"
-                                               IsChecked="{Binding ChkMythic, Mode=TwoWay}"
-                                               Text="Mythic"
-                                               Color="{StaticResource Primary}" />
-                        </Grid>
-                    </VerticalStackLayout>
-
-                    <!-- More filters (opens full modal) -->
-                    <Button Text="More filters… (set, artist, format, etc.)"
+                    <Button Text="All filters — mana, rarity, set, format…"
                             Command="{Binding GoToFiltersCommand}"
-                            BackgroundColor="{StaticResource CardBackground}"
+                            BackgroundColor="{StaticResource Surface}"
+                            TextColor="{StaticResource Primary}"
                             FontSize="13"
-                            Padding="12,8" />
+                            CornerRadius="10"
+                            Padding="14,12" />
                 </VerticalStackLayout>
-            </ScrollView>
-                <!-- Fade at bottom to indicate more content when scrollable -->
-                <BoxView VerticalOptions="End"
-                        HeightRequest="24"
-                        InputTransparent="True"
-                        Margin="0,-24,0,0">
-                    <BoxView.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="Transparent" Offset="0" />
-                            <GradientStop Color="{StaticResource CardBackground}" Offset="1" />
-                        </LinearGradientBrush>
-                    </BoxView.Background>
-                </BoxView>
-            </Grid>
-        </Border>
+            </Border>
 
-        <!-- Card Grid (hidden when no results so empty state shows) -->
-        <controls:CardGrid Grid.Row="3"
-                           x:Name="CardGrid"
-                           IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBool}}"
-                           Scrolled="OnGridScrolled"
-                           IsDragEnabled="False" />
+            <controls:CardGrid Grid.Row="2"
+                               x:Name="CardGrid"
+                               IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBool}}"
+                               Scrolled="OnGridScrolled"
+                               IsDragEnabled="False" />
 
-        <!-- Empty State -->
-        <controls:EmptyStateView Grid.Row="3"
-                                 IsVisible="{Binding IsEmpty}"
-                                 IconGlyph="{x:Static fa:Solid.MagnifyingGlass}"
-                                 Message="No cards found"
-                                 SecondaryMessage="Try a different search or adjust your filters" />
+            <controls:EmptyStateView Grid.Row="2"
+                                     IsVisible="{Binding IsEmpty}"
+                                     IconGlyph="{x:Static fa:Solid.MagnifyingGlass}"
+                                     Message="No cards found"
+                                     SecondaryMessage="Try a different search or adjust your filters" />
 
         </Grid>
 
-        <!-- Easter egg: tap 7 times within 6 seconds to play sound (invisible top-right corner) -->
         <Border x:Name="EasterEggTapArea"
                 VerticalOptions="Start"
                 HorizontalOptions="End"

@@ -106,7 +106,7 @@
                         <Border Style="{StaticResource CardStyle}"
                                 Margin="16,6"
                                 Padding="16,14"
-                                MinimumHeightRequest="72">
+                                MinimumHeightRequest="110">
                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
                                 <controls:DeckListItem Grid.Row="0"
                                                       Grid.RowSpan="3"

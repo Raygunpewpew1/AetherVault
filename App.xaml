@@ -6,28 +6,15 @@
              x:Class="AetherVault.App">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- AppColors must load before SearchFiltersResources: merged child XAML cannot resolve StaticResource from parent inline entries. -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/AppColors.xaml" />
+                <ResourceDictionary Source="Resources/Styles/SearchFiltersResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
             <!-- Converters -->
             <toolkit:InvertedBoolConverter x:Key="InvertedBool" />
             <converters:LegalityToColorConverter x:Key="LegalityToColor" />
-            <converters:BoolToChevronConverter x:Key="BoolToChevronConverter" />
-
-            <!-- Colors -->
-            <Color x:Key="Primary">#6200EE</Color>
-            <Color x:Key="PrimaryDark">#3700B3</Color>
-            <Color x:Key="Accent">#03DAC5</Color>
-            <Color x:Key="Background">#121212</Color>
-            <Color x:Key="Surface">#1E1E1E</Color>
-            <Color x:Key="CardBackground">#252525</Color>
-            <Color x:Key="TextPrimary">#F0F0F0</Color>
-            <Color x:Key="TextSecondary">#A0A0A0</Color>
-            <Color x:Key="ErrorColor">#CF6679</Color>
-            <Color x:Key="LegalGreen">#4CAF50</Color>
-            <Color x:Key="BannedRed">#F44336</Color>
-            <Color x:Key="RestrictedYellow">#FFC107</Color>
-            <Color x:Key="RarityCommon">#C0C0C0</Color>
-            <Color x:Key="RarityUncommon">#B0C4DE</Color>
-            <Color x:Key="RarityRare">#FFD700</Color>
-            <Color x:Key="RarityMythic">#FF8C00</Color>
 
             <!-- Styles -->
             <Style TargetType="Page" ApplyToDerivedTypes="True">

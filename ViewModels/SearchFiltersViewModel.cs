@@ -46,21 +46,15 @@ public partial class SearchFiltersViewModel : BaseViewModel
     public IList<string> TypeOptions { get; }
     public ObservableCollection<SetInfo> SetList { get; }
 
-    /// <summary>Accordion section expansion state.</summary>
+    /// <summary>Active category tab in the filter sheet (0 General, 1 Mana, 2 Print, 3 Options).</summary>
     [ObservableProperty]
-    private bool _isTextSectionExpanded = true;
+    [NotifyPropertyChangedFor(nameof(IsFilterGeneralVisible), nameof(IsFilterManaVisible), nameof(IsFilterPrintVisible), nameof(IsFilterOptionsVisible))]
+    private int _selectedFilterCategory;
 
-    [ObservableProperty]
-    private bool _isColorSectionExpanded = true;
-
-    [ObservableProperty]
-    private bool _isStatsSectionExpanded = true;
-
-    [ObservableProperty]
-    private bool _isFormatSectionExpanded;
-
-    [ObservableProperty]
-    private bool _isSpecialSectionExpanded;
+    public bool IsFilterGeneralVisible => SelectedFilterCategory == 0;
+    public bool IsFilterManaVisible => SelectedFilterCategory == 1;
+    public bool IsFilterPrintVisible => SelectedFilterCategory == 2;
+    public bool IsFilterOptionsVisible => SelectedFilterCategory == 3;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CmcMinLabel), nameof(CmcMaxLabel), nameof(ActiveFilterCount), nameof(HasActiveFilters), nameof(FiltersSummaryText))]
@@ -147,10 +141,6 @@ public partial class SearchFiltersViewModel : BaseViewModel
     [NotifyPropertyChangedFor(nameof(ActiveFilterCount), nameof(HasActiveFilters), nameof(FiltersSummaryText))]
     private bool _chkCommanderOnly;
 
-    /// <summary>When true, the advanced filter section (format/set/artist/special) is visible.</summary>
-    [ObservableProperty]
-    private bool _isAdvancedVisible;
-
     public ObservableCollection<ColorFilterItem> ColorFilters { get; }
 
     /// <summary>Number of active filters for the sticky header badge.</summary>
@@ -167,6 +157,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
     {
         _target = target;
         _cardManager = cardManager;
+        SelectedFilterCategory = 0;
         LoadFromOptions(target.CurrentOptions);
         _ = LoadSetsAsync();
     }
@@ -197,33 +188,60 @@ public partial class SearchFiltersViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private void ToggleTextSection()
+    private void SelectCategory(object? parameter)
     {
-        IsTextSectionExpanded = !IsTextSectionExpanded;
+        var idx = parameter switch
+        {
+            int i => i,
+            string s when int.TryParse(s, out var n) => n,
+            _ => -1
+        };
+        if (idx is >= 0 and <= 3)
+            SelectedFilterCategory = idx;
     }
 
     [RelayCommand]
-    private void ToggleColorSection()
+    private void AdjustCmc(string? which)
     {
-        IsColorSectionExpanded = !IsColorSectionExpanded;
+        switch (which)
+        {
+            case "min-":
+                if (CmcMin > 0)
+                    CmcMin--;
+                break;
+            case "min+":
+                if (CmcMin < 16)
+                    CmcMin++;
+                break;
+            case "max-":
+                if (CmcMax > 0)
+                    CmcMax--;
+                break;
+            case "max+":
+                if (CmcMax < 16)
+                    CmcMax++;
+                break;
+        }
     }
 
     [RelayCommand]
-    private void ToggleStatsSection()
+    private void ToggleRarity(string? key)
     {
-        IsStatsSectionExpanded = !IsStatsSectionExpanded;
-    }
-
-    [RelayCommand]
-    private void ToggleFormatSection()
-    {
-        IsFormatSectionExpanded = !IsFormatSectionExpanded;
-    }
-
-    [RelayCommand]
-    private void ToggleSpecialSection()
-    {
-        IsSpecialSectionExpanded = !IsSpecialSectionExpanded;
+        switch (key)
+        {
+            case "C":
+                ChkCommon = !ChkCommon;
+                break;
+            case "U":
+                ChkUncommon = !ChkUncommon;
+                break;
+            case "R":
+                ChkRare = !ChkRare;
+                break;
+            case "M":
+                ChkMythic = !ChkMythic;
+                break;
+        }
     }
 
     [RelayCommand]
@@ -246,19 +264,13 @@ public partial class SearchFiltersViewModel : BaseViewModel
     private void Reset()
     {
         LoadFromOptions(new SearchOptions());
-        IsAdvancedVisible = false;
+        SelectedFilterCategory = 0;
     }
 
     [RelayCommand]
     private void ClearAll()
     {
         Reset();
-    }
-
-    [RelayCommand]
-    private void ToggleAdvanced()
-    {
-        IsAdvancedVisible = !IsAdvancedVisible;
     }
 
     public async Task LoadSetsAsync()
