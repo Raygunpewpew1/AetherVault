@@ -16,6 +16,13 @@ public static class AppDataManager
     // 1. ADDED: The Semaphore to prevent concurrent downloads
     private static readonly SemaphoreSlim DownloadLock = new SemaphoreSlim(1, 1);
 
+    /// <summary>
+    /// When set, startup runs a download even if a valid DB already exists (e.g. user accepted an in-app update).
+    /// Cleared after consume. Do not delete the working DB beforehand — <see cref="DownloadDatabaseAsync"/>
+    /// replaces the file only after a successful extract, so the previous DB remains if download fails.
+    /// </summary>
+    private static int _pendingForcedMtgDownload;
+
     private static string? _appDataPath;
 
     /// <summary>
@@ -74,6 +81,16 @@ public static class AppDataManager
         if (!File.Exists(path)) return false;
         return new FileInfo(path).Length > MinValidDatabaseSize;
     }
+
+    public static void RequestPendingMtgDatabaseDownload() =>
+        Interlocked.Exchange(ref _pendingForcedMtgDownload, 1);
+
+    /// <summary>Returns true once if a forced download was requested; clears the flag.</summary>
+    public static bool TryConsumePendingMtgDatabaseDownload() =>
+        Interlocked.CompareExchange(ref _pendingForcedMtgDownload, 0, 1) == 1;
+
+    public static void ClearPendingMtgDatabaseDownload() =>
+        Interlocked.Exchange(ref _pendingForcedMtgDownload, 0);
 
     /// <summary>
     /// Performs a lightweight integrity and sanity check on the MTG master database.

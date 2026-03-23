@@ -174,7 +174,7 @@ public class CardPriceDatabase : IDisposable
             await EnsureCollectionAttachedAsync(_connection!);
 
             var total = await _connection!.ExecuteScalarAsync<double>(
-                SQLQueries.PricesGetCollectionTotalValue,
+                SqlQueries.PricesGetCollectionTotalValue,
                 new
                 {
                     v1 = providers[0],
@@ -347,7 +347,7 @@ public class CardPriceDatabase : IDisposable
 
     private static string ToProviderName(PriceVendor vendor) => vendor switch
     {
-        PriceVendor.TCGPlayer => "tcgplayer",
+        PriceVendor.TcgPlayer => "tcgplayer",
         PriceVendor.Cardmarket => "cardmarket",
         PriceVendor.CardKingdom => "cardkingdom",
         PriceVendor.ManaPool => "manapool",

@@ -1,3 +1,4 @@
+using AetherVault.Pages;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -110,10 +111,17 @@ public partial class LoadingViewModel : BaseViewModel
                 var isValid = await Task.Run(() => AppDataManager.ValidateMtgDatabaseAsync());
                 if (isValid)
                 {
+                    if (AppDataManager.TryConsumePendingMtgDatabaseDownload())
+                    {
+                        await StartDownloadAsync();
+                        return;
+                    }
+
                     await FinalizeStartupAsync();
                 }
                 else
                 {
+                    AppDataManager.ClearPendingMtgDatabaseDownload();
                     bool redownload = await _dialogService.DisplayAlertAsync(
                         UserMessages.DatabaseErrorTitle,
                         UserMessages.DatabaseErrorMessage,
@@ -133,6 +141,7 @@ public partial class LoadingViewModel : BaseViewModel
             }
             else
             {
+                AppDataManager.ClearPendingMtgDatabaseDownload();
                 await StartDownloadAsync();
             }
         }
@@ -177,14 +186,14 @@ public partial class LoadingViewModel : BaseViewModel
 
         if (!shouldUpdate) return;
 
-        // Disconnect so the loading page can safely replace the DB file, then
-        // delete it so the startup sequence treats this as a fresh install and downloads.
+        // Disconnect so ExtractDatabase can replace the file; keep the existing DB on disk until
+        // DownloadDatabaseAsync succeeds (atomic swap). Pending flag forces InitAsync to download
+        // even though MtgDatabaseExists — without deleting first, download failure still offers
+        // "use existing database" in StartDownloadAsync.
         await _cardManager.DisconnectAsync();
-        var dbPath = AppDataManager.GetMtgDatabasePath();
-        if (File.Exists(dbPath))
-            File.Delete(dbPath);
+        AppDataManager.RequestPendingMtgDatabaseDownload();
 
-        // Navigate back to the loading screen — its OnAppearing will kick off a fresh download.
+        // Navigate back to the loading screen — its OnAppearing will kick off the download flow.
         MainThread.BeginInvokeOnMainThread(() =>
         {
             if (Application.Current?.Windows.Count > 0)
