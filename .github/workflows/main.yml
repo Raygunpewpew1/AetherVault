@@ -9,6 +9,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Generate Release Tag
         id: date
         run: echo "tag=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
@@ -19,10 +21,18 @@ jobs:
       - name: Extract Database
         run: unzip AllPrintings.sqlite.zip
 
+      - name: Normalize list columns to JSON arrays
+        run: python3 scripts/normalize_mtg_sqlite_columns.py AllPrintings.sqlite
+
       - name: Drop Heavy Tables, Add FTS & Indexes, Vacuum
         run: |
           sqlite3 AllPrintings.sqlite <<'SQLEOF'
           DROP TABLE IF EXISTS cardForeignData;
+          DROP TABLE IF EXISTS setBoosterContents;
+          DROP TABLE IF EXISTS setBoosterContentWeights;
+          DROP TABLE IF EXISTS setBoosterSheetCards;
+          DROP TABLE IF EXISTS setBoosterSheets;
+          DROP TABLE IF EXISTS setTranslations;
 
           -- FTS5 table for fast name/oracle/type/artist/set search (cards + tokens)
           CREATE VIRTUAL TABLE IF NOT EXISTS av_cards_fts USING fts5(

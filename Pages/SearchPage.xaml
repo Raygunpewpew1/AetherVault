@@ -96,10 +96,11 @@
 
         </Grid>
 
+        <!-- Easter egg hit target: bottom-right so it does not cover the Clear button / filter row -->
         <Border x:Name="EasterEggTapArea"
-                VerticalOptions="Start"
+                VerticalOptions="End"
                 HorizontalOptions="End"
-                Margin="0,56,24,0"
+                Margin="0,0,16,88"
                 WidthRequest="96"
                 HeightRequest="96"
                 BackgroundColor="#01000000"

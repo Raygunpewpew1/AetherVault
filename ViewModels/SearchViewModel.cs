@@ -338,11 +338,14 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         var parts = new List<string>();
         AddTextAndTypeSummary(parts, options);
+        AddOracleKeywordsSummary(parts, options);
         AddColorAndRaritySummary(parts, options);
         AddCmcSummary(parts, options);
         AddPowerToughnessSummary(parts, options);
         AddFormatSetArtistSummary(parts, options);
         AddAvailabilitySummary(parts, options);
+        AddLayoutSummary(parts, options);
+        AddFinishesSummary(parts, options);
         AddSpecialSummary(parts, options);
 
         if (parts.Count == 0)
@@ -368,10 +371,19 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             parts.Add($"Supertype: {options.SupertypeFilter}");
     }
 
+    private static void AddOracleKeywordsSummary(List<string> parts, SearchOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.KeywordsFilter))
+            parts.Add($"Keywords: {options.KeywordsFilter}");
+    }
+
     private static void AddColorAndRaritySummary(List<string> parts, SearchOptions options)
     {
         if (!string.IsNullOrWhiteSpace(options.ColorFilter))
             parts.Add($"Colors: {ColorFilterDisplay.ToDisplayString(options.ColorFilter)}");
+
+        if (!string.IsNullOrWhiteSpace(options.ColorIdentityFilter))
+            parts.Add($"Identity: {ColorFilterDisplay.ToDisplayString(options.ColorIdentityFilter)}");
 
         if (options.RarityFilter.Count > 0)
             parts.Add($"Rarity: {string.Join("/", options.RarityFilter)}");
@@ -419,6 +431,33 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             })
             .Distinct();
         parts.Add($"Available: {string.Join("/", labels)}");
+    }
+
+    private static void AddLayoutSummary(List<string> parts, SearchOptions options)
+    {
+        if (options.LayoutFilter.Count == 0) return;
+        var labels = options.LayoutFilter.Select(l => l switch
+        {
+            CardLayout.ModalDfc => "MDFC",
+            CardLayout.DoubleFacedToken => "DFC token",
+            _ => l.ToString()
+        });
+        parts.Add($"Layout: {string.Join("/", labels)}");
+    }
+
+    private static void AddFinishesSummary(List<string> parts, SearchOptions options)
+    {
+        if (options.FinishesFilter.Count == 0) return;
+        var labels = options.FinishesFilter
+            .Select(static t => t.ToLowerInvariant() switch
+            {
+                "nonfoil" => "Nonfoil",
+                "foil" => "Foil",
+                "etched" => "Etched",
+                _ => t
+            })
+            .Distinct();
+        parts.Add($"Finish: {string.Join("/", labels)}");
     }
 
     private static void AddSpecialSummary(List<string> parts, SearchOptions options)

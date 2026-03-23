@@ -332,7 +332,8 @@ public class MtgSearchHelper
     }
 
     /// <summary>
-    /// Each comma-separated term must appear as an entry in the JSON <c>keywords</c> array (case-insensitive substring).
+    /// Each comma-separated term must appear in <c>keywords</c>: JSON array entries (via <c>json_each</c>) or, if not valid JSON,
+    /// as a substring of the raw column (comma-separated oracle keywords in some SQLite exports).
     /// </summary>
     public MtgSearchHelper WhereKeywordTermsAll(string commaSeparatedTerms)
     {
@@ -342,10 +343,12 @@ public class MtgSearchHelper
         foreach (var term in terms)
         {
             if (string.IsNullOrWhiteSpace(term)) continue;
-            var param = NextParam("Kw");
-            _whereConditions.Add(
-                "EXISTS (SELECT 1 FROM json_each(c.keywords) WHERE LOWER(CAST(json_each.value AS TEXT)) LIKE @" + param + ")");
-            _params.Add(param, "%" + term.Trim().ToLowerInvariant() + "%");
+            var t = term.Trim().ToLowerInvariant();
+            var paramJson = NextParam("Kw");
+            var paramPlain = NextParam("KwPlain");
+            _params.Add(paramJson, "%" + t + "%");
+            _params.Add(paramPlain, "%" + t + "%");
+            _whereConditions.Add(KeywordTermFlexibleMatch(paramJson, paramPlain));
         }
 
         return this;
@@ -508,8 +511,9 @@ public class MtgSearchHelper
     }
 
     /// <summary>
-    /// Restricts to rows whose JSON <c>availability</c> array contains <b>any</b> of the given MTGJSON tokens
-    /// (<c>paper</c>, <c>mtgo</c>, <c>arena</c>). Unknown values are ignored.
+    /// Restricts to rows whose <c>availability</c> includes <b>any</b> of the given tokens
+    /// (<c>paper</c>, <c>mtgo</c>, <c>arena</c>). Supports JSON arrays (MTGJSON), quoted JSON substrings, and
+    /// comma-separated text (e.g. <c>mtgo, paper</c>) as stored in some SQLite exports.
     /// </summary>
     public MtgSearchHelper WhereAvailabilityAny(IReadOnlyList<string> platforms)
     {
@@ -522,9 +526,14 @@ public class MtgSearchHelper
             if (string.IsNullOrWhiteSpace(raw)) continue;
             var p = raw.Trim().ToLowerInvariant();
             if (!allowed.Contains(p)) continue;
-            var param = NextParam("Avail");
-            _params.Add(param, p);
-            parts.Add("EXISTS (SELECT 1 FROM json_each(c.availability) WHERE json_each.value = @" + param + ")");
+            var paramValue = NextParam("Avail");
+            var paramJsonLike = NextParam("AvailLike");
+            var paramCsvLike = NextParam("AvailCsv");
+            _params.Add(paramValue, p);
+            _params.Add(paramJsonLike, "%\"" + p + "\"%");
+            // Normalized "token list": strip spaces, lower, wrap with commas so `mtgo,paper` matches `%,paper,%`.
+            _params.Add(paramCsvLike, "%," + p + ",%");
+            parts.Add(JsonQuotedOrCommaTokenMatch("c.availability", paramValue, paramJsonLike, paramCsvLike));
         }
 
         if (parts.Count > 0)
@@ -536,7 +545,8 @@ public class MtgSearchHelper
         new(StringComparer.Ordinal) { "paper", "mtgo", "arena" };
 
     /// <summary>
-    /// Restricts to rows whose JSON <c>finishes</c> array contains <b>any</b> of the given MTGJSON finish tokens.
+    /// Restricts to rows whose <c>finishes</c> includes <b>any</b> of the given tokens (<c>nonfoil</c>, <c>foil</c>, <c>etched</c>).
+    /// Supports JSON arrays, quoted JSON substrings, and comma-separated plain text (e.g. <c>nonfoil</c>).
     /// </summary>
     public MtgSearchHelper WhereFinishesAny(IReadOnlyList<string> finishes)
     {
@@ -549,9 +559,13 @@ public class MtgSearchHelper
             if (string.IsNullOrWhiteSpace(raw)) continue;
             var p = raw.Trim().ToLowerInvariant();
             if (!allowed.Contains(p)) continue;
-            var param = NextParam("Finish");
-            _params.Add(param, p);
-            parts.Add("EXISTS (SELECT 1 FROM json_each(c.finishes) WHERE json_each.value = @" + param + ")");
+            var paramValue = NextParam("Finish");
+            var paramJsonLike = NextParam("FinishLike");
+            var paramCsvLike = NextParam("FinishCsv");
+            _params.Add(paramValue, p);
+            _params.Add(paramJsonLike, "%\"" + p + "\"%");
+            _params.Add(paramCsvLike, "%," + p + ",%");
+            parts.Add(JsonQuotedOrCommaTokenMatch("c.finishes", paramValue, paramJsonLike, paramCsvLike));
         }
 
         if (parts.Count > 0)
@@ -561,6 +575,31 @@ public class MtgSearchHelper
 
     private static readonly HashSet<string> AllowedFinishTokens =
         new(StringComparer.Ordinal) { "nonfoil", "foil", "etched" };
+
+    /// <summary>
+    /// One token in a column: valid JSON array via <c>json_each</c>, quoted JSON substring, or comma-wrapped list after stripping spaces.
+    /// </summary>
+    private static string JsonQuotedOrCommaTokenMatch(string columnPath, string valueParam, string jsonLikeParam, string csvLikeParam)
+    {
+        var csvNorm = "LOWER(REPLACE(TRIM(IFNULL(" + columnPath + ", '')), ' ', ''))";
+        var csvWrapped = "',' || " + csvNorm + " || ','";
+        return "((json_valid(" + columnPath + ") = 1 AND EXISTS (SELECT 1 FROM json_each(" + columnPath +
+            ") WHERE LOWER(TRIM(CAST(json_each.value AS TEXT))) = @" + valueParam + ")) OR (" + columnPath +
+            " LIKE @" + jsonLikeParam + ") OR (" + csvWrapped + " LIKE @" + csvLikeParam + "))";
+    }
+
+    /// <summary>Keyword term: JSON array match or plain-text <c>keywords</c> column substring (CSV oracle keywords).</summary>
+    private static string KeywordTermFlexibleMatch(string jsonLikeParam, string plainLikeParam) =>
+        "((json_valid(c.keywords) = 1 AND EXISTS (SELECT 1 FROM json_each(c.keywords) WHERE LOWER(CAST(json_each.value AS TEXT)) LIKE @" +
+        jsonLikeParam + ")) OR (LOWER(IFNULL(c.keywords, '')) LIKE @" + plainLikeParam + "))";
+
+    /// <summary>
+    /// MTGJSON text columns are usually JSON arrays but some rows are empty or non-JSON; <c>json_each</c> alone throws
+    /// <c>SQLite Error 1: malformed JSON</c>. Guard with <c>json_valid</c> first.
+    /// </summary>
+    private static string SafeJsonArrayTokenEquals(string columnPath, string dapperParamName) =>
+        "(json_valid(" + columnPath + ") = 1 AND EXISTS (SELECT 1 FROM json_each(" + columnPath +
+        ") WHERE json_each.value = @" + dapperParamName + "))";
 
     //public MTGSearchHelper WhereCustom(string condition)
     //{

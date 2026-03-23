@@ -29,7 +29,7 @@ public partial class DeckCardDisplayItem : ObservableObject
     public string ManaCostText => Card?.ManaCost ?? "";
     public string CardTypeText => Card?.CardType ?? "";
     public string ImageId => Card?.ImageId ?? "";
-    public double Cmc => Card?.FaceManaValue ?? 0;
+    public double Cmc => Card?.EffectiveManaValue ?? 0;
     /// <summary>Rules text for quick-detail popup.</summary>
     public string RulesText => Card?.Text ?? "";
     /// <summary>Power/toughness or loyalty for quick-detail popup.</summary>
@@ -790,7 +790,7 @@ public partial class DeckDetailViewModel(
 
             if (!type.Contains("Land"))
             {
-                double cmc = card.FaceManaValue;
+                double cmc = card.EffectiveManaValue;
                 totalCmc += cmc * qty;
                 cmcCount += qty;
                 int slot = Math.Min((int)cmc, 10);

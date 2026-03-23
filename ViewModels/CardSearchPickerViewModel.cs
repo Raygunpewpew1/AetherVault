@@ -168,6 +168,7 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     SupertypeFilter = CurrentOptions.SupertypeFilter,
                     ColorFilter = CurrentOptions.ColorFilter,
                     ColorIdentityFilter = CurrentOptions.ColorIdentityFilter,
+                    KeywordsFilter = CurrentOptions.KeywordsFilter,
                     RarityFilter = [.. CurrentOptions.RarityFilter],
                     SetFilter = CurrentOptions.SetFilter,
                     CmcMin = CurrentOptions.CmcMin,
@@ -185,7 +186,9 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     IncludeAllFaces = CurrentOptions.IncludeAllFaces,
                     IncludeTokens = CurrentOptions.IncludeTokens,
                     CommanderOnly = CurrentOptions.CommanderOnly,
-                    AvailabilityFilter = [.. CurrentOptions.AvailabilityFilter]
+                    AvailabilityFilter = [.. CurrentOptions.AvailabilityFilter],
+                    LayoutFilter = [.. CurrentOptions.LayoutFilter],
+                    FinishesFilter = [.. CurrentOptions.FinishesFilter]
                 };
 
                 var helper = _cardManager.CreateSearchHelper();

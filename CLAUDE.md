@@ -204,6 +204,7 @@ App (App.xaml.cs)
 - MTG master DB is downloaded automatically on first launch via `AppDataManager`, from the GitHub Releases URL defined in `MTGConstants.MTGDatabaseUrl`.
 - A local version file (`main_db_version.txt`) tracks the downloaded DB version; `AppDataManager` checks it before re-downloading.
 - The master DB is updated weekly via GitHub Actions (drops `cardForeignData`, runs `VACUUM`, zips, publishes).
+- **`cards` table / column quirks** (e.g. `availability` as comma-separated `mtgo, paper` vs JSON): see [`docs/MTGSQLiteCardsSchemaNotes.md`](docs/MTGSQLiteCardsSchemaNotes.md).
 
 ---
 

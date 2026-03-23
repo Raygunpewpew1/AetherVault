@@ -121,6 +121,10 @@ public partial class SearchFiltersViewModel : BaseViewModel
     [NotifyPropertyChangedFor(nameof(ActiveFilterCount), nameof(HasActiveFilters), nameof(FiltersSummaryText))]
     private string _artist = "";
 
+    /// <summary>Draft card name while the sheet is open; synced to the host on Apply.</summary>
+    [ObservableProperty]
+    private string _nameQueryPreview = "";
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ActiveFilterCount), nameof(HasActiveFilters), nameof(FiltersSummaryText))]
     private bool _chkCommon;
@@ -196,6 +200,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
         _target = target;
         _cardManager = cardManager;
         LoadFromOptions(target.CurrentOptions);
+        RefreshNameQueryPreviewFromTarget();
         _ = LoadSetsAsync();
     }
 
@@ -221,6 +226,69 @@ public partial class SearchFiltersViewModel : BaseViewModel
             OnPropertyChanged(nameof(ActiveFilterCount));
             OnPropertyChanged(nameof(HasActiveFilters));
             OnPropertyChanged(nameof(FiltersSummaryText));
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleColorIdentity(string code)
+    {
+        var item = ColorIdentityFilters.FirstOrDefault(c => c.Code == code);
+        if (item != null)
+        {
+            item.IsSelected = !item.IsSelected;
+            OnPropertyChanged(nameof(ActiveFilterCount));
+            OnPropertyChanged(nameof(HasActiveFilters));
+            OnPropertyChanged(nameof(FiltersSummaryText));
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleLayout(object? param)
+    {
+        if (!TryGetCardLayout(param, out var layout))
+            return;
+        var item = LayoutFilters.FirstOrDefault(l => l.Layout == layout);
+        if (item != null)
+        {
+            item.IsSelected = !item.IsSelected;
+            OnPropertyChanged(nameof(ActiveFilterCount));
+            OnPropertyChanged(nameof(HasActiveFilters));
+            OnPropertyChanged(nameof(FiltersSummaryText));
+        }
+    }
+
+    private static bool TryGetCardLayout(object? param, out CardLayout layout)
+    {
+        switch (param)
+        {
+            case CardLayout cl:
+                layout = cl;
+                return true;
+            case string s when Enum.TryParse(s, ignoreCase: true, out layout):
+                return true;
+            case int i when Enum.IsDefined(typeof(CardLayout), i):
+                layout = (CardLayout)i;
+                return true;
+            default:
+                layout = default;
+                return false;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleFinish(string? key)
+    {
+        switch (key)
+        {
+            case "nonfoil":
+                ChkFinishNonfoil = !ChkFinishNonfoil;
+                break;
+            case "foil":
+                ChkFinishFoil = !ChkFinishFoil;
+                break;
+            case "etched":
+                ChkFinishEtched = !ChkFinishEtched;
+                break;
         }
     }
 
@@ -289,8 +357,10 @@ public partial class SearchFiltersViewModel : BaseViewModel
     private async Task Apply()
     {
         if (_target == null) return;
+        var name = NameQueryPreview?.Trim() ?? "";
+        _target.SearchText = name;
         var options = BuildSearchOptions();
-        options.NameFilter = _target.SearchText ?? "";
+        options.NameFilter = name;
         await _target.ApplyFiltersAndSearchAsync(options);
         RequestClose?.Invoke();
     }
@@ -305,6 +375,12 @@ public partial class SearchFiltersViewModel : BaseViewModel
     private void Reset()
     {
         LoadFromOptions(new SearchOptions());
+        RefreshNameQueryPreviewFromTarget();
+    }
+
+    private void RefreshNameQueryPreviewFromTarget()
+    {
+        NameQueryPreview = _target?.SearchText?.Trim() ?? "";
     }
 
     [RelayCommand]
@@ -356,7 +432,12 @@ public partial class SearchFiltersViewModel : BaseViewModel
         if (selectedColors.Count > 0)
             options.ColorFilter = string.Join(", ", selectedColors);
 
-        options.TextFilter = Keywords ?? "";
+        var idColors = ColorIdentityFilters.Where(c => c.IsSelected).Select(c => c.Code).ToList();
+        if (idColors.Count > 0)
+            options.ColorIdentityFilter = string.Join(", ", idColors);
+
+        options.TextFilter = RulesText ?? "";
+        options.KeywordsFilter = OracleKeywords ?? "";
         if (SelectedTypeIndex > 0 && SelectedTypeIndex <= TypeOptions.Count)
             options.TypeFilter = TypeOptions[SelectedTypeIndex] ?? "";
         options.SubtypeFilter = Subtype ?? "";
@@ -397,6 +478,13 @@ public partial class SearchFiltersViewModel : BaseViewModel
         if (ChkAvailMtgo) options.AvailabilityFilter.Add("mtgo");
         if (ChkAvailArena) options.AvailabilityFilter.Add("arena");
 
+        foreach (var lf in LayoutFilters.Where(l => l.IsSelected))
+            options.LayoutFilter.Add(lf.Layout);
+
+        if (ChkFinishNonfoil) options.FinishesFilter.Add("nonfoil");
+        if (ChkFinishFoil) options.FinishesFilter.Add("foil");
+        if (ChkFinishEtched) options.FinishesFilter.Add("etched");
+
         return options;
     }
 
@@ -412,7 +500,18 @@ public partial class SearchFiltersViewModel : BaseViewModel
         foreach (var item in ColorFilters)
             item.IsSelected = colors.Contains(item.Code);
 
-        Keywords = options.TextFilter ?? "";
+        var idSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(options.ColorIdentityFilter))
+        {
+            foreach (var c in options.ColorIdentityFilter.Split(','))
+                idSet.Add(c.Trim());
+        }
+
+        foreach (var item in ColorIdentityFilters)
+            item.IsSelected = idSet.Contains(item.Code);
+
+        RulesText = options.TextFilter ?? "";
+        OracleKeywords = options.KeywordsFilter ?? "";
         Subtype = options.SubtypeFilter ?? "";
         Supertype = options.SupertypeFilter ?? "";
         Power = options.PowerFilter ?? "";
@@ -467,17 +566,29 @@ public partial class SearchFiltersViewModel : BaseViewModel
         ChkAvailPaper = av.Contains("paper");
         ChkAvailMtgo = av.Contains("mtgo");
         ChkAvailArena = av.Contains("arena");
+
+        var layoutSet = new HashSet<CardLayout>(options.LayoutFilter);
+        foreach (var lf in LayoutFilters)
+            lf.IsSelected = layoutSet.Contains(lf.Layout);
+
+        var fin = new HashSet<string>(options.FinishesFilter, StringComparer.OrdinalIgnoreCase);
+        ChkFinishNonfoil = fin.Contains("nonfoil");
+        ChkFinishFoil = fin.Contains("foil");
+        ChkFinishEtched = fin.Contains("etched");
     }
 
     private static string BuildFiltersSummary(SearchOptions options)
     {
         var parts = new List<string>();
         AddTextAndTypeSummary(parts, options);
+        AddOracleKeywordsSummary(parts, options);
         AddColorAndRaritySummary(parts, options);
         AddCmcSummary(parts, options);
         AddPowerToughnessSummary(parts, options);
         AddFormatSetArtistSummary(parts, options);
         AddAvailabilitySummary(parts, options);
+        AddLayoutSummary(parts, options);
+        AddFinishesSummary(parts, options);
         AddSpecialSummary(parts, options);
 
         if (parts.Count == 0)
@@ -503,10 +614,19 @@ public partial class SearchFiltersViewModel : BaseViewModel
             parts.Add($"Supertype: {options.SupertypeFilter}");
     }
 
+    private static void AddOracleKeywordsSummary(List<string> parts, SearchOptions options)
+    {
+        if (!string.IsNullOrWhiteSpace(options.KeywordsFilter))
+            parts.Add($"Keywords: {options.KeywordsFilter}");
+    }
+
     private static void AddColorAndRaritySummary(List<string> parts, SearchOptions options)
     {
         if (!string.IsNullOrWhiteSpace(options.ColorFilter))
             parts.Add($"Colors: {ColorFilterDisplay.ToDisplayString(options.ColorFilter)}");
+
+        if (!string.IsNullOrWhiteSpace(options.ColorIdentityFilter))
+            parts.Add($"Identity: {ColorFilterDisplay.ToDisplayString(options.ColorIdentityFilter)}");
 
         if (options.RarityFilter.Count > 0)
             parts.Add($"Rarity: {string.Join("/", options.RarityFilter)}");
@@ -554,6 +674,33 @@ public partial class SearchFiltersViewModel : BaseViewModel
             })
             .Distinct();
         parts.Add($"Available: {string.Join("/", labels)}");
+    }
+
+    private static void AddLayoutSummary(List<string> parts, SearchOptions options)
+    {
+        if (options.LayoutFilter.Count == 0) return;
+        var labels = options.LayoutFilter.Select(l => l switch
+        {
+            CardLayout.ModalDfc => "MDFC",
+            CardLayout.DoubleFacedToken => "DFC token",
+            _ => l.ToString()
+        });
+        parts.Add($"Layout: {string.Join("/", labels)}");
+    }
+
+    private static void AddFinishesSummary(List<string> parts, SearchOptions options)
+    {
+        if (options.FinishesFilter.Count == 0) return;
+        var labels = options.FinishesFilter
+            .Select(static t => t.ToLowerInvariant() switch
+            {
+                "nonfoil" => "Nonfoil",
+                "foil" => "Foil",
+                "etched" => "Etched",
+                _ => t
+            })
+            .Distinct();
+        parts.Add($"Finish: {string.Join("/", labels)}");
     }
 
     private static void AddSpecialSummary(List<string> parts, SearchOptions options)

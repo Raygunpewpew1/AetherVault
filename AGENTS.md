@@ -31,6 +31,7 @@ Pages bind to ViewModels via MAUI data binding. ViewModels expose `ObservablePro
 
 ### Database Strategy
 - **MTG master (`MTG_App_DB.zip`)**: Read-only SQLite copy of MTGJSON data. Downloaded automatically on first launch via `AppDataManager`.
+- **`cards` row format** (column order, sample row, **`availability`** often comma-separated — not always JSON): [`docs/MTGSQLiteCardsSchemaNotes.md`](docs/MTGSQLiteCardsSchemaNotes.md).
 - **Collection DB**: Read-write SQLite DB for user collections and decks.
 - **Cross-DB Queries**: To query across both (e.g., joining cards with `my_collection`), the collection database must be attached to the MTG connection (e.g., `ATTACH DATABASE '...' AS col`) and collection tables must be referenced with the `col.` prefix (e.g., `col.my_collection`).
 - **ORM**: The project uses Dapper. Prefer Dapper's extension methods (e.g., `ExecuteAsync`, `QuerySingleAsync`, `QueryAsync`) on `SqliteConnection` over manual `SqliteCommand` and `SqlDataReader` instantiation.

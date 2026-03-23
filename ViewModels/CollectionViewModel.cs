@@ -151,7 +151,7 @@ public partial class CollectionViewModel : BaseViewModel
                 result = SortMode switch
                 {
                     CollectionSortMode.Name => result.OrderBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
-                    CollectionSortMode.Cmc => result.OrderBy(i => i.Card.FaceManaValue).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.Cmc => result.OrderBy(i => i.Card.EffectiveManaValue).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Rarity => result.OrderByDescending(i => i.Card.Rarity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Color => result.OrderBy(i => i.Card.ColorIdentity.Length).ThenBy(i => i.Card.ColorIdentity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     _ => result // Manual: keep loaded order

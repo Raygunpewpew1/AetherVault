@@ -423,10 +423,16 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereAvailabilityAny(["paper", "arena"]);
         var result = helper.Build();
+        Assert.Contains("json_valid(c.availability)", result.sql);
         Assert.Contains("json_each(c.availability)", result.sql);
+        Assert.Contains(" LIKE ", result.sql);
         Assert.Contains(" OR ", result.sql);
         Assert.Contains("paper", result.parameters.Select(p => p.value).OfType<string>());
         Assert.Contains("arena", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%\"paper\"%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%\"arena\"%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%,paper,%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%,arena,%", result.parameters.Select(p => p.value).OfType<string>());
     }
 
     [Fact]
@@ -445,6 +451,57 @@ public class MtgSearchHelperTests
         helper.SearchCards().WhereAvailabilityAny(["notaplatform"]);
         var result = helper.Build();
         Assert.DoesNotContain("json_each", result.sql);
+    }
+
+    [Fact]
+    public void WhereColorIdentityAny_OrClausesAndColorless()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards().WhereColorIdentityAny("W, C");
+        var result = helper.Build();
+        Assert.Contains("c.colorIdentity LIKE", result.sql);
+        Assert.Contains(" OR ", result.sql);
+        Assert.Contains("colorIdentity", result.sql);
+    }
+
+    [Fact]
+    public void WhereKeywordTermsAll_AddsAndedJsonEach()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards().WhereKeywordTermsAll("Flying, Reach");
+        var result = helper.Build();
+        Assert.Contains("json_valid(c.keywords)", result.sql);
+        Assert.Equal(2, CountOccurrences(result.sql, "json_each(c.keywords)"));
+        Assert.Contains("LOWER(IFNULL(c.keywords", result.sql);
+        var kwParams = result.parameters.Select(p => p.value).OfType<string>().ToList();
+        Assert.Contains("%flying%", kwParams);
+        Assert.Contains("%reach%", kwParams);
+    }
+
+    [Fact]
+    public void WhereFinishesAny_AddsJsonEachOr()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards().WhereFinishesAny(["foil", "etched"]);
+        var result = helper.Build();
+        Assert.Contains("json_valid(c.finishes)", result.sql);
+        Assert.Contains("json_each(c.finishes)", result.sql);
+        Assert.Contains(" LIKE ", result.sql);
+        Assert.Contains(" OR ", result.sql);
+        Assert.Contains("foil", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%\"foil\"%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%\"etched\"%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%,foil,%", result.parameters.Select(p => p.value).OfType<string>());
+        Assert.Contains("%,etched,%", result.parameters.Select(p => p.value).OfType<string>());
+    }
+
+    [Fact]
+    public void WhereFinishesAny_IgnoresUnknownFinish()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards().WhereFinishesAny(["glossy"]);
+        var result = helper.Build();
+        Assert.DoesNotContain("json_each(c.finishes)", result.sql);
     }
 
     // ── Helper ────────────────────────────────────────────────────────

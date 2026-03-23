@@ -18,6 +18,8 @@ public class Card
     public string PrintedName { get; set; } = "";
     public string ManaCost { get; set; } = "";
     public double Cmc { get; set; }
+    /// <summary>Mana value for deck curve and CMC sorting. Uses <see cref="Cmc"/> (MTGJSON <c>manaValue</c>) when &gt; 0; otherwise <see cref="FaceManaValue"/> (covers true 0-CMC spells and odd exports where only the face column is set).</summary>
+    public double EffectiveManaValue => Cmc > 0 ? Cmc : FaceManaValue;
     public string CardType { get; set; } = "";
     public string Text { get; set; } = "";
     public string OriginalText { get; set; } = "";

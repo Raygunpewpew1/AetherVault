@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <Compile Include="..\Data\MTGSearchHelper.cs" Link="Data\MTGSearchHelper.cs" />
+    <Compile Include="..\Data\SearchOptionsApplier.cs" Link="Data\SearchOptionsApplier.cs" />
     <Compile Include="..\Data\SQLQueries.cs" Link="Data\SQLQueries.cs" />
     <Compile Include="..\Core\Enums.cs" Link="Core\Enums.cs" />
     <Compile Include="..\Core\SetInfo.cs" Link="Core\SetInfo.cs" />

@@ -111,6 +111,8 @@ public class SearchOptions
             if (UseLegalFormat) count++;
             if (!string.IsNullOrWhiteSpace(ArtistFilter)) count++;
             if (IncludeTokens) count++;
+            if (NoVariations) count++;
+            if (!PrimarySideOnly || IncludeAllFaces) count++;
             if (CommanderOnly) count++;
             if (AvailabilityFilter.Count > 0) count++;
             if (LayoutFilter.Count > 0) count++;
@@ -124,7 +126,7 @@ public class SearchOptions
         !string.IsNullOrEmpty(TextFilter) ||
         !string.IsNullOrWhiteSpace(KeywordsFilter) ||
         !string.IsNullOrEmpty(ArtistFilter) ||
-        !string.IsNullOrEmpty(TypeFilter) ||
+        (!string.IsNullOrEmpty(TypeFilter) && !TypeFilter.Equals("Any", StringComparison.OrdinalIgnoreCase)) ||
         !string.IsNullOrEmpty(SubtypeFilter) ||
         !string.IsNullOrEmpty(SupertypeFilter) ||
         !string.IsNullOrEmpty(ColorFilter) ||
@@ -137,6 +139,9 @@ public class SearchOptions
         !string.IsNullOrEmpty(ToughnessFilter) ||
         UseLegalFormat ||
         IncludeTokens ||
+        NoVariations ||
+        !PrimarySideOnly ||
+        IncludeAllFaces ||
         CommanderOnly ||
         AvailabilityFilter.Count > 0 ||
         LayoutFilter.Count > 0 ||

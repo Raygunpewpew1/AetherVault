@@ -8,7 +8,7 @@ namespace AetherVault.ViewModels;
 /// </summary>
 public interface ISearchFilterTarget
 {
-    string SearchText { get; }
+    string SearchText { get; set; }
     SearchOptions CurrentOptions { get; set; }
     Task ApplyFiltersAndSearchAsync(SearchOptions options);
 }

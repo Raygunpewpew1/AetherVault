@@ -8,7 +8,7 @@ namespace AetherVault.Pages;
 /// <summary>
 /// Search tab: search box, filters, and card grid. Binds to SearchViewModel; grid events open card detail or add-to-collection/deck.
 /// CardGalleryContext is set on tap so CardDetailPage can swipe between cards from this result set.
-/// Easter egg: tap the top-right corner 7 times within 6 seconds to play a sound.
+/// Easter egg: tap the bottom-right corner (above the tab bar) 7 times within 6 seconds to play a sound.
 /// </summary>
 public partial class SearchPage : ContentPage
 {

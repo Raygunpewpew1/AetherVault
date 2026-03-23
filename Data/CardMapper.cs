@@ -209,14 +209,15 @@ public static class CardMapper
         card.EdhRecSaltiness = Dbl(reader, o.EdhRecSaltiness);
 
         // ── Boolean flags ──────────────────────────────────────────
-        // hasFoil/hasNonFoil removed in MTGJSON v5.3+, derive from finishes if absent
+        // hasFoil/hasNonFoil removed in MTGJSON v5.3+, derive from finishes if absent.
+        // Match whole finish tokens only — "nonfoil" must not satisfy Contains("foil").
         card.IsFoil = o.HasFoil >= 0
             ? Int(reader, o.HasFoil) == 1
-            : card.Finishes.Contains("foil", StringComparison.OrdinalIgnoreCase);
+            : FinishesFieldHasToken(card.Finishes, "foil");
 
         card.IsNonFoil = o.HasNonFoil >= 0
             ? Int(reader, o.HasNonFoil) == 1
-            : card.Finishes.Contains("nonfoil", StringComparison.OrdinalIgnoreCase);
+            : FinishesFieldHasToken(card.Finishes, "nonfoil");
 
         card.IsPromo = Int(reader, o.IsPromo) == 1;
         card.IsReprint = Int(reader, o.IsReprint) == 1;
@@ -293,6 +294,18 @@ public static class CardMapper
             if (double.TryParse(s, out var d)) return (int)Math.Round(d);
             return 0;
         }
+    }
+
+    /// <summary>True if <paramref name="finishesCsv"/> is a comma-separated finish list containing <paramref name="token"/> as a whole segment (not substring).</summary>
+    private static bool FinishesFieldHasToken(string finishesCsv, string token)
+    {
+        if (string.IsNullOrEmpty(finishesCsv)) return false;
+        foreach (var segment in finishesCsv.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (segment.Equals(token, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
     }
 
     // ── JSON array helpers ──────────────────────────────────────────

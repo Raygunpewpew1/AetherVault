@@ -145,6 +145,27 @@ public class SearchOptionsTests
     }
 
     [Fact]
+    public void ActiveFilterCount_WithKeywordsFilter_IsOne()
+    {
+        var options = new SearchOptions { KeywordsFilter = "Flying" };
+        Assert.Equal(1, options.ActiveFilterCount);
+    }
+
+    [Fact]
+    public void ActiveFilterCount_WithLayoutFilter_IsOne()
+    {
+        var options = new SearchOptions { LayoutFilter = [CardLayout.Transform] };
+        Assert.Equal(1, options.ActiveFilterCount);
+    }
+
+    [Fact]
+    public void ActiveFilterCount_WithFinishesFilter_IsOne()
+    {
+        var options = new SearchOptions { FinishesFilter = ["foil"] };
+        Assert.Equal(1, options.ActiveFilterCount);
+    }
+
+    [Fact]
     public void ActiveFilterCount_MultipleFilters_SumsCorrectly()
     {
         var options = new SearchOptions
@@ -165,6 +186,7 @@ public class SearchOptionsTests
         {
             ColorFilter = "",
             TextFilter = null!,
+            KeywordsFilter = "",
             SubtypeFilter = "",
             SupertypeFilter = null!,
             SetFilter = "",
@@ -197,5 +219,26 @@ public class SearchOptionsTests
     {
         var options = new SearchOptions();
         Assert.False(options.HasActiveFilters);
+    }
+
+    [Fact]
+    public void HasActiveFilters_TypeFilterAny_IsFalse()
+    {
+        var options = new SearchOptions { TypeFilter = "Any" };
+        Assert.False(options.HasActiveFilters);
+    }
+
+    [Fact]
+    public void ActiveFilterCount_NoVariations_IsOne()
+    {
+        var options = new SearchOptions { NoVariations = true };
+        Assert.Equal(1, options.ActiveFilterCount);
+    }
+
+    [Fact]
+    public void ActiveFilterCount_PrimarySideOff_IsOne()
+    {
+        var options = new SearchOptions { PrimarySideOnly = false };
+        Assert.Equal(1, options.ActiveFilterCount);
     }
 }
