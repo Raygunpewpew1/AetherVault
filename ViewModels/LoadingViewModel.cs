@@ -102,34 +102,12 @@ public partial class LoadingViewModel : BaseViewModel
             if (_cardManager.DatabaseManager.IsConnected)
                 await _cardManager.DisconnectAsync();
 
-            // Run file/network/DB I/O on thread pool to avoid blocking the main thread and causing ANR.
-            // Sync file I/O (MTGDatabaseExists, GetLocalDatabaseVersion) and network timeouts can block for seconds.
+            // Run file/DB I/O on thread pool to avoid blocking the main thread and causing ANR.
             bool dbExists = await Task.Run(AppDataManager.MtgDatabaseExists);
-            var updateCheckTask = Task.Run(CheckForUpdateSafeAsync);
-            var validationTask = dbExists
-                ? Task.Run(() => AppDataManager.ValidateMtgDatabaseAsync())
-                : Task.FromResult(false);
-
-            // Await the update check first — its result determines whether we even need validation.
-            var (updateAvailable, _, remoteVersion) = await updateCheckTask;
-
-            if (updateAvailable)
-            {
-                bool shouldUpdate = await _dialogService.DisplayAlertAsync(UserMessages.UpdateAvailableTitle,
-                    UserMessages.UpdateAvailableMessage(remoteVersion),
-                    "Yes",
-                    "No");
-                if (shouldUpdate)
-                {
-                    await StartDownloadAsync();
-                    return;
-                }
-            }
 
             if (dbExists)
             {
-                // Validation was running in parallel — await the already-in-flight task.
-                var isValid = await validationTask;
+                var isValid = await Task.Run(() => AppDataManager.ValidateMtgDatabaseAsync());
                 if (isValid)
                 {
                     await FinalizeStartupAsync();
@@ -179,6 +157,39 @@ public partial class LoadingViewModel : BaseViewModel
             Logger.LogStuff($"Update check failed: {ex.Message}", LogLevel.Warning);
             return (false, string.Empty, string.Empty);
         }
+    }
+
+    /// <summary>
+    /// Runs after the shell is visible. If a new DB version is found, prompts the user and
+    /// navigates back to the loading screen to download it (reusing the full startup/download flow).
+    /// </summary>
+    private async Task CheckForUpdateAfterStartupAsync()
+    {
+        var (updateAvailable, _, remoteVersion) = await CheckForUpdateSafeAsync();
+        if (!updateAvailable) return;
+
+        bool shouldUpdate = await MainThread.InvokeOnMainThreadAsync(() =>
+            _dialogService.DisplayAlertAsync(
+                UserMessages.UpdateAvailableTitle,
+                UserMessages.UpdateAvailableMessage(remoteVersion),
+                "Yes",
+                "No"));
+
+        if (!shouldUpdate) return;
+
+        // Disconnect so the loading page can safely replace the DB file, then
+        // delete it so the startup sequence treats this as a fresh install and downloads.
+        await _cardManager.DisconnectAsync();
+        var dbPath = AppDataManager.GetMtgDatabasePath();
+        if (File.Exists(dbPath))
+            File.Delete(dbPath);
+
+        // Navigate back to the loading screen — its OnAppearing will kick off a fresh download.
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (Application.Current?.Windows.Count > 0)
+                Application.Current.Windows[0].Page = _serviceProvider.GetRequiredService<LoadingPage>();
+        });
     }
 
     private async Task StartDownloadAsync()
@@ -319,6 +330,10 @@ public partial class LoadingViewModel : BaseViewModel
 
         // Switch to main app and create toast overlay (deferred from CreateWindow to avoid Android startup crash).
         MainThread.BeginInvokeOnMainThread(SwitchToShellWithToastOverlay);
+
+        // Check for DB updates in background after the shell is visible so the network request
+        // does not block or delay startup.
+        _ = CheckForUpdateAfterStartupAsync();
     }
 
     private async Task InitializePricesSafeAsync()
