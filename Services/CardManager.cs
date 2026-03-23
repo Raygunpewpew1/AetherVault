@@ -470,6 +470,15 @@ public class CardManager : IDisposable
         return await ImageService.GetCachedImageAsync(scryfallId, imageSize, face);
     }
 
+    /// <summary>
+    /// Fetches encoded image bytes from Scryfall (use size <c>png</c> for the CDN PNG asset).
+    /// </summary>
+    public Task<byte[]?> DownloadCardImageBytesAsync(
+        string scryfallId, string imageSize = "normal", string face = "")
+    {
+        return ImageService.DownloadImageBytesDirectAsync(scryfallId, imageSize, face);
+    }
+
     public void CancelPendingImageDownloads()
     {
         _imageService.CancelPendingDownloads();

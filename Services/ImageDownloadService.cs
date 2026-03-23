@@ -87,6 +87,17 @@ public class ImageDownloadService : IDisposable
     }
 
     /// <summary>
+    /// Downloads or reads from cache the encoded image bytes (e.g. PNG for <c>png</c> size) without decoding to <see cref="SKImage"/>.
+    /// </summary>
+    public async Task<byte[]?> DownloadImageBytesDirectAsync(
+        string scryfallId,
+        string imageSize = "normal",
+        string face = "")
+    {
+        return await DownloadImageBytesCoreAsync(scryfallId, imageSize, Generation, face);
+    }
+
+    /// <summary>
     /// Returns a cached image, or null if not cached.
     /// </summary>
     public async Task<SKImage?> GetCachedImageAsync(
@@ -193,7 +204,66 @@ public class ImageDownloadService : IDisposable
         }
     }
 
+    private async Task<byte[]?> DownloadImageBytesCoreAsync(
+        string scryfallId, string imageSize, int generation, string face)
+    {
+        if (string.IsNullOrEmpty(scryfallId)) return null;
+
+        var cacheKey = GetCacheKey(scryfallId, imageSize, face);
+
+        if (_fileCache.IsCached(cacheKey))
+        {
+            var cached = await _fileCache.TryReadRawBytesAsync(cacheKey);
+            if (cached is { Length: > 0 }) return cached;
+        }
+
+        if (await IsDownloadPending(cacheKey))
+        {
+            for (int i = 0; i < MaxWaitAttempts; i++)
+            {
+                await Task.Delay(WaitIntervalMs);
+                if (generation != Generation) return null;
+
+                if (!await IsDownloadPending(cacheKey))
+                {
+                    var result = await _fileCache.TryReadRawBytesAsync(cacheKey);
+                    if (result is { Length: > 0 }) return result;
+                    break;
+                }
+            }
+        }
+
+        if (generation != Generation) return null;
+
+        await MarkDownloadPending(cacheKey);
+        try
+        {
+            await _downloadSemaphore.WaitAsync();
+            try
+            {
+                if (generation != Generation) return null;
+
+                return await FetchEncodedBytesWithRetryAsync(scryfallId, imageSize, face, cacheKey, generation);
+            }
+            finally
+            {
+                _downloadSemaphore.Release();
+            }
+        }
+        finally
+        {
+            await ClearDownloadPending(cacheKey);
+        }
+    }
+
     private async Task<SKImage?> DownloadWithRetryAsync(
+        string scryfallId, string imageSize, string face, string cacheKey, int generation)
+    {
+        var data = await FetchEncodedBytesWithRetryAsync(scryfallId, imageSize, face, cacheKey, generation);
+        return data == null ? null : SKImage.FromEncodedData(data);
+    }
+
+    private async Task<byte[]?> FetchEncodedBytesWithRetryAsync(
         string scryfallId, string imageSize, string face, string cacheKey, int generation)
     {
         var scryfallFace = face.Equals("back", StringComparison.OrdinalIgnoreCase)
@@ -224,12 +294,10 @@ public class ImageDownloadService : IDisposable
                 var data = await response.Content.ReadAsByteArrayAsync();
                 if (data.Length == 0) continue;
 
-                // Save to file cache
                 using var saveStream = new MemoryStream(data);
                 await _fileCache.SaveRawStreamAsync(cacheKey, saveStream);
 
-                // Decode and return
-                return SKImage.FromEncodedData(data);
+                return data;
             }
             catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException)
             {

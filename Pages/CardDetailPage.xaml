@@ -15,6 +15,15 @@
              BackgroundColor="{StaticResource Background}"
              Shell.PresentationMode="Animated">
 
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Share"
+                     Order="Secondary"
+                     Command="{Binding ShareCardDetailsCommand}" />
+        <ToolbarItem Text="Save art"
+                     Order="Secondary"
+                     Command="{Binding SaveCardImageCommand}" />
+    </ContentPage.ToolbarItems>
+
     <Shell.BackButtonBehavior>
         <BackButtonBehavior Command="{Binding BindingContext.BackCommand, Source={x:Reference DetailScreen}}" />
     </Shell.BackButtonBehavior>

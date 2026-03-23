@@ -44,6 +44,36 @@ public class FileImageCache : IDisposable
     }
 
     /// <summary>
+    /// Reads cached file bytes without decoding (same files as <see cref="GetImageAsync"/>).
+    /// </summary>
+    public async Task<byte[]?> TryReadRawBytesAsync(string key)
+    {
+        var filePath = GetCacheFilePath(key);
+        if (!File.Exists(filePath)) return null;
+
+        await _lock.WaitAsync();
+        try
+        {
+            if (!File.Exists(filePath) || IsFileExpired(filePath))
+            {
+                TryDeleteFile(filePath);
+                return null;
+            }
+
+            return await File.ReadAllBytesAsync(filePath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            Logger.LogStuff($"FileImageCache.TryReadRawBytes failed for {key}: {ex.Message}", LogLevel.Warning);
+            return null;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
     /// Returns a cached SKImage, or null if not found or expired.
     /// </summary>
     public async Task<SKImage?> GetImageAsync(string key)

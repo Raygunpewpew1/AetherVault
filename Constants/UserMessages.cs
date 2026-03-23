@@ -145,4 +145,11 @@ public static class UserMessages
 
     public const string ClearCollectionTitle = "Clear collection";
     public const string ClearCollectionMessage = "Remove all cards from your collection? This cannot be undone.";
+
+    // ── Card detail: save / share ───────────────────────────────────────
+
+    public const string SaveCardImageSuccess = "Saved card art to Photos (AetherVault folder).";
+    public const string SaveCardImageFailed = "Could not save card art.";
+    public const string SaveCardImageNoId = "No image available for this card.";
+    public const string ShareCardFailed = "Could not open share.";
 }

@@ -1,5 +1,6 @@
 using AetherVault.Data;
 using AetherVault.Pages;
+using AetherVault.Platforms.Android;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using AetherVault.Services.ImportExport;
@@ -77,6 +78,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MtgJsonDeckImporter>();
         builder.Services.AddSingleton<CardGalleryContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
+        builder.Services.AddSingleton<ICardImageSaveService, CardImageSaveService>();
         builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
         builder.Services.AddSingleton<ILogBufferService, LogBufferService>();

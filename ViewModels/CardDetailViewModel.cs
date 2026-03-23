@@ -1,8 +1,10 @@
+using System.Text;
 using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.ApplicationModel.DataTransfer;
 using SkiaSharp;
 using System.Windows.Input;
 
@@ -29,6 +31,8 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 {
     private readonly CardManager _cardManager;
     private readonly CardGalleryContext _galleryContext;
+    private readonly ICardImageSaveService _cardImageSave;
+    private readonly IToastService _toast;
 
     // ── Bindable properties (detail UI binds to these) ──
 
@@ -134,10 +138,16 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     public event Action<string>? AddedToCollection;
 
-    public CardDetailViewModel(CardManager cardManager, CardGalleryContext galleryContext)
+    public CardDetailViewModel(
+        CardManager cardManager,
+        CardGalleryContext galleryContext,
+        ICardImageSaveService cardImageSave,
+        IToastService toast)
     {
         _cardManager = cardManager;
         _galleryContext = galleryContext;
+        _cardImageSave = cardImageSave;
+        _toast = toast;
         _cardManager.OnPricesUpdated += HandlePricesUpdated;
     }
 
@@ -355,16 +365,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
             return;
         }
 
-        // Determine face parameter for Scryfall
-        string faceParam = "front";
-        if (currentFace.Side is 'b' or 'c')
-        {
-            // If the current face has a different Scryfall ID than the main face,
-            // it's a separate card record (e.g. Meld result), so we want its 'front'.
-            // Otherwise it's the back of a standard Transform/MDFC.
-            if (Faces.Length > 0 && currentFace.ScryfallId == Faces[0].ScryfallId)
-                faceParam = "back";
-        }
+        var faceParam = GetCurrentImageFaceParam();
 
         var cached = await _cardManager.GetCachedCardImageAsync(currentFace.ScryfallId, MtgConstants.ImageSizeNormal, faceParam);
         if (cached != null)
@@ -408,6 +409,146 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     partial void OnCardImageChanging(SKImage? value)
     {
         CardImage?.Dispose();
+    }
+
+    /// <summary>Scryfall CDN face query: <c>front</c> or <c>back</c>.</summary>
+    private string GetCurrentImageFaceParam()
+    {
+        var currentFace = CurrentFace;
+        if (string.IsNullOrEmpty(currentFace.ScryfallId)) return "front";
+
+        var faceParam = "front";
+        if (currentFace.Side is 'b' or 'c')
+        {
+            if (Faces.Length > 0 && currentFace.ScryfallId == Faces[0].ScryfallId)
+                faceParam = "back";
+        }
+
+        return faceParam;
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "card";
+        var invalid = Path.GetInvalidFileNameChars();
+        var sb = new StringBuilder(name.Trim().Length);
+        foreach (var c in name.Trim())
+            sb.Append(invalid.Contains(c) ? '_' : c);
+        var s = sb.ToString().Trim();
+        return string.IsNullOrEmpty(s) ? "card" : s;
+    }
+
+    private string BuildPngFileNameForCurrentFace()
+    {
+        var name = SanitizeFileName(CurrentFace.Name);
+        if (name.Length > 80)
+            name = name[..80];
+        var id = CurrentFace.ScryfallId;
+        var id8 = id.Length >= 8 ? id[..8] : id;
+        var back = GetCurrentImageFaceParam() == "back" ? "_back" : "";
+        return $"{name}_{id8}{back}.png";
+    }
+
+    private static string BuildScryfallPageUrl(Card face)
+    {
+        if (!string.IsNullOrWhiteSpace(face.SetCode) && !string.IsNullOrWhiteSpace(face.Number))
+        {
+            var set = face.SetCode.Trim().ToLowerInvariant();
+            var num = face.Number.Trim();
+            return $"https://scryfall.com/card/{Uri.EscapeDataString(set)}/{Uri.EscapeDataString(num)}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(face.ScryfallId))
+            return $"https://scryfall.com/card/{Uri.EscapeDataString(face.ScryfallId)}";
+
+        return "https://scryfall.com";
+    }
+
+    private string BuildShareText()
+    {
+        var face = CurrentFace;
+        var sb = new StringBuilder();
+        sb.AppendLine(face.Name);
+        if (!string.IsNullOrWhiteSpace(face.ManaCost))
+            sb.AppendLine(face.ManaCost);
+        sb.AppendLine(face.CardType);
+        if (!string.IsNullOrWhiteSpace(face.SetCode) || !string.IsNullOrWhiteSpace(face.Number))
+            sb.AppendLine(face.GetSetAndNumber());
+        if (!string.IsNullOrWhiteSpace(face.SetName))
+            sb.AppendLine(face.SetName);
+        sb.AppendLine();
+        sb.Append(BuildScryfallPageUrl(face));
+        return sb.ToString().TrimEnd();
+    }
+
+    [RelayCommand]
+    private async Task SaveCardImage()
+    {
+        var currentFace = CurrentFace;
+        if (string.IsNullOrEmpty(currentFace.ScryfallId))
+        {
+            _toast.Show(UserMessages.SaveCardImageNoId);
+            return;
+        }
+
+        if (IsBusy) return;
+        IsBusy = true;
+        StatusIsError = false;
+        StatusMessage = UserMessages.StatusClear;
+        try
+        {
+            var faceParam = GetCurrentImageFaceParam();
+            var bytes = await _cardManager.DownloadCardImageBytesAsync(
+                currentFace.ScryfallId,
+                MtgConstants.ImageSizePng,
+                faceParam);
+
+            if (bytes == null || bytes.Length == 0)
+            {
+                StatusIsError = true;
+                StatusMessage = UserMessages.SaveCardImageFailed;
+                _toast.Show(UserMessages.SaveCardImageFailed);
+                return;
+            }
+
+            var fileName = BuildPngFileNameForCurrentFace();
+            var (ok, err) = await _cardImageSave.SavePngToGalleryAsync(bytes, fileName);
+            if (ok)
+            {
+                _toast.Show(UserMessages.SaveCardImageSuccess);
+            }
+            else
+            {
+                StatusIsError = true;
+                StatusMessage = string.IsNullOrEmpty(err) ? UserMessages.SaveCardImageFailed : err;
+                _toast.Show(StatusMessage);
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ShareCardDetails()
+    {
+        if (string.IsNullOrEmpty(Card.Uuid)) return;
+
+        try
+        {
+            await Share.Default.RequestAsync(new ShareTextRequest
+            {
+                Title = CurrentFace.Name,
+                Subject = CurrentFace.Name,
+                Text = BuildShareText()
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogStuff($"Share card failed: {ex.Message}", LogLevel.Warning);
+            _toast.Show(UserMessages.ShareCardFailed);
+        }
     }
 
     [RelayCommand]
