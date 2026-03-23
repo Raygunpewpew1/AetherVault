@@ -5,6 +5,7 @@ using AppoMobi.Maui.Gestures;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Channels;
 
 namespace AetherVault.Controls;
@@ -46,6 +47,10 @@ public class CardGrid : ContentView
     // Throttle shimmer-only repaints (loading placeholders) to ~25fps
     private long _lastShimmerInvalidateTickCount;
     private const int ShimmerThrottleMs = 40;
+
+    // Coalesce channel-driven layout to one main-thread pass; coalesce image-load repaints to one invalidate per UI pump
+    private int _layoutFlushScheduled;
+    private int _imageRedrawCoalesced;
 
     // Events
     public event Action<string>? CardClicked;
@@ -366,42 +371,79 @@ public class CardGrid : ContentView
         if (_cts == null) return;
         try
         {
-            await foreach (var state in _stateChannel.Reader.ReadAllAsync(_cts.Token))
-            {
-                var renderList = GridLayoutEngine.Calculate(state);
-
-                // Trigger image loads for newly visible cards (outside the render path)
-                foreach (var cmd in renderList.Commands.OfType<DrawCardCommand>())
-                    EnqueueImageLoad(cmd.Card.ScryfallId);
-
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    bool rangeChanged = _currentRenderList == null ||
-                        _currentRenderList.VisibleStart != renderList.VisibleStart ||
-                        _currentRenderList.VisibleEnd != renderList.VisibleEnd;
-
-                    _currentRenderList = renderList;
-
-                    if (Math.Abs(_spacer.HeightRequest - renderList.TotalHeight) > 1)
-                        _spacer.HeightRequest = Math.Max(0, renderList.TotalHeight);
-
-                    long now = Environment.TickCount64;
-                    bool mustDraw = _dragState != null;
-                    bool throttleElapsed = (now - _lastInvalidateTickCount) >= InvalidateThrottleMs;
-                    if (mustDraw || throttleElapsed)
-                    {
-                        _canvas.InvalidateSurface();
-                        _lastInvalidateTickCount = now;
-                    }
-
-                    if (rangeChanged)
-                        VisibleRangeChanged?.Invoke(renderList.VisibleStart, renderList.VisibleEnd);
-                });
-            }
+            await foreach (var _ in _stateChannel.Reader.ReadAllAsync(_cts.Token))
+                ScheduleLayoutFlushMainThread();
         }
         catch (OperationCanceledException) { /* Expected when state updates are cancelled. */ }
         catch (Exception ex) { Logger.LogStuff($"Grid error: {ex.Message}", LogLevel.Warning); }
         finally { _isProcessingUpdates = false; }
+    }
+
+    /// <summary>
+    /// At most one pending main-thread layout flush: keeps latest grid state and render list in sync under
+    /// rapid scroll while avoiding a backlog of BeginInvoke callbacks.
+    /// </summary>
+    private void ScheduleLayoutFlushMainThread()
+    {
+        if (Interlocked.CompareExchange(ref _layoutFlushScheduled, 1, 0) != 0)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                ApplyLayoutFromLastState();
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _layoutFlushScheduled, 0);
+            }
+        });
+    }
+
+    /// <summary>
+    /// Computes layout from the latest grid state on the UI thread so paint scroll offset and visible commands
+    /// never disagree; enqueues image loads for the current visible set.
+    /// </summary>
+    private void ApplyLayoutFromLastState()
+    {
+        var renderList = GridLayoutEngine.Calculate(_lastState);
+
+        foreach (var cmd in renderList.Commands.OfType<DrawCardCommand>())
+            EnqueueImageLoad(cmd.Card.ScryfallId);
+
+        bool rangeChanged = _currentRenderList == null ||
+            _currentRenderList.VisibleStart != renderList.VisibleStart ||
+            _currentRenderList.VisibleEnd != renderList.VisibleEnd;
+
+        _currentRenderList = renderList;
+
+        if (Math.Abs(_spacer.HeightRequest - renderList.TotalHeight) > 1)
+            _spacer.HeightRequest = Math.Max(0, renderList.TotalHeight);
+
+        long now = Environment.TickCount64;
+        bool mustDraw = _dragState != null;
+        bool throttleElapsed = (now - _lastInvalidateTickCount) >= InvalidateThrottleMs;
+        if (mustDraw || throttleElapsed)
+        {
+            _canvas.InvalidateSurface();
+            _lastInvalidateTickCount = now;
+        }
+
+        if (rangeChanged)
+            VisibleRangeChanged?.Invoke(renderList.VisibleStart, renderList.VisibleEnd);
+    }
+
+    private void RequestCanvasRedrawCoalesced()
+    {
+        if (Interlocked.CompareExchange(ref _imageRedrawCoalesced, 1, 0) != 0)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Interlocked.Exchange(ref _imageRedrawCoalesced, 0);
+            _canvas.InvalidateSurface();
+        });
     }
 
     // ── Image Loading ──────────────────────────────────────────────────
@@ -439,7 +481,7 @@ public class CardGrid : ContentView
                 }
 
                 if (img != null)
-                    MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
+                    RequestCanvasRedrawCoalesced();
             }
             finally
             {

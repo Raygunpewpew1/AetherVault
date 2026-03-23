@@ -19,6 +19,9 @@ public sealed class DatabaseManager : IDisposable
     private volatile bool _isConnected;
     private bool _disposed;
 
+    /// <summary>True when the MTG file is the lite AtomicCards schema (oracle-level rows) rather than full printings.</summary>
+    public bool IsAtomicCatalog { get; private set; }
+
     private const int MaxConnectionRetries = 3;
     private const int BusyTimeoutMs = 5000;
 
@@ -86,6 +89,10 @@ public sealed class DatabaseManager : IDisposable
                         // Attach collection DB as "col" so queries on MTG connection can reference col.my_collection, col.Decks, etc.
                         var escapedCollPath = collectionDbPath.Replace("'", "''");
                         await ExecuteNonQueryAsync(_mtgConnection, $"ATTACH DATABASE '{escapedCollPath}' AS col");
+
+                        var atomicName = await _mtgConnection.QueryFirstOrDefaultAsync<string>(
+                            "SELECT name FROM sqlite_master WHERE type='table' AND name='atomic_cards' LIMIT 1;");
+                        IsAtomicCatalog = !string.IsNullOrEmpty(atomicName);
                     }
 
                     _isConnected = true;
@@ -321,6 +328,7 @@ public sealed class DatabaseManager : IDisposable
     private void DisconnectInternal()
     {
         _isConnected = false;
+        IsAtomicCatalog = false;
 
         // Close + dispose so the OS releases file handles before we replace AllPrintings.sqlite
         // (e.g. in-app DB update). A closed-but-not-disposed SqliteConnection can keep Android

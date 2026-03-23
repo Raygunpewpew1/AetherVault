@@ -529,6 +529,8 @@ public static class SqlQueries
     /// <summary>Returns one row if FTS table exists; used for runtime capability check.</summary>
     public const string FtsExistsCheck = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='av_cards_fts' LIMIT 1";
 
+    public const string AtomicFtsExistsCheck = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='atomic_cards_fts' LIMIT 1";
+
     /// <summary>Fragment: c.uuid IN (SELECT uuid FROM av_cards_fts WHERE av_cards_fts MATCH @paramName). Append param name + ")".</summary>
     public const string CondFtsMatchPrefix = "c.uuid IN (SELECT uuid FROM av_cards_fts WHERE av_cards_fts MATCH @";
 

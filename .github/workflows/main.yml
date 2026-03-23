@@ -84,12 +84,20 @@ jobs:
       - name: Zip the Final Database
         run: zip -9 MTG_App_DB.zip AllPrintings.sqlite
 
+      - name: Build AtomicCards SQLite (compact catalog)
+        run: |
+          curl -L -o AtomicCards.json.zip "https://mtgjson.com/api/v5/AtomicCards.json.zip"
+          python3 scripts/build_atomic_sqlite.py AtomicCards.json.zip
+          zip -9 AtomicCards.sqlite.zip AtomicCards.sqlite
+
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2.6.1
         with:
           tag_name: ${{ steps.date.outputs.tag }}
           name: MTG Database Update (${{ steps.date.outputs.tag }})
-          files: MTG_App_DB.zip
+          files: |
+            MTG_App_DB.zip
+            AtomicCards.sqlite.zip
           make_latest: true
 
       # Action is archived (no Node 24 update); job env FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 runs it on Node 24.

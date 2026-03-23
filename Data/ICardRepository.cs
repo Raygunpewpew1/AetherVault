@@ -36,4 +36,10 @@ public interface ICardRepository
 
     /// <summary>Returns true if the av_cards_fts table exists (built by CI). When false, search falls back to LIKE.</summary>
     Task<bool> HasFtsAsync();
+
+    /// <summary>Lite catalog only: search <c>atomic_cards</c> using filter options.</summary>
+    Task<Card[]> SearchAtomicCatalogAsync(SearchOptions options, int limit, int offset);
+
+    /// <summary>Lite catalog only: total matches for <see cref="SearchAtomicCatalogAsync"/>.</summary>
+    Task<int> CountAtomicCatalogAsync(SearchOptions options);
 }

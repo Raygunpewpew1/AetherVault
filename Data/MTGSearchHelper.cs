@@ -18,6 +18,20 @@ public class MtgSearchHelper
     private readonly Dictionary<string, object> _params = new();
     private readonly List<string> _whereConditions = [];
 
+    private enum MtgSearchQueryBaseKind { None, Cards, CardsWithTokens, Collection, Sets }
+
+    private MtgSearchQueryBaseKind _baseKind = MtgSearchQueryBaseKind.None;
+
+    /// <summary>True when the helper was configured with <see cref="SearchMyCollection"/>.</summary>
+    public bool IsCollectionQuery => _baseKind == MtgSearchQueryBaseKind.Collection;
+
+    /// <summary>True when the helper was configured with <see cref="SearchSets"/>.</summary>
+    public bool IsSetsQuery => _baseKind == MtgSearchQueryBaseKind.Sets;
+
+    /// <summary>True when the helper was configured with <see cref="SearchCards"/>.</summary>
+    public bool IsCardTableQuery =>
+        _baseKind is MtgSearchQueryBaseKind.Cards or MtgSearchQueryBaseKind.CardsWithTokens;
+
     /// <summary>True when WhereFts was used; callers can skip setting OrderBy("c.name") and use FTS relevance order.</summary>
     public bool UsedFts { get; private set; }
 
@@ -54,18 +68,21 @@ public class MtgSearchHelper
 
     public MtgSearchHelper SearchCards(bool includeTokens = false)
     {
+        _baseKind = includeTokens ? MtgSearchQueryBaseKind.CardsWithTokens : MtgSearchQueryBaseKind.Cards;
         _baseSql = includeTokens ? SqlQueries.BaseCardsAndTokens : SqlQueries.BaseCards;
         return this;
     }
 
     public MtgSearchHelper SearchMyCollection()
     {
+        _baseKind = MtgSearchQueryBaseKind.Collection;
         _baseSql = SqlQueries.BaseCollection;
         return this;
     }
 
     public MtgSearchHelper SearchSets()
     {
+        _baseKind = MtgSearchQueryBaseKind.Sets;
         _baseSql = SqlQueries.BaseSets;
         return this;
     }

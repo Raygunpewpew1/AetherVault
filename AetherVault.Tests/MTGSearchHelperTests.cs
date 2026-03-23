@@ -146,8 +146,8 @@ public class MtgSearchHelperTests
 
         var result = helper.Build();
 
-        // Assert
-        Assert.DoesNotContain("c.side", result.sql);
+        // Assert (SELECT lists c.side; ensure primary-face WHERE filter was not added)
+        Assert.DoesNotContain("(c.side = 'a' OR c.side IS NULL)", result.sql);
     }
 
     // ── No-op guard tests ─────────────────────────────────────────────
@@ -158,7 +158,7 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereColors("");
         var result = helper.Build();
-        Assert.DoesNotContain("c.colors", result.sql);
+        Assert.DoesNotContain("c.colors LIKE", result.sql);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereColors("   ");
         var result = helper.Build();
-        Assert.DoesNotContain("c.colors", result.sql);
+        Assert.DoesNotContain("c.colors LIKE", result.sql);
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereSubtype("");
         var result = helper.Build();
-        Assert.DoesNotContain("c.subtypes", result.sql);
+        Assert.DoesNotContain("c.subtypes LIKE", result.sql);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereSubtype(new[] { "  ", "\t", "" });
         var result = helper.Build();
-        Assert.DoesNotContain("c.subtypes", result.sql);
+        Assert.DoesNotContain("c.subtypes LIKE", result.sql);
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class MtgSearchHelperTests
         var helper = new MtgSearchHelper();
         helper.SearchCards().WhereRarity(Array.Empty<CardRarity>());
         var result = helper.Build();
-        Assert.DoesNotContain("rarity", result.sql);
+        Assert.DoesNotContain("c.rarity IN", result.sql);
     }
 
     [Fact]

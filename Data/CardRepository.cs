@@ -24,6 +24,9 @@ public class CardRepository : ICardRepository
     /// <summary>Loads a single card by UUID from cards/tokens and maps it to a Card model.</summary>
     public async Task<Card> GetCardWithLegalitiesAsync(string uuid)
     {
+        if (_db.IsAtomicCatalog)
+            return await LoadAtomicCardAsync(uuid, includeRulings: false);
+
         return await WithMtgReaderAsync(
             SqlQueries.BaseCardsAndTokens + SqlQueries.WhereUuidEquals,
             new { uuid },
@@ -50,6 +53,9 @@ public class CardRepository : ICardRepository
 
     public async Task<Card> GetCardWithRulingsAsync(string uuid)
     {
+        if (_db.IsAtomicCatalog)
+            return await LoadAtomicCardAsync(uuid, includeRulings: true);
+
         var card = await GetCardWithLegalitiesAsync(uuid);
         if (!string.IsNullOrEmpty(card.Uuid))
             card.Rulings = (await GetCardRulingsAsync(uuid)).ToList();
@@ -103,6 +109,12 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            if (_db.IsAtomicCatalog)
+            {
+                var c = await LoadAtomicCardAsync(cardUuid, includeRulings: false);
+                return c.ScryfallId;
+            }
+
             var result = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
                 SqlQueries.SelectScryfallId, new { uuid = cardUuid });
             return result ?? "";
@@ -124,6 +136,19 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            if (_db.IsAtomicCatalog)
+            {
+                var json = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
+                    """
+                    SELECT a.rulings_json FROM atomic_cards a
+                    WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
+                       OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                    LIMIT 1
+                    """,
+                    new { id = uuid });
+                return [.. AtomicCatalogMapper.ParseRulings(json)];
+            }
+
             var rows = await _db.MtgConnection.QueryAsync<CardRulingRow>(
                 SqlQueries.SelectRulings, new { uuid });
 
@@ -147,6 +172,33 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            if (_db.IsAtomicCatalog)
+            {
+                var self = await _db.MtgConnection.QueryFirstOrDefaultAsync<AtomicIdNameRow>(
+                    """
+                    SELECT a.id AS Id, a.name AS Name FROM atomic_cards a
+                    WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
+                       OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                    LIMIT 1
+                    """,
+                    new { id = uuid });
+                if (self is null || string.IsNullOrEmpty(self.Name))
+                    return [];
+
+                var ids = await _db.MtgConnection.QueryAsync<string>(
+                    """
+                    SELECT COALESCE(
+                      NULLIF(TRIM(scryfall_id), ''),
+                      NULLIF(TRIM(scryfall_oracle_id), ''),
+                      'atomic:' || CAST(id AS TEXT))
+                    FROM atomic_cards
+                    WHERE name = @n AND id <> @sid
+                    ORDER BY face_index
+                    """,
+                    new { n = self.Name, sid = self.Id });
+                return [.. ids];
+            }
+
             var raw = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
                 SqlQueries.SelectOtherFaces, new { uuid });
             return CardMapper.ParseOtherFaceIds(raw ?? "");
@@ -167,6 +219,45 @@ public class CardRepository : ICardRepository
 
     public async Task<Card[]> GetFullCardPackageAsync(string uuid)
     {
+        if (_db.IsAtomicCatalog)
+        {
+            var atomicMain = await GetCardWithRulingsAsync(uuid);
+            if (string.IsNullOrEmpty(atomicMain.Uuid)) return [];
+
+            await _lock.WaitAsync();
+            try
+            {
+                var rows = await _db.MtgConnection.QueryAsync<AtomicCatalogMapper.AtomicRow>(
+                    """
+                    SELECT
+                      a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
+                      a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
+                      a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
+                      a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                      a.leadership_json, a.is_reserved, a.is_funny
+                    FROM atomic_cards a
+                    WHERE a.name = @n
+                    ORDER BY a.face_index
+                    """,
+                    new { n = atomicMain.Name });
+
+                var list = new List<Card>();
+                foreach (var r in rows)
+                {
+                    var c = AtomicCatalogMapper.ToCard(r);
+                    if (string.Equals(StableAtomicId(r), uuid, StringComparison.OrdinalIgnoreCase))
+                        c.Rulings = AtomicCatalogMapper.ParseRulings(r.rulings_json);
+                    list.Add(c);
+                }
+
+                return [.. list];
+            }
+            finally
+            {
+                _lock.Release();
+            }
+        }
+
         var mainCard = await GetCardWithRulingsAsync(uuid);
         if (string.IsNullOrEmpty(mainCard.Uuid)) return [];
 
@@ -209,13 +300,61 @@ public class CardRepository : ICardRepository
 
     public async Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids)
     {
-        var result = new Dictionary<string, Card>();
+        var result = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
         if (uuids.Length == 0) return result;
 
-        const int chunkSize = 500;
-        for (int i = 0; i < uuids.Length; i += chunkSize)
+        if (_db.IsAtomicCatalog)
         {
-            var chunk = uuids.Skip(i).Take(chunkSize).ToArray();
+            const int chunkSize = 100;
+            for (int i = 0; i < uuids.Length; i += chunkSize)
+            {
+                var chunk = uuids.Skip(i).Take(chunkSize).ToArray();
+                var parts = new List<string>(chunk.Length);
+                var dynamicParams = new DynamicParameters();
+                for (int j = 0; j < chunk.Length; j++)
+                {
+                    var p = "u" + (i + j);
+                    parts.Add(
+                        $"(a.scryfall_id = @{p} OR a.scryfall_oracle_id = @{p} OR ('atomic:' || CAST(a.id AS TEXT)) = @{p})");
+                    dynamicParams.Add(p, chunk[j]);
+                }
+
+                var sql =
+                    $"""
+                    SELECT
+                      a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
+                      a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
+                      a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
+                      a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                      a.leadership_json, a.is_reserved, a.is_funny
+                    FROM atomic_cards a
+                    WHERE {string.Join(" OR ", parts)}
+                    """;
+
+                await _lock.WaitAsync();
+                try
+                {
+                    var rows = await _db.MtgConnection.QueryAsync<AtomicCatalogMapper.AtomicRow>(sql, dynamicParams);
+                    foreach (var r in rows)
+                    {
+                        var card = AtomicCatalogMapper.ToCard(r);
+                        if (!string.IsNullOrEmpty(card.Uuid))
+                            result[card.Uuid] = card;
+                    }
+                }
+                finally
+                {
+                    _lock.Release();
+                }
+            }
+
+            return result;
+        }
+
+        const int fullChunk = 500;
+        for (int i = 0; i < uuids.Length; i += fullChunk)
+        {
+            var chunk = uuids.Skip(i).Take(fullChunk).ToArray();
             var paramNames = chunk.Select((_, idx) => $"@u{idx}").ToArray();
             var sql = SqlQueries.BaseCardsAndTokens + " WHERE c.uuid IN (" + string.Join(",", paramNames) + ")";
 
@@ -247,6 +386,9 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            if (_db.IsAtomicCatalog)
+                return [];
+
             var rows = await _db.MtgConnection.QueryAsync<ImportLookupRow>(SqlQueries.SelectImportLookupRows);
             return [.. rows];
         }
@@ -258,6 +400,17 @@ public class CardRepository : ICardRepository
 
     public async Task<Card[]> SearchCardsAsync(string searchText, int limit = 100)
     {
+        if (_db.IsAtomicCatalog)
+        {
+            var options = new SearchOptions
+            {
+                NameFilter = searchText,
+                PrimarySideOnly = true,
+                IncludeTokens = false
+            };
+            return await SearchAtomicCatalogAsync(options, limit, 0);
+        }
+
         var helper = CreateSearchHelper();
         helper.SearchCards()
             .WhereNameContains(searchText)
@@ -269,6 +422,12 @@ public class CardRepository : ICardRepository
 
     public async Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper)
     {
+        if (_db.IsAtomicCatalog)
+        {
+            if (searchHelper.IsCollectionQuery || searchHelper.IsSetsQuery || searchHelper.IsCardTableQuery)
+                return [];
+        }
+
         var cards = new List<Card>();
         var (sql, parameters) = searchHelper.Build();
 
@@ -293,6 +452,9 @@ public class CardRepository : ICardRepository
 
     public async Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper)
     {
+        if (_db.IsAtomicCatalog)
+            return 0;
+
         var (sql, parameters) = searchHelper.BuildCount();
 
         await _lock.WaitAsync();
@@ -319,6 +481,9 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            if (_db.IsAtomicCatalog)
+                return [];
+
             var list = await _db.MtgConnection.QueryAsync<SetInfo>(SqlQueries.SelectSetsForFilter);
             return [.. list];
         }
@@ -333,8 +498,14 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
-            var val = await _db.MtgConnection.QueryFirstOrDefaultAsync<int>(SqlQueries.FtsExistsCheck);
-            return val == 1;
+            if (_db.IsAtomicCatalog)
+            {
+                var val = await _db.MtgConnection.QueryFirstOrDefaultAsync<int>(SqlQueries.AtomicFtsExistsCheck);
+                return val == 1;
+            }
+
+            var valFull = await _db.MtgConnection.QueryFirstOrDefaultAsync<int>(SqlQueries.FtsExistsCheck);
+            return valFull == 1;
         }
         catch
         {
@@ -346,7 +517,93 @@ public class CardRepository : ICardRepository
         }
     }
 
+    /// <inheritdoc />
+    public async Task<Card[]> SearchAtomicCatalogAsync(SearchOptions options, int limit, int offset)
+    {
+        if (!_db.IsAtomicCatalog)
+            return [];
+
+        var (sql, parameters) = AtomicCatalogQuery.BuildSearch(options, limit, offset);
+        await _lock.WaitAsync();
+        try
+        {
+            var rows = await _db.MtgConnection.QueryAsync<AtomicCatalogMapper.AtomicRow>(sql, parameters);
+            return [.. rows.Select(AtomicCatalogMapper.ToCard)];
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CountAtomicCatalogAsync(SearchOptions options)
+    {
+        if (!_db.IsAtomicCatalog)
+            return 0;
+
+        var (sql, parameters) = AtomicCatalogQuery.BuildCount(options);
+        await _lock.WaitAsync();
+        try
+        {
+            return await _db.MtgConnection.ExecuteScalarAsync<int>(sql, parameters);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     // ── Private helpers ─────────────────────────────────────────────
+
+    private static string StableAtomicId(AtomicCatalogMapper.AtomicRow r)
+    {
+        var sid = (r.scryfall_id ?? "").Trim();
+        var oracle = (r.scryfall_oracle_id ?? "").Trim();
+        if (!string.IsNullOrEmpty(sid)) return sid;
+        if (!string.IsNullOrEmpty(oracle)) return oracle;
+        return $"atomic:{r.id}";
+    }
+
+    private sealed class AtomicIdNameRow
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    private async Task<Card> LoadAtomicCardAsync(string id, bool includeRulings)
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            var row = await _db.MtgConnection.QueryFirstOrDefaultAsync<AtomicCatalogMapper.AtomicRow>(
+                $"""
+                SELECT
+                  a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
+                  a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
+                  a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
+                  a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                  a.leadership_json, a.is_reserved, a.is_funny
+                FROM atomic_cards a
+                WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
+                   OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                LIMIT 1
+                """,
+                new { id });
+
+            if (row is null)
+                return new Card();
+
+            var card = AtomicCatalogMapper.ToCard(row);
+            if (includeRulings)
+                card.Rulings = AtomicCatalogMapper.ParseRulings(row.rulings_json);
+            return card;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
 
     private async Task<Card[]> GetMeldPartCardsAsync(string[] cardParts, string setCode, string mainUuid)
     {

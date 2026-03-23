@@ -201,25 +201,47 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
         try
         {
-            var helper = _cardManager.CreateSearchHelper();
-            helper.SearchCards(CurrentOptions.IncludeTokens);
-            SearchOptionsApplier.Apply(helper, CurrentOptions);
-            helper.OrderBy("c.name").Limit(PageSize).Offset(0);
+            Card[] results;
+            int total;
 
-            var results = await Task.Run(() => _cardManager.ExecuteSearchAsync(helper));
-
-            if (results.Length < PageSize)
+            if (_cardManager.IsAtomicCatalog)
             {
-                TotalResults = results.Length;
-                HasMorePages = false;
+                results = await _cardManager.SearchAtomicCatalogAsync(CurrentOptions, PageSize, 0);
+                if (results.Length < PageSize)
+                {
+                    total = results.Length;
+                    HasMorePages = false;
+                }
+                else
+                {
+                    total = await _cardManager.CountAtomicCatalogAsync(CurrentOptions);
+                    HasMorePages = total > results.Length;
+                }
+
+                TotalResults = total;
             }
             else
             {
-                var countHelper = _cardManager.CreateSearchHelper();
-                countHelper.SearchCards(CurrentOptions.IncludeTokens);
-                SearchOptionsApplier.Apply(countHelper, CurrentOptions);
-                TotalResults = await _cardManager.GetCountAdvancedAsync(countHelper);
-                HasMorePages = TotalResults > results.Length;
+                var helper = _cardManager.CreateSearchHelper();
+                helper.SearchCards(CurrentOptions.IncludeTokens);
+                SearchOptionsApplier.Apply(helper, CurrentOptions);
+                helper.OrderBy("c.name").Limit(PageSize).Offset(0);
+
+                results = await Task.Run(() => _cardManager.ExecuteSearchAsync(helper));
+
+                if (results.Length < PageSize)
+                {
+                    TotalResults = results.Length;
+                    HasMorePages = false;
+                }
+                else
+                {
+                    var countHelper = _cardManager.CreateSearchHelper();
+                    countHelper.SearchCards(CurrentOptions.IncludeTokens);
+                    SearchOptionsApplier.Apply(countHelper, CurrentOptions);
+                    TotalResults = await _cardManager.GetCountAdvancedAsync(countHelper);
+                    HasMorePages = TotalResults > results.Length;
+                }
             }
 
             IsEmpty = TotalResults == 0;
@@ -287,14 +309,25 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
         try
         {
-            var helper = _cardManager.CreateSearchHelper();
-            helper.SearchCards(CurrentOptions.IncludeTokens);
-            SearchOptionsApplier.Apply(helper, CurrentOptions);
-            helper.OrderBy("c.name")
-                  .Limit(PageSize)
-                  .Offset((_currentPage - 1) * PageSize);
+            Card[] results;
+            if (_cardManager.IsAtomicCatalog)
+            {
+                results = await _cardManager.SearchAtomicCatalogAsync(
+                    CurrentOptions,
+                    PageSize,
+                    (_currentPage - 1) * PageSize);
+            }
+            else
+            {
+                var helper = _cardManager.CreateSearchHelper();
+                helper.SearchCards(CurrentOptions.IncludeTokens);
+                SearchOptionsApplier.Apply(helper, CurrentOptions);
+                helper.OrderBy("c.name")
+                    .Limit(PageSize)
+                    .Offset((_currentPage - 1) * PageSize);
 
-            var results = await _cardManager.ExecuteSearchAsync(helper);
+                results = await _cardManager.ExecuteSearchAsync(helper);
+            }
 
             if (results.Length > 0)
                 await _grid.AddCardsAsync(results);

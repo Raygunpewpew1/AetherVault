@@ -1,3 +1,4 @@
+using AetherVault.Core;
 using AetherVault.Services;
 using AetherVault.ViewModels;
 
@@ -8,6 +9,7 @@ public partial class StatsPage : ContentPage
     private readonly StatsViewModel _viewModel;
     private readonly CardManager _cardManager;
     private bool _initializingPricePicker;
+    private bool _initializingCatalogPicker;
 
     public StatsPage(StatsViewModel viewModel, CardManager cardManager)
     {
@@ -33,11 +35,14 @@ public partial class StatsPage : ContentPage
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                DbStatusLabel.Text = "Connected";
+                DbStatusLabel.Text = _cardManager.IsAtomicCatalog
+                    ? "Connected (compact catalog)"
+                    : "Connected (full catalog)";
                 DbStatusLabel.TextColor = Color.FromArgb("#4CAF50");
                 DownloadProgress.IsVisible = false;
                 DownloadStatusLabel.Text = "Download complete!";
                 CancelDownloadBtn.IsVisible = false;
+                ForceDbUpdateBtn.IsVisible = true;
             });
         };
 
@@ -47,7 +52,7 @@ public partial class StatsPage : ContentPage
             {
                 DbStatusLabel.Text = "Download failed";
                 DbStatusLabel.TextColor = Color.FromArgb("#F44336");
-                DownloadDbBtn.IsVisible = true;
+                ForceDbUpdateBtn.IsVisible = true;
                 DownloadProgress.IsVisible = false;
                 DownloadStatusLabel.Text = "Download failed. Please try again.";
                 CancelDownloadBtn.IsVisible = false;
@@ -60,7 +65,7 @@ public partial class StatsPage : ContentPage
             {
                 DownloadProgress.IsVisible = false;
                 CancelDownloadBtn.IsVisible = false;
-                DownloadDbBtn.IsVisible = true;
+                ForceDbUpdateBtn.IsVisible = true;
                 DownloadStatusLabel.Text = "Download cancelled.";
             });
         };
@@ -73,6 +78,37 @@ public partial class StatsPage : ContentPage
         };
 
         InitPriceVendorPicker();
+        InitCatalogModePicker();
+        CatalogModePicker.SelectedIndexChanged += OnCatalogModePickerChanged;
+    }
+
+    private void InitCatalogModePicker()
+    {
+        _initializingCatalogPicker = true;
+        try
+        {
+            CatalogModePicker.ItemsSource = new[] { "Full catalog (all printings)", "Compact (AtomicCards)" };
+            CatalogModePicker.SelectedIndex = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite ? 1 : 0;
+        }
+        finally
+        {
+            _initializingCatalogPicker = false;
+        }
+    }
+
+    private async void OnCatalogModePickerChanged(object? sender, EventArgs e)
+    {
+        if (_initializingCatalogPicker || CatalogModePicker.SelectedIndex < 0)
+            return;
+
+        MtgCatalogPreferences.Mode = CatalogModePicker.SelectedIndex == 1
+            ? MtgCatalogMode.Lite
+            : MtgCatalogMode.Full;
+
+        await DisplayAlertAsync(
+            "Catalog mode",
+            "The next database download will use this choice (different file on disk). Tap Download Database if you need to fetch the matching catalog.",
+            "OK");
     }
 
     private static readonly string[] PriceVendorNames = ["TCG Player", "Cardmarket", "Card Kingdom", "ManaPool"];
@@ -110,21 +146,24 @@ public partial class StatsPage : ContentPage
         // Check database status
         if (_cardManager.DatabaseManager.IsConnected)
         {
-            DbStatusLabel.Text = "Connected";
+            DbStatusLabel.Text = _cardManager.IsAtomicCatalog
+                ? "Connected (compact catalog)"
+                : "Connected (full catalog)";
             DbStatusLabel.TextColor = Color.FromArgb("#4CAF50");
-            DownloadDbBtn.IsVisible = false;
         }
         else if (!AppDataManager.MtgDatabaseExists())
         {
             DbStatusLabel.Text = "Database not downloaded";
             DbStatusLabel.TextColor = Color.FromArgb("#F44336");
-            DownloadDbBtn.IsVisible = true;
         }
         else
         {
             DbStatusLabel.Text = "Database exists but not connected";
             DbStatusLabel.TextColor = Color.FromArgb("#FFC107");
         }
+
+        if (!DownloadProgress.IsVisible)
+            ForceDbUpdateBtn.IsVisible = true;
 
         if (_viewModel.IsStatsStale)
         {
@@ -168,7 +207,7 @@ public partial class StatsPage : ContentPage
 
     private void OnDownloadDbClicked(object? sender, EventArgs e)
     {
-        DownloadDbBtn.IsVisible = false;
+        ForceDbUpdateBtn.IsVisible = false;
         DownloadProgress.IsVisible = true;
         DownloadStatusLabel.IsVisible = true;
         CancelDownloadBtn.IsVisible = true;

@@ -191,15 +191,20 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
                     FinishesFilter = [.. CurrentOptions.FinishesFilter]
                 };
 
-                var helper = _cardManager.CreateSearchHelper();
-                if (SearchCollectionOnly)
-                    helper.SearchMyCollection();
+                if (_cardManager.IsAtomicCatalog && !SearchCollectionOnly)
+                    _allCards = await _cardManager.SearchAtomicCatalogAsync(options, 100, 0);
                 else
-                    helper.SearchCards(options.IncludeTokens);
-                SearchOptionsApplier.Apply(helper, options);
-                helper.OrderBy("c.name").Limit(100);
+                {
+                    var helper = _cardManager.CreateSearchHelper();
+                    if (SearchCollectionOnly)
+                        helper.SearchMyCollection();
+                    else
+                        helper.SearchCards(options.IncludeTokens);
+                    SearchOptionsApplier.Apply(helper, options);
+                    helper.OrderBy("c.name").Limit(100);
 
-                _allCards = await _cardManager.ExecuteSearchAsync(helper);
+                    _allCards = await _cardManager.ExecuteSearchAsync(helper);
+                }
             }
             else
             {
