@@ -95,4 +95,8 @@
 		<None Remove="Resources\Splash\_splash.svg" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<InternalsVisibleTo Include="AetherVault.Tests" />
+	</ItemGroup>
+
 </Project>

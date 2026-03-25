@@ -5,7 +5,9 @@
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Views.DeckStatsTabView"
              x:DataType="vm:DeckDetailViewModel">
-    <ScrollView Padding="16,8">
+    <ScrollView Padding="16,8"
+                VerticalOptions="Fill"
+                HorizontalOptions="Fill">
         <VerticalStackLayout Spacing="16">
             <VerticalStackLayout Spacing="4">
                 <Label Text="Mana Curve"

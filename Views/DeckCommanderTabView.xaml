@@ -7,7 +7,9 @@
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              x:Class="AetherVault.Views.DeckCommanderTabView"
              x:DataType="vm:DeckDetailViewModel">
-    <ScrollView Padding="16,8">
+    <ScrollView Padding="16,8"
+                VerticalOptions="Fill"
+                HorizontalOptions="Fill">
         <VerticalStackLayout Spacing="12">
             <!-- No commander placeholder -->
             <VerticalStackLayout IsVisible="{Binding HasNoCommander}"
@@ -79,28 +81,19 @@
                 </Button>
             </Grid>
 
-            <!-- Additional commander cards (e.g. partner) -->
-            <CollectionView IsVisible="{Binding ShowFilteredPartnersSection}"
-                            ItemsSource="{Binding FilteredAdditionalCommanderCards}"
-                            SelectionMode="None">
-                <CollectionView.Header>
-                    <Label Text="Partner / other"
-                           FontSize="12"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextSecondary}"
-                           Padding="0,8,0,4" />
-                </CollectionView.Header>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:DeckCardDisplayItem">
-                        <SwipeView>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Remove"
-                                               BackgroundColor="#B00020"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.RemoveCardCommand}"
-                                               CommandParameter="{Binding .}" />
-                                </SwipeItems>
-                            </SwipeView.RightItems>
+            <!-- Partner rows: BindableLayout avoids nested CollectionView inside ScrollView (broken vertical scroll on Android). -->
+            <VerticalStackLayout IsVisible="{Binding ShowFilteredPartnersSection}"
+                                 Spacing="0">
+                <Label Text="Partner / other"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextSecondary}"
+                       Padding="0,8,0,4" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding FilteredAdditionalCommanderCards}"
+                                     Spacing="0">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DeckCardDisplayItem">
+                            <!-- No SwipeView: tap vs swipe fights CachedCardImage / gestures inside ScrollView. -->
                             <Border Style="{StaticResource CardStyle}"
                                     Margin="0,6"
                                     Padding="12,10"
@@ -115,17 +108,19 @@
                                     <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DeckListItemTappedCommand}"
                                                          CommandParameter="{Binding .}" />
                                 </Border.GestureRecognizers>
-                                <Grid ColumnDefinitions="Auto,Auto,*"
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto"
                                       ColumnSpacing="10"
                                       VerticalOptions="Center">
                                     <Border Grid.Column="0"
                                             WidthRequest="36"
                                             HeightRequest="50"
+                                            InputTransparent="True"
                                             BackgroundColor="{StaticResource Surface}"
                                             StrokeShape="RoundRectangle 4"
                                             Stroke="Transparent"
                                             VerticalOptions="Center">
                                         <controls:CachedCardImage CardUuid="{Binding ImageId}"
+                                                                   InputTransparent="True"
                                                                    HorizontalOptions="Fill"
                                                                    VerticalOptions="Fill" />
                                     </Border>
@@ -163,12 +158,28 @@
                                             </Label.Triggers>
                                         </Label>
                                     </VerticalStackLayout>
+                                    <Button Grid.Column="3"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.RemoveCardCommand}"
+                                            CommandParameter="{Binding .}"
+                                            BackgroundColor="#B00020"
+                                            WidthRequest="44"
+                                            HeightRequest="44"
+                                            Padding="0"
+                                            CornerRadius="8"
+                                            VerticalOptions="Center">
+                                        <Button.ImageSource>
+                                            <FontImageSource FontFamily="FASolid"
+                                                             Glyph="{x:Static fa:Solid.TrashCan}"
+                                                             Size="16"
+                                                             Color="White" />
+                                        </Button.ImageSource>
+                                    </Button>
                                 </Grid>
                             </Border>
-                        </SwipeView>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>
 </ContentView>

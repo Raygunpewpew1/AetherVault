@@ -61,7 +61,8 @@ public class DeckBuilderService
         // DeckValidator logic: total = existing + toAdd. Correct.
         var result = await _validator.ValidateCardAdditionAsync(deck, card, quantityToAdd, currentCards, skipLegalityCheck);
 
-        if (result.IsError) return result;
+        if (result.IsError)
+            return result;
 
         // Perform Add/Update
         if (existingCard != null)

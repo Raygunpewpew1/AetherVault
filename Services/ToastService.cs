@@ -45,15 +45,46 @@ public class ToastService : IToastService
         throw new InvalidOperationException("ToastService overlay not set. Ensure the window root is built with ToastService.SetOverlayHost(overlayGrid).");
     }
 
+    /// <summary>
+    /// Snackbar without an anchor often does not appear on Android when no toast overlay Grid is set.
+    /// Anchor to the visible page so Material snackbar attaches to the activity.
+    /// </summary>
+    private static IView? GetSnackbarAnchor()
+    {
+        try
+        {
+            if (Shell.Current?.CurrentPage is IView shellPage)
+                return shellPage;
+            var window = Application.Current?.Windows.FirstOrDefault();
+            if (window?.Page is IView windowPage)
+                return windowPage;
+        }
+        catch
+        {
+            // Shell/window not ready
+        }
+
+        return null;
+    }
+
     private static async Task ShowBannerWithActionAsync(string message, string actionLabel, Action action, int durationMs)
     {
         if (OverlayHost == null)
         {
-            var snackbar = Snackbar.Make(message, () =>
+            var duration = TimeSpan.FromMilliseconds(Math.Max(durationMs, 2000));
+            var anchor = GetSnackbarAnchor();
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                action();
-            }, actionLabel, TimeSpan.FromMilliseconds(Math.Max(durationMs, 2000)));
-            await MainThread.InvokeOnMainThreadAsync(async () => await snackbar.Show());
+                // Extension anchors the native snackbar to this element (required on Android without overlay).
+                if (anchor is VisualElement ve)
+                {
+                    await ve.DisplaySnackbar(message, action, actionLabel, duration);
+                    return;
+                }
+
+                var snackbar = Snackbar.Make(message, action, actionLabel, duration, null, anchor);
+                await snackbar.Show();
+            });
             return;
         }
 

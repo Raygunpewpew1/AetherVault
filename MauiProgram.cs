@@ -73,6 +73,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<CollectionImporter>();
         builder.Services.AddSingleton<CollectionExporter>();
         builder.Services.AddSingleton<DeckImporter>();
+        builder.Services.AddSingleton<DeckUrlImporter>();
         builder.Services.AddSingleton<DeckExporter>();
         builder.Services.AddSingleton<MtgJsonDeckListService>();
         builder.Services.AddSingleton<MtgJsonDeckImporter>();
@@ -111,6 +112,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DeckAddCardsPage>();
         builder.Services.AddTransient<CardSearchPickerPage>();
         builder.Services.AddTransient<CreateDeckPage>();
+        builder.Services.AddTransient<PasteDecklistPage>();
         builder.Services.AddTransient<AddToDeckPage>();
         builder.Services.AddTransient<CollectionAddPage>();
         builder.Services.AddTransient<MtgJsonDecksPage>();

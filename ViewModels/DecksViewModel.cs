@@ -15,6 +15,7 @@ public partial class DecksViewModel : BaseViewModel
     private readonly DeckBuilderService _deckService;
     private readonly IDeckRepository _deckRepository;
     private readonly DeckImporter _deckImporter;
+    private readonly DeckUrlImporter _deckUrlImporter;
     private readonly DeckExporter _deckExporter;
 
     [ObservableProperty]
@@ -23,11 +24,17 @@ public partial class DecksViewModel : BaseViewModel
     [ObservableProperty]
     public partial bool IsEmpty { get; set; }
 
-    public DecksViewModel(DeckBuilderService deckService, IDeckRepository deckRepository, DeckImporter deckImporter, DeckExporter deckExporter)
+    public DecksViewModel(
+        DeckBuilderService deckService,
+        IDeckRepository deckRepository,
+        DeckImporter deckImporter,
+        DeckUrlImporter deckUrlImporter,
+        DeckExporter deckExporter)
     {
         _deckService = deckService;
         _deckRepository = deckRepository;
         _deckImporter = deckImporter;
+        _deckUrlImporter = deckUrlImporter;
         _deckExporter = deckExporter;
     }
 
@@ -41,20 +48,7 @@ public partial class DecksViewModel : BaseViewModel
 
         try
         {
-            var list = await _deckService.GetDecksAsync();
-            var counts = await _deckRepository.GetDeckCardCountsAsync(list.Select(d => d.Id));
-            foreach (var deck in list)
-                deck.CardCount = counts.GetValueOrDefault(deck.Id);
-
-            var collection = new ObservableCollection<DeckEntity>(list);
-            var isEmpty = collection.Count == 0;
-            var statusMessage = isEmpty ? UserMessages.StatusClear : FormatDeckCount(collection.Count);
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                Decks = collection;
-                IsEmpty = isEmpty;
-                StatusMessage = statusMessage;
-            });
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: true);
         }
         catch (Exception ex)
         {
@@ -65,6 +59,30 @@ public partial class DecksViewModel : BaseViewModel
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// Reloads deck list from DB. When <paramref name="updateStatusLineWithDeckCount"/> is false, leaves
+    /// status text unchanged (used after import while busy).
+    /// </summary>
+    private async Task RefreshDecksListAsync(bool updateStatusLineWithDeckCount)
+    {
+        var list = await _deckService.GetDecksAsync();
+        var counts = await _deckRepository.GetDeckCardCountsAsync(list.Select(d => d.Id));
+        foreach (var deck in list)
+            deck.CardCount = counts.GetValueOrDefault(deck.Id);
+
+        var collection = new ObservableCollection<DeckEntity>(list);
+        var isEmpty = collection.Count == 0;
+        var countStatus = isEmpty ? UserMessages.StatusClear : FormatDeckCount(collection.Count);
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Decks = collection;
+            IsEmpty = isEmpty;
+            if (updateStatusLineWithDeckCount)
+                StatusMessage = countStatus;
+        });
     }
 
     [RelayCommand]
@@ -95,7 +113,7 @@ public partial class DecksViewModel : BaseViewModel
         if (IsBusy) return;
         try
         {
-            var result = await FilePickerHelper.PickCsvFileAsync("Select a deck CSV file to import");
+            var result = await FilePickerHelper.PickDeckImportFileAsync("Select a deck file to import (CSV or TXT)");
             if (result == null) return;
 
             IsBusy = true;
@@ -108,20 +126,112 @@ public partial class DecksViewModel : BaseViewModel
             }
 
             using var stream = await result.OpenReadAsync();
-            var importResult = await Task.Run(async () => await _deckImporter.ImportCsvAsync(stream, OnProgress));
+            var importResult = await Task.Run(async () =>
+                await _deckImporter.ImportFromFileStreamAsync(stream, result.FileName, OnProgress));
 
             if (importResult.Errors.Count > 0)
                 Logger.LogStuff($"Deck import completed with {importResult.Errors.Count} errors. First: {importResult.Errors[0]}", LogLevel.Warning);
             if (importResult.Warnings.Count > 0)
                 Logger.LogStuff($"Deck import completed with {importResult.Warnings.Count} warnings. First: {importResult.Warnings[0]}", LogLevel.Warning);
 
-            await LoadDecksAsync();
-            StatusIsError = false;
-            StatusMessage = UserMessages.ImportedDecksToast(importResult.ImportedDecks, importResult.ImportedCards);
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: false);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StatusIsError = importResult.Errors.Count > 0;
+                StatusMessage = importResult.Errors.Count > 0
+                    ? UserMessages.ImportFailed(importResult.Errors[0])
+                    : UserMessages.ImportedDecksToast(importResult.ImportedDecks, importResult.ImportedCards);
+            });
         }
         catch (Exception ex)
         {
             Logger.LogStuff($"Failed to import decks: {ex.Message}", LogLevel.Error);
+            StatusIsError = true;
+            StatusMessage = UserMessages.ImportFailed(ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ImportDeckFromUrlAsync(string url)
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        StatusIsError = false;
+        StatusMessage = UserMessages.ImportingDecks;
+
+        void OnProgress(string message, int _)
+        {
+            MainThread.BeginInvokeOnMainThread(() => { StatusMessage = message; });
+        }
+
+        try
+        {
+            var importResult = await Task.Run(async () =>
+                await _deckUrlImporter.ImportFromUrlAsync(url, OnProgress));
+
+            if (importResult.Errors.Count > 0)
+                Logger.LogStuff($"URL import: {importResult.Errors.Count} errors. First: {importResult.Errors[0]}", LogLevel.Warning);
+            if (importResult.Warnings.Count > 0)
+                Logger.LogStuff($"URL import: {importResult.Warnings.Count} warnings. First: {importResult.Warnings[0]}", LogLevel.Warning);
+
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: false);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StatusIsError = importResult.Errors.Count > 0;
+                StatusMessage = importResult.Errors.Count > 0
+                    ? UserMessages.ImportFailed(importResult.Errors[0])
+                    : UserMessages.ImportedDecksToast(importResult.ImportedDecks, importResult.ImportedCards);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"URL deck import failed: {ex.Message}", LogLevel.Error);
+            StatusIsError = true;
+            StatusMessage = UserMessages.ImportFailed(ex.Message);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public async Task ImportDeckFromPlainTextAsync(string text)
+    {
+        if (IsBusy) return;
+        IsBusy = true;
+        StatusIsError = false;
+        StatusMessage = UserMessages.ImportingDecks;
+
+        void OnProgress(string message, int _)
+        {
+            MainThread.BeginInvokeOnMainThread(() => { StatusMessage = message; });
+        }
+
+        try
+        {
+            var importResult = await Task.Run(async () =>
+                await _deckImporter.ImportFromPlainTextAsync(text, "Pasted deck", OnProgress));
+
+            if (importResult.Errors.Count > 0)
+                Logger.LogStuff($"Paste import: {importResult.Errors.Count} errors. First: {importResult.Errors[0]}", LogLevel.Warning);
+            if (importResult.Warnings.Count > 0)
+                Logger.LogStuff($"Paste import: {importResult.Warnings.Count} warnings. First: {importResult.Warnings[0]}", LogLevel.Warning);
+
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: false);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StatusIsError = importResult.Errors.Count > 0;
+                StatusMessage = importResult.Errors.Count > 0
+                    ? UserMessages.ImportFailed(importResult.Errors[0])
+                    : UserMessages.ImportedDecksToast(importResult.ImportedDecks, importResult.ImportedCards);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"Paste deck import failed: {ex.Message}", LogLevel.Error);
             StatusIsError = true;
             StatusMessage = UserMessages.ImportFailed(ex.Message);
         }

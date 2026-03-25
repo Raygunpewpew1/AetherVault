@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AetherVault.Pages.PasteDecklistPage"
+             Title="Paste deck list"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto"
+          Padding="16"
+          RowSpacing="12">
+
+        <Label Grid.Row="0"
+               Text="Paste an Arena-style or Moxfield text list. Lines like: 4 Lightning Bolt or 1 Opt (XLN) 65"
+               TextColor="{StaticResource TextSecondary}"
+               FontSize="13" />
+
+        <Border Grid.Row="1"
+                Stroke="{StaticResource Surface}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 12"
+                Padding="8">
+            <Editor x:Name="DeckEditor"
+                    AutoSize="TextChanges"
+                    MinimumHeightRequest="200"
+                    Placeholder="Deck list..."
+                    TextColor="{StaticResource TextPrimary}"
+                    BackgroundColor="{StaticResource Surface}" />
+        </Border>
+
+        <Label x:Name="ErrorLabel"
+               Grid.Row="2"
+               TextColor="{StaticResource ErrorColor}"
+               FontSize="13"
+               IsVisible="False" />
+
+        <Grid Grid.Row="3"
+              ColumnDefinitions="*,*"
+              ColumnSpacing="12">
+            <Button Grid.Column="0"
+                    Text="Cancel"
+                    Clicked="OnCancelClicked"
+                    BackgroundColor="{StaticResource Surface}"
+                    TextColor="{StaticResource TextPrimary}"
+                    CornerRadius="12"
+                    HeightRequest="48" />
+            <Button Grid.Column="1"
+                    Text="Import"
+                    Clicked="OnImportClicked"
+                    BackgroundColor="{StaticResource Accent}"
+                    TextColor="Black"
+                    FontAttributes="Bold"
+                    CornerRadius="12"
+                    HeightRequest="48" />
+        </Grid>
+    </Grid>
+</ContentPage>

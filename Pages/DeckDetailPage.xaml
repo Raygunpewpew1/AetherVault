@@ -15,18 +15,26 @@
              x:DataType="vm:DeckDetailViewModel">
 
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Undo"
+                     Command="{Binding UndoDeckEditCommand}"
+                     Order="Primary"
+                     Priority="0" />
         <ToolbarItem Text="Select"
                      Command="{Binding ToggleSelectionModeCommand}"
                      Order="Primary"
-                     Priority="0" />
+                     Priority="1" />
         <ToolbarItem Text="Import"
                      Clicked="OnImportCsvClicked"
                      Order="Primary"
-                     Priority="1" />
+                     Priority="2" />
         <ToolbarItem Text="Export"
                      Clicked="OnExportDeckClicked"
                      Order="Primary"
-                     Priority="2" />
+                     Priority="3" />
+        <ToolbarItem Text="Layout"
+                     Clicked="OnDeckLayoutClicked"
+                     Order="Primary"
+                     Priority="4" />
     </ContentPage.ToolbarItems>
 
     <Grid x:Name="DeckDetailRoot" RowDefinitions="100,Auto,Auto,Auto,*,Auto">
@@ -165,12 +173,22 @@
         </Border>
 
         <!-- Row 4: Tab content + floating add button -->
-        <Grid Grid.Row="4">
+        <Grid Grid.Row="4"
+              VerticalOptions="Fill"
+              HorizontalOptions="Fill">
             <views:DeckCommanderTabView x:Name="CommanderTabView"
+                                         VerticalOptions="Fill"
+                                         HorizontalOptions="Fill"
                                          IsVisible="{Binding IsCommanderTab}" />
-            <views:DeckMainTabView IsVisible="{Binding IsMainTab}" />
-            <views:DeckSideboardTabView IsVisible="{Binding IsSideboardTab}" />
-            <views:DeckStatsTabView IsVisible="{Binding IsStatsTab}" />
+            <views:DeckMainTabView VerticalOptions="Fill"
+                                   HorizontalOptions="Fill"
+                                   IsVisible="{Binding IsMainTab}" />
+            <views:DeckSideboardTabView VerticalOptions="Fill"
+                                        HorizontalOptions="Fill"
+                                        IsVisible="{Binding IsSideboardTab}" />
+            <views:DeckStatsTabView VerticalOptions="Fill"
+                                    HorizontalOptions="Fill"
+                                    IsVisible="{Binding IsStatsTab}" />
 
             <Button Clicked="OnAddCardsClicked"
                     HorizontalOptions="End"

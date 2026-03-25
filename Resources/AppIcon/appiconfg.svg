@@ -5,17 +5,26 @@
       <stop offset="35%" stop-color="#00E5CC"/>
       <stop offset="100%" stop-color="#00A896"/>
     </linearGradient>
+    <!-- Slightly warmer plate so WUBRG reads as “game” not generic navy -->
     <radialGradient id="plateGrad" cx="50%" cy="42%" r="58%">
-      <stop offset="0%" stop-color="#152238"/>
-      <stop offset="100%" stop-color="#0B101C"/>
+      <stop offset="0%" stop-color="#182a3a"/>
+      <stop offset="55%" stop-color="#101c28"/>
+      <stop offset="100%" stop-color="#0a121c"/>
     </radialGradient>
   </defs>
-  <!-- Inner disc (full-bleed icons use a smaller centered mark; this mirrors that pattern) -->
-  <circle cx="512" cy="512" r="300" fill="url(#plateGrad)" stroke="#00E5CC" stroke-width="4" stroke-opacity="0.28"/>
-  <g transform="translate(512,512) scale(0.42) translate(-512,-570)">
+  <circle cx="512" cy="512" r="300" fill="url(#plateGrad)" stroke="#00E5CC" stroke-width="3" stroke-opacity="0.22"/>
+  <!-- Abstract WUBRG ring (color pie cue — not mana symbols) -->
+  <g fill="none" stroke-width="8" stroke-linecap="round" opacity="0.88">
+    <path stroke="#E8E2C8" d="M 350.9 254.2 A 304 304 0 0 1 673.1 254.2"/>
+    <path stroke="#5EB8E8" d="M 707.4 278.7 A 304 304 0 0 1 806.9 585.5"/>
+    <path stroke="#9A95B0" d="M 793.9 625.9 A 304 304 0 0 1 533.2 815.3"/>
+    <path stroke="#E86868" d="M 490.8 815.3 A 304 304 0 0 1 230.1 625.9"/>
+    <path stroke="#52C98A" d="M 217.0 585.5 A 304 304 0 0 1 316.6 278.7"/>
+  </g>
+  <g transform="translate(512,512) scale(0.49) translate(-512,-570)">
     <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M 268 372 Q 512 258 756 372" stroke="#00E5CC" stroke-width="12" opacity="0.28"/>
-      <g opacity="0.14" stroke="#00E5CC" stroke-width="6">
+      <path d="M 268 372 Q 512 258 756 372" stroke="#00E5CC" stroke-width="12" opacity="0.26"/>
+      <g opacity="0.12" stroke="#00E5CC" stroke-width="6">
         <rect x="168" y="556" width="76" height="288" rx="16" ry="16" transform="rotate(-10 206 700)"/>
         <rect x="198" y="544" width="76" height="300" rx="16" ry="16" transform="rotate(-5 236 694)"/>
         <g transform="translate(1024,0) scale(-1,1)">

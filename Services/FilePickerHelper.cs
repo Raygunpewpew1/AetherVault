@@ -17,6 +17,17 @@ public static class FilePickerHelper
     });
 
     /// <summary>
+    /// File type filter for deck import (CSV or plain-text deck lists).
+    /// </summary>
+    public static FilePickerFileType DeckImportFileType { get; } = new(new Dictionary<DevicePlatform, IEnumerable<string>>
+    {
+        { DevicePlatform.iOS, ["public.comma-separated-values-text", "public.plain-text"] },
+        { DevicePlatform.Android, ["text/csv", "text/comma-separated-values", "application/csv", "text/plain"] },
+        { DevicePlatform.WinUI, [".csv", ".txt", ".dec"] },
+        { DevicePlatform.MacCatalyst, ["public.comma-separated-values-text", "public.plain-text"] },
+    });
+
+    /// <summary>
     /// Opens the file picker for selecting a CSV file with the given title.
     /// </summary>
     /// <param name="pickerTitle">Title shown in the picker dialog (e.g. "Select a CSV file to import").</param>
@@ -27,6 +38,18 @@ public static class FilePickerHelper
         {
             PickerTitle = pickerTitle,
             FileTypes = CsvFileType,
+        });
+    }
+
+    /// <summary>
+    /// Opens the file picker for deck import (CSV or TXT).
+    /// </summary>
+    public static async Task<FileResult?> PickDeckImportFileAsync(string pickerTitle)
+    {
+        return await FilePicker.Default.PickAsync(new PickOptions
+        {
+            PickerTitle = pickerTitle,
+            FileTypes = DeckImportFileType,
         });
     }
 }

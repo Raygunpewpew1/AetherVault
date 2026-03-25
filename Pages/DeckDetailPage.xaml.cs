@@ -1,4 +1,5 @@
 using AetherVault.Constants;
+using AetherVault.Core;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using AetherVault.Services.ImportExport;
@@ -66,6 +67,26 @@ public partial class DeckDetailPage : ContentPage
         CommanderTabView.CommanderMenuRequested += OnCommanderMenuRequested;
     }
 
+    private async void OnDeckLayoutClicked(object? sender, EventArgs e)
+    {
+        if (_viewModel.IsStatsTab)
+        {
+            await DisplayAlertAsync("Layout", "Layout options apply to Main deck and Sideboard.", "OK");
+            return;
+        }
+
+        const string list = "List (full)";
+        const string compact = "List (compact)";
+        const string grid = "Card grid";
+        var pick = await DisplayActionSheetAsync("Deck layout", "Cancel", null, list, compact, grid);
+        if (pick == list)
+            _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Standard);
+        else if (pick == compact)
+            _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Compact);
+        else if (pick == grid)
+            _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Grid);
+    }
+
     private async void OnAddCardsClicked(object? sender, EventArgs e)
     {
         // Full-screen modal avoids Shell tab bar jumping with IME (AdjustResize); popup was resizing the whole window.
@@ -103,7 +124,7 @@ public partial class DeckDetailPage : ContentPage
 
         try
         {
-            var pick = await FilePickerHelper.PickCsvFileAsync("Select a deck CSV file to import");
+            var pick = await FilePickerHelper.PickDeckImportFileAsync("Select a deck file to import (CSV or TXT)");
             if (pick == null) return;
 
             _viewModel.IsBusy = true;
@@ -111,7 +132,8 @@ public partial class DeckDetailPage : ContentPage
             _viewModel.StatusMessage = UserMessages.ImportingDecks;
 
             using var stream = await pick.OpenReadAsync();
-            var importResult = await Task.Run(async () => await _deckImporter.ImportCsvAsync(stream));
+            var importResult = await Task.Run(async () =>
+                await _deckImporter.ImportFromFileStreamAsync(stream, pick.FileName));
 
             if (importResult.Errors.Count > 0)
                 Logger.LogStuff($"Deck import: {importResult.Errors.Count} errors. First: {importResult.Errors[0]}", LogLevel.Warning);

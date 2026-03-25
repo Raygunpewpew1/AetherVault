@@ -1,52 +1,112 @@
 using AetherVault.Core;
 using CommunityToolkit.Maui.Views;
 using System.Collections.ObjectModel;
+using System.Threading;
 
 namespace AetherVault.Pages;
 
 public partial class SetPickerPopup : Popup
 {
+    private const int SearchDebounceMs = 250;
+
     private readonly IReadOnlyList<SetInfo> _allSets;
     private readonly Action<int> _onSelected;
+    private readonly Dictionary<string, int> _codeToIndex;
     private readonly ObservableCollection<SetInfo> _filteredSets = [];
+    private CancellationTokenSource? _searchDebounceCts;
+    private int _filterGeneration;
 
     public SetPickerPopup(IReadOnlyList<SetInfo> sets, int initialIndex, Action<int> onSelected)
     {
         InitializeComponent();
         _allSets = sets;
         _onSelected = onSelected;
+        _codeToIndex = BuildCodeIndex(sets);
 
-        ApplyFilter("");
+        SetsList.ItemsSource = _filteredSets;
+        _ = LoadInitialListAsync();
+
         SearchEntry.TextChanged += OnSearchTextChanged;
+    }
+
+    private static Dictionary<string, int> BuildCodeIndex(IReadOnlyList<SetInfo> sets)
+    {
+        var map = new Dictionary<string, int>(sets.Count, StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < sets.Count; i++)
+        {
+            var code = sets[i].Code;
+            if (!string.IsNullOrEmpty(code))
+                map.TryAdd(code, i);
+        }
+
+        return map;
+    }
+
+    private async Task LoadInitialListAsync()
+    {
+        var all = await Task.Run(() => new List<SetInfo>(_allSets)).ConfigureAwait(false);
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            _filteredSets.Clear();
+            foreach (var s in all)
+                _filteredSets.Add(s);
+        });
     }
 
     private void OnSearchTextChanged(object? sender, TextChangedEventArgs e)
     {
-        ApplyFilter(e.NewTextValue ?? "");
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+        var text = e.NewTextValue ?? "";
+        var gen = Interlocked.Increment(ref _filterGeneration);
+        _ = ApplyDebouncedFilterAsync(text, token, gen);
     }
 
-    private void ApplyFilter(string search)
+    private async Task ApplyDebouncedFilterAsync(string search, CancellationToken debounceToken, int generation)
     {
-        _filteredSets.Clear();
-        var q = search.Trim();
-        if (string.IsNullOrEmpty(q))
+        try
         {
-            foreach (var s in _allSets)
-                _filteredSets.Add(s);
+            await Task.Delay(SearchDebounceMs, debounceToken).ConfigureAwait(false);
         }
-        else
+        catch (OperationCanceledException)
         {
-            var lower = q.ToLowerInvariant();
-            foreach (var s in _allSets)
-            {
-                if (s.Name.Contains(lower, StringComparison.OrdinalIgnoreCase) ||
-                    s.Code.Contains(lower, StringComparison.OrdinalIgnoreCase))
-                    _filteredSets.Add(s);
-            }
+            return;
         }
 
-        SetsList.ItemsSource = null;
-        SetsList.ItemsSource = _filteredSets;
+        if (generation != Volatile.Read(ref _filterGeneration))
+            return;
+
+        var q = search.Trim();
+        var filtered = await Task.Run(() => FilterSets(q)).ConfigureAwait(false);
+
+        if (generation != Volatile.Read(ref _filterGeneration))
+            return;
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            if (generation != Volatile.Read(ref _filterGeneration))
+                return;
+            _filteredSets.Clear();
+            foreach (var s in filtered)
+                _filteredSets.Add(s);
+        });
+    }
+
+    private List<SetInfo> FilterSets(string q)
+    {
+        if (string.IsNullOrEmpty(q))
+            return [.. _allSets];
+
+        var result = new List<SetInfo>();
+        foreach (var s in _allSets)
+        {
+            if (s.Name.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                s.Code.Contains(q, StringComparison.OrdinalIgnoreCase))
+                result.Add(s);
+        }
+
+        return result;
     }
 
     private async void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -55,8 +115,7 @@ public partial class SetPickerPopup : Popup
 
         if (e.CurrentSelection[0] is SetInfo selected)
         {
-            var idx = _allSets.ToList().FindIndex(s => s.Code == selected.Code);
-            if (idx >= 0)
+            if (_codeToIndex.TryGetValue(selected.Code, out var idx))
             {
                 _onSelected(idx);
                 await CloseAsync();

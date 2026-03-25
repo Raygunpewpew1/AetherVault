@@ -1,3 +1,4 @@
+using AetherVault.Constants;
 using AetherVault.Models;
 using AetherVault.ViewModels;
 
@@ -71,6 +72,37 @@ public partial class DecksPage : ContentPage
     private async void OnBrowseMTGJsonClicked(object? sender, EventArgs e)
     {
         await Shell.Current.GoToAsync("mtgjsondecks");
+    }
+
+    private async void OnImportFromUrlClicked(object? sender, EventArgs e)
+    {
+        if (_viewModel.IsBusy)
+            return;
+
+        string? url = await DisplayPromptAsync(
+            UserMessages.ImportDeckFromUrlTitle,
+            UserMessages.ImportDeckFromUrlPrompt,
+            accept: "Import",
+            cancel: "Cancel",
+            placeholder: "https://www.moxfield.com/decks/…",
+            maxLength: 512);
+
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        await _viewModel.ImportDeckFromUrlAsync(url.Trim());
+    }
+
+    private async void OnPasteDecklistClicked(object? sender, EventArgs e)
+    {
+        if (_viewModel.IsBusy)
+            return;
+
+        var page = _serviceProvider.GetRequiredService<PasteDecklistPage>();
+        await Navigation.PushModalAsync(page);
+        string? text = await page.WaitForTextAsync();
+        if (!string.IsNullOrWhiteSpace(text))
+            await _viewModel.ImportDeckFromPlainTextAsync(text);
     }
 
     private async void OnDeckSelectionChanged(object? sender, SelectionChangedEventArgs e)

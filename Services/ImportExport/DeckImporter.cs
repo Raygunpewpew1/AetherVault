@@ -17,6 +17,9 @@ public sealed class DeckImportResult
 
 public class DeckImporter
 {
+    /// <summary>When import rows omit format, treat large lists as Commander (typical pasted EDH lists).</summary>
+    private const int InferCommanderMinTotalCopies = 85;
+
     private readonly DeckBuilderService _deckService;
     private readonly ICardRepository _cardRepo;
 
@@ -24,6 +27,78 @@ public class DeckImporter
     {
         _deckService = deckService;
         _cardRepo = cardRepo;
+    }
+
+    /// <summary>
+    /// Buffers the stream, detects CSV vs TXT when the file name has no extension (Android pickers),
+    /// then imports.
+    /// </summary>
+    public async Task<DeckImportResult> ImportFromFileStreamAsync(
+        Stream source,
+        string? fileName,
+        Action<string, int>? onProgress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var buffer = await DeckImportFormatSniffer.BufferEntireStreamAsync(source, cancellationToken).ConfigureAwait(false);
+        var kind = DeckImportFormatSniffer.DetectFormat(fileName, buffer);
+        var suggestedName = Path.GetFileNameWithoutExtension(fileName ?? "") ?? "Imported deck";
+        buffer.Position = 0;
+        return kind == DeckImportFormatSniffer.DeckImportKind.Csv
+            ? await ImportCsvAsync(buffer, onProgress).ConfigureAwait(false)
+            : await ImportTxtAsync(buffer, suggestedName, onProgress).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Imports a single deck from pre-built rows (e.g. URL download from Moxfield JSON).
+    /// </summary>
+    internal async Task<DeckImportResult> ImportPreparedDeckAsync(
+        string deckName,
+        string? formatText,
+        IReadOnlyList<DeckCsvRowV1> rows,
+        Action<string, int>? onProgress = null)
+    {
+        var result = new DeckImportResult();
+        if (rows.Count == 0)
+        {
+            result.Errors.Add("No cards to import.");
+            return result;
+        }
+
+        var baseName = string.IsNullOrWhiteSpace(deckName) ? "Imported deck" : deckName.Trim();
+        var list = new List<DeckCsvRowV1>(rows.Count);
+        foreach (var r in rows)
+        {
+            var copy = new DeckCsvRowV1
+            {
+                DeckName = baseName,
+                Format = string.IsNullOrWhiteSpace(r.Format) ? formatText : r.Format,
+                Section = r.Section,
+                Quantity = r.Quantity,
+                CardUuid = r.CardUuid,
+                CardName = r.CardName,
+                SetCode = r.SetCode,
+                CollectorNumber = r.CollectorNumber,
+                ScryfallId = r.ScryfallId,
+            };
+            list.Add(copy);
+        }
+
+        var grouped = new Dictionary<string, List<DeckCsvRowV1>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [baseName] = list,
+        };
+
+        onProgress?.Invoke("Preparing card lookup index...", 0);
+        var resolver = new CardImportResolver(_cardRepo);
+        var resolveSession = await resolver.CreateSessionAsync().ConfigureAwait(false);
+        await ImportGroupedDecksAsync(grouped, resolveSession, result, onProgress).ConfigureAwait(false);
+        return result;
+    }
+
+    public async Task<DeckImportResult> ImportFromPlainTextAsync(string text, string suggestedDeckName, Action<string, int>? onProgress = null)
+    {
+        await using var ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(text ?? ""));
+        return await ImportTxtAsync(ms, suggestedDeckName, onProgress).ConfigureAwait(false);
     }
 
     public async Task<DeckImportResult> ImportCsvAsync(Stream csvStream, Action<string, int>? onProgress = null)
@@ -78,10 +153,6 @@ public class DeckImporter
             result.Errors.Add("Could not find a card identifier column. Provide 'Card UUID' or at least 'Card Name'/'Scryfall ID'.");
             return result;
         }
-
-        onProgress?.Invoke("Preparing card lookup index...", 0);
-        var resolver = new CardImportResolver(_cardRepo);
-        var resolveSession = await resolver.CreateSessionAsync();
 
         // Read rows, then group by deck name
         int lineNumber = 1;
@@ -139,6 +210,82 @@ public class DeckImporter
             return result;
         }
 
+        onProgress?.Invoke("Preparing card lookup index...", 0);
+        var resolver = new CardImportResolver(_cardRepo);
+        var resolveSession = await resolver.CreateSessionAsync();
+
+        await ImportGroupedDecksAsync(grouped, resolveSession, result, onProgress);
+        return result;
+    }
+
+    /// <summary>
+    /// Imports a plain-text deck list (MTG Arena export, Moxfield TXT, etc.) as a single new deck.
+    /// </summary>
+    /// <param name="txtStream">UTF-8 text stream.</param>
+    /// <param name="suggestedDeckName">Base name when the file has no <c>Name:</c> header (e.g. file name without extension).</param>
+    public async Task<DeckImportResult> ImportTxtAsync(Stream txtStream, string suggestedDeckName, Action<string, int>? onProgress = null)
+    {
+        var result = new DeckImportResult();
+        using var reader = new StreamReader(txtStream);
+        var text = await reader.ReadToEndAsync();
+
+        var lines = DeckTxtFormat.Parse(text, out var metaName);
+        if (lines.Count == 0)
+        {
+            result.Errors.Add("No card lines found in text file.");
+            return result;
+        }
+
+        var baseName = !string.IsNullOrWhiteSpace(metaName) ? metaName.Trim() : suggestedDeckName.Trim();
+        if (baseName.Length == 0)
+            baseName = "Imported deck";
+
+        string? formatHint = InferTxtFormat(lines);
+        var rows = new List<DeckCsvRowV1>(lines.Count);
+        foreach (var line in lines)
+        {
+            rows.Add(new DeckCsvRowV1
+            {
+                DeckName = baseName,
+                Format = formatHint,
+                Section = line.Section,
+                Quantity = line.Quantity,
+                CardName = line.CardName,
+                SetCode = line.SetCode,
+                CollectorNumber = line.CollectorNumber,
+            });
+        }
+
+        var grouped = new Dictionary<string, List<DeckCsvRowV1>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [baseName] = rows,
+        };
+
+        onProgress?.Invoke("Preparing card lookup index...", 0);
+        var resolver = new CardImportResolver(_cardRepo);
+        var resolveSession = await resolver.CreateSessionAsync();
+
+        await ImportGroupedDecksAsync(grouped, resolveSession, result, onProgress);
+        return result;
+    }
+
+    private static string? InferTxtFormat(IReadOnlyList<DeckTxtFormat.Line> lines)
+    {
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].Section.Equals(DeckCsvV1.Sections.Commander, StringComparison.OrdinalIgnoreCase))
+                return DeckFormat.Commander.ToDbField();
+        }
+
+        return null;
+    }
+
+    private async Task ImportGroupedDecksAsync(
+        Dictionary<string, List<DeckCsvRowV1>> grouped,
+        CardImportResolver.Session resolveSession,
+        DeckImportResult result,
+        Action<string, int>? onProgress)
+    {
         var existingNames = new HashSet<string>(
             (await _deckService.GetDecksAsync()).Select(d => d.Name),
             StringComparer.OrdinalIgnoreCase);
@@ -153,6 +300,22 @@ public class DeckImporter
 
             var formatText = rows.Select(r => r.Format).FirstOrDefault(f => !string.IsNullOrWhiteSpace(f))?.Trim();
             var format = EnumExtensions.ParseDeckFormat(formatText);
+
+            // Plain-text pastes often lack a Commander section; default Standard then rejects EDH cards.
+            // 60+15 is max for tournament 60-card formats — above that, assume Commander.
+            if (string.IsNullOrWhiteSpace(formatText) && format == DeckFormat.Standard)
+            {
+                int totalCopies = 0;
+                for (int ri = 0; ri < rows.Count; ri++)
+                {
+                    int q = rows[ri].Quantity;
+                    if (q > 0)
+                        totalCopies += q;
+                }
+
+                if (totalCopies >= InferCommanderMinTotalCopies)
+                    format = DeckFormat.Commander;
+            }
 
             string deckName = MakeUniqueName(sourceDeckName, existingNames);
             existingNames.Add(deckName);
@@ -206,7 +369,8 @@ public class DeckImporter
                     {
                         // Fall back to importing it as a commander-section card entry (so it isn't lost).
                         result.Warnings.Add($"Deck '{deckName}': could not set commander ({setCmd.Message}); importing as Commander section card instead.");
-                        var add = await _deckService.AddCardAsync(deckId, uuid, 1, DeckCsvV1.Sections.Commander);
+                        var add = await _deckService.AddCardAsync(
+                            deckId, uuid, 1, DeckCsvV1.Sections.Commander, skipLegalityCheck: true);
                         if (!add.IsSuccess)
                         {
                             result.Errors.Add($"Deck '{deckName}': could not add commander card: {add.Message}");
@@ -223,7 +387,8 @@ public class DeckImporter
                     continue;
                 }
 
-                var addResult = await _deckService.AddCardAsync(deckId, uuid, r.Quantity, section);
+                // Trust import source (same as MTGJSON import); DB legality gaps should not block deck lists.
+                var addResult = await _deckService.AddCardAsync(deckId, uuid, r.Quantity, section, skipLegalityCheck: true);
                 if (addResult.IsError)
                 {
                     var display = !string.IsNullOrWhiteSpace(r.CardName) ? r.CardName : uuid;
@@ -234,8 +399,6 @@ public class DeckImporter
                 result.ImportedCards += r.Quantity;
             }
         }
-
-        return result;
     }
 
     private static int FindHeader(string[] lowerHeaders, string[] candidates)

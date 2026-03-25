@@ -4,6 +4,7 @@ using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 
 namespace AetherVault.ViewModels;
 
@@ -51,8 +52,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
         FormatOptions = formatList;
 
         TypeOptions = [.. TypeOptionsSource];
-        SetList = [AnySet];
-        SetList.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SelectedSetDisplayName));
+        SetList.CollectionChanged += OnSetListCollectionChanged;
         ColorFilters = new ObservableCollection<ColorFilterItem>(
             ColorCodes.Select(c => new ColorFilterItem(c, false)));
         ColorIdentityFilters = new ObservableCollection<ColorFilterItem>(
@@ -62,7 +62,9 @@ public partial class SearchFiltersViewModel : BaseViewModel
 
     public IList<string> FormatOptions { get; }
     public IList<string> TypeOptions { get; }
-    public ObservableCollection<SetInfo> SetList { get; }
+
+    [ObservableProperty]
+    private ObservableCollection<SetInfo> _setList = new([AnySet]);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CmcMinLabel), nameof(CmcMaxLabel), nameof(ActiveFilterCount), nameof(HasActiveFilters), nameof(FiltersSummaryText))]
@@ -395,21 +397,14 @@ public partial class SearchFiltersViewModel : BaseViewModel
         try
         {
             var sets = await _cardManager.GetAllSetsAsync();
+            var buffer = new List<SetInfo>(sets.Count + 1) { AnySet };
+            buffer.AddRange(sets);
+            var currentSet = _target.CurrentOptions.SetFilter;
+
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                SetList.Clear();
-                SetList.Add(AnySet);
-                foreach (var s in sets)
-                    SetList.Add(s);
-
-                var currentSet = _target.CurrentOptions.SetFilter;
-                if (string.IsNullOrEmpty(currentSet))
-                    SelectedSetIndex = 0;
-                else
-                {
-                    var idx = SetList.ToList().FindIndex(s => s.Code.Equals(currentSet, StringComparison.OrdinalIgnoreCase));
-                    SelectedSetIndex = idx >= 0 ? idx : 0;
-                }
+                ReplaceSetList(new ObservableCollection<SetInfo>(buffer));
+                SelectedSetIndex = FindSetIndexByCode(SetList, currentSet);
             });
         }
         catch (Exception ex)
@@ -417,11 +412,33 @@ public partial class SearchFiltersViewModel : BaseViewModel
             Logger.LogStuff($"SearchFilters: could not load sets: {ex.Message}", LogLevel.Warning);
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                SetList.Clear();
-                SetList.Add(AnySet);
+                ReplaceSetList(new ObservableCollection<SetInfo> { AnySet });
                 SelectedSetIndex = 0;
             });
         }
+    }
+
+    private void OnSetListCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        OnPropertyChanged(nameof(SelectedSetDisplayName));
+
+    private void ReplaceSetList(ObservableCollection<SetInfo> next)
+    {
+        SetList.CollectionChanged -= OnSetListCollectionChanged;
+        SetList = next;
+        SetList.CollectionChanged += OnSetListCollectionChanged;
+        OnPropertyChanged(nameof(SelectedSetDisplayName));
+    }
+
+    private static int FindSetIndexByCode(ObservableCollection<SetInfo> list, string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return 0;
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i].Code.Equals(code, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        return 0;
     }
 
     private SearchOptions BuildSearchOptions()
@@ -550,12 +567,7 @@ public partial class SearchFiltersViewModel : BaseViewModel
         SelectedFormatIndex = options.UseLegalFormat ? (int)options.LegalFormat + 1 : 0;
 
         if (SetList.Count > 0)
-        {
-            var idx = string.IsNullOrEmpty(options.SetFilter)
-                ? 0
-                : SetList.ToList().FindIndex(s => s.Code.Equals(options.SetFilter, StringComparison.OrdinalIgnoreCase));
-            SelectedSetIndex = idx >= 0 ? idx : 0;
-        }
+            SelectedSetIndex = FindSetIndexByCode(SetList, options.SetFilter);
 
         ChkPrimarySide = options.PrimarySideOnly;
         ChkNoVariations = options.NoVariations;

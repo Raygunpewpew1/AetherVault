@@ -111,6 +111,17 @@ public enum CollectionSortMode
     Color = 4,
 }
 
+/// <summary>Main / sideboard list presentation on the deck editor page.</summary>
+public enum DeckEditorLayoutMode
+{
+    /// <summary>Grouped rows, full metadata, swipe actions.</summary>
+    Standard,
+    /// <summary>Denser grouped rows, same swipe actions.</summary>
+    Compact,
+    /// <summary>Card art grid; use list layout for swipe move/remove.</summary>
+    Grid,
+}
+
 public static class EnumExtensions
 {
     static EnumExtensions()

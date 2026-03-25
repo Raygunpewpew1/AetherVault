@@ -8,6 +8,9 @@ using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Storage;
 
 namespace AetherVault.ViewModels;
 
@@ -66,12 +69,14 @@ public partial class DeckCardDisplayItem : ObservableObject
         OnPropertyChanged(nameof(IsOverCollection));
     }
 
-    /// <summary>Dark tint for list row background based on card color identity (WUBRG).</summary>
-    public Color StripBackgroundColor => DeckDetailViewModel.GetStripBackgroundColorFromIdentity(Card?.Colors ?? Card?.ColorIdentity ?? "");
+    /// <summary>List row fill: solid for 1 or 3+ colors, horizontal WUBRG gradient for exactly two colors.</summary>
+    public Brush StripBackground => DeckDetailViewModel.GetDeckRowStripBackgroundBrush(Card);
 
     /// <summary>Multi-select mode for bulk deck edits.</summary>
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
+
+    partial void OnCardChanged(Card value) => OnPropertyChanged(nameof(StripBackground));
 }
 
 /// <summary>Search result row in the add-cards sheet (staging + commander quick-add).</summary>
@@ -156,6 +161,8 @@ public partial class DeckDetailViewModel(
     private CancellationTokenSource? _addCardSearchCts;
     private int _addCardSearchGeneration;
     private CancellationTokenSource? _deckListFilterCts;
+    private const string PrefDeckEditorLayoutMode = "DeckEditorLayoutMode";
+    private bool _deckEditorLayoutPrefLoaded;
 
     /// <summary>Raised on the main thread after deck data has been reloaded (so the page can force layout/redraw).</summary>
     public event Action? ReloadCompleted;
@@ -163,7 +170,11 @@ public partial class DeckDetailViewModel(
     /// <summary>Raised when the user requests the quick-detail popup for a deck list card.</summary>
     public event Action<DeckCardDisplayItem>? RequestShowQuickDetail;
 
-    private LastAddedInfo? _lastAdded;
+    private const int MaxDeckUndoDepth = 25;
+    private readonly List<DeckEditorMutation[]> _undoStack = [];
+
+    /// <summary>True when the deck editor has at least one reversible edit (toolbar Undo).</summary>
+    public bool CanUndoDeckEdit => _undoStack.Count > 0;
 
     [ObservableProperty]
     public partial DeckEntity? Deck { get; set; }
@@ -174,6 +185,10 @@ public partial class DeckDetailViewModel(
     /// <summary>Main-deck groups after applying the in-deck filter (same item refs as Main when filter is empty).</summary>
     [ObservableProperty]
     public partial ObservableCollection<DeckCardGroup> FilteredMainDeckGroups { get; set; } = [];
+
+    /// <summary>Flattened filtered main-deck rows for grid layout (same item instances as in groups).</summary>
+    [ObservableProperty]
+    public partial ObservableCollection<DeckCardDisplayItem> MainDeckGridItems { get; set; } = [];
 
     [ObservableProperty]
     public partial ObservableCollection<DeckCardDisplayItem> SideboardCards { get; set; } = [];
@@ -212,6 +227,31 @@ public partial class DeckDetailViewModel(
 
     /// <summary>Show partner / other commander rows when any remain after filter.</summary>
     public bool ShowFilteredPartnersSection => FilteredAdditionalCommanderCards.Count > 0;
+
+    [ObservableProperty]
+    public partial DeckEditorLayoutMode DeckEditorLayoutMode { get; set; } = DeckEditorLayoutMode.Standard;
+
+    public bool IsDeckEditorLayoutStandard => DeckEditorLayoutMode == DeckEditorLayoutMode.Standard;
+    public bool IsDeckEditorLayoutCompact => DeckEditorLayoutMode == DeckEditorLayoutMode.Compact;
+    public bool IsDeckEditorLayoutGrid => DeckEditorLayoutMode == DeckEditorLayoutMode.Grid;
+
+    partial void OnDeckEditorLayoutModeChanged(DeckEditorLayoutMode value)
+    {
+        OnPropertyChanged(nameof(IsDeckEditorLayoutStandard));
+        OnPropertyChanged(nameof(IsDeckEditorLayoutCompact));
+        OnPropertyChanged(nameof(IsDeckEditorLayoutGrid));
+        try
+        {
+            Preferences.Default.Set(PrefDeckEditorLayoutMode, value.ToString());
+        }
+        catch
+        {
+            // ignore storage failures
+        }
+    }
+
+    /// <summary>Called from <see cref="Pages.DeckDetailPage"/> layout action sheet (and tests).</summary>
+    public void SetDeckEditorLayout(DeckEditorLayoutMode mode) => DeckEditorLayoutMode = mode;
 
     [ObservableProperty]
     public partial DeckStats Stats { get; set; } = new();
@@ -322,9 +362,59 @@ public partial class DeckDetailViewModel(
 
     public bool HasSelection => SelectedCardCount > 0;
 
-    private IAsyncRelayCommand? _undoLastAddedCommand;
+    private IAsyncRelayCommand? _undoDeckEditCommand;
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
-    public IAsyncRelayCommand UndoLastAddedCommand => _undoLastAddedCommand ??= new AsyncRelayCommand(UndoLastAddedAsync);
+    public IAsyncRelayCommand UndoDeckEditCommand => _undoDeckEditCommand ??= new AsyncRelayCommand(UndoDeckEditAsync, () => _undoStack.Count > 0);
+
+    private async Task UndoDeckEditAsync()
+    {
+        if (Deck == null || _undoStack.Count == 0) return;
+
+        DeckEditorMutation[] frame = _undoStack[^1];
+        _undoStack.RemoveAt(_undoStack.Count - 1);
+        NotifyUndoAvailability();
+
+        try
+        {
+            var result = await _deckService.ApplyEditorMutationsAsync(Deck.Id, frame);
+            if (result.IsError)
+            {
+                _undoStack.Add(frame);
+                NotifyUndoAvailability();
+                StatusIsError = true;
+                StatusMessage = result.Message ?? UserMessages.CouldNotUndoDeckEdit();
+                _toast.Show(UserMessages.CouldNotUndoDeckEdit(result.Message));
+                return;
+            }
+
+            await ReloadAsync(preserveState: true);
+            StatusIsError = false;
+            StatusMessage = UserMessages.DeckEditUndone;
+        }
+        catch (Exception ex)
+        {
+            _undoStack.Add(frame);
+            NotifyUndoAvailability();
+            _toast.Show(UserMessages.CouldNotUndoDeckEdit(ex.Message));
+        }
+    }
+
+    private void NotifyUndoAvailability()
+    {
+        OnPropertyChanged(nameof(CanUndoDeckEdit));
+        _undoDeckEditCommand?.NotifyCanExecuteChanged();
+    }
+
+    private void PushUndoFrame(DeckEditorMutation[] inverseMutations, string? toastSummary = null)
+    {
+        if (inverseMutations.Length == 0) return;
+        _undoStack.Add(inverseMutations);
+        while (_undoStack.Count > MaxDeckUndoDepth)
+            _undoStack.RemoveAt(0);
+        NotifyUndoAvailability();
+        if (!string.IsNullOrWhiteSpace(toastSummary))
+            _toast.ShowWithAction(toastSummary, "Undo", () => _ = UndoDeckEditAsync(), durationMs: 5000);
+    }
 
     private IAsyncRelayCommand? _suggestLandsCommand;
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
@@ -517,6 +607,8 @@ public partial class DeckDetailViewModel(
         }
 
         string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
+        var cardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
+        int qtyBefore = cardsBefore.FirstOrDefault(c => c.CardId == card.Uuid && c.Section == section)?.Quantity ?? 0;
         var addResult = await _deckService.AddCardAsync(Deck.Id, card.Uuid, 1, section);
         if (addResult.IsError)
         {
@@ -527,46 +619,11 @@ public partial class DeckDetailViewModel(
         {
             StatusIsError = false;
             StatusMessage = UserMessages.CardsAddedToSection(1, card.Name, section);
-            RegisterLastAdded(card.Uuid, card.Name, section, 1);
+            PushUndoFrame(
+            [
+                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, card.Uuid, section, null, qtyBefore)
+            ], UserMessages.CardsAddedToSection(1, card.Name, section));
             await ReloadAsync(preserveState: true);
-        }
-    }
-
-    public void RegisterLastAdded(string cardId, string cardName, string section, int quantity)
-    {
-        _lastAdded = new LastAddedInfo(cardId, section, quantity, cardName);
-        var summary = $"{quantity}× {cardName} added to {section}.";
-        _toast.ShowWithAction(summary, "Undo", () => _ = UndoLastAddedAsync(), durationMs: 5000);
-    }
-
-    private async Task UndoLastAddedAsync()
-    {
-        if (Deck == null || _lastAdded is null) return;
-
-        try
-        {
-            var cards = await _deckService.GetDeckCardsAsync(Deck.Id);
-            var existing = cards.FirstOrDefault(c => c.CardId == _lastAdded.CardId && c.Section == _lastAdded.Section);
-            if (existing == null) return;
-
-            int newQty = existing.Quantity - _lastAdded.Quantity;
-            if (newQty < 0) newQty = 0;
-
-            var result = await _deckService.UpdateQuantityAsync(Deck.Id, _lastAdded.CardId, newQty, _lastAdded.Section);
-            if (result.IsSuccess)
-            {
-                _toast.Show(UserMessages.UndidLastAdd(_lastAdded.Quantity, _lastAdded.CardName, _lastAdded.Section));
-                _lastAdded = null;
-                await ReloadAsync(preserveState: true);
-            }
-            else
-            {
-                _toast.Show(result.Message ?? UserMessages.CouldNotUndoLastAdd());
-            }
-        }
-        catch (Exception ex)
-        {
-            _toast.Show(UserMessages.CouldNotUndoLastAdd(ex.Message));
         }
     }
 
@@ -575,6 +632,27 @@ public partial class DeckDetailViewModel(
     public async Task LoadAsync(int deckId, bool preserveState = false)
     {
         _deckId = deckId;
+        if (!_deckEditorLayoutPrefLoaded)
+        {
+            _deckEditorLayoutPrefLoaded = true;
+            try
+            {
+                string s = Preferences.Default.Get(PrefDeckEditorLayoutMode, DeckEditorLayoutMode.Standard.ToString());
+                if (Enum.TryParse(s, out DeckEditorLayoutMode layoutMode))
+                    DeckEditorLayoutMode = layoutMode;
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        if (!preserveState)
+        {
+            _undoStack.Clear();
+            NotifyUndoAvailability();
+        }
+
         if (IsBusy) return;
         IsBusy = true;
         StatusIsError = false;
@@ -661,7 +739,9 @@ public partial class DeckDetailViewModel(
         return SelectedSectionIndex switch
         {
             0 => [.. CommanderCards.Select(x => x.CardUuid)],
-            1 => [.. FilteredMainDeckGroups.SelectMany(g => g).Select(x => x.CardUuid)],
+            1 => DeckEditorLayoutMode == DeckEditorLayoutMode.Grid
+                ? [.. MainDeckGridItems.Select(x => x.CardUuid)]
+                : [.. FilteredMainDeckGroups.SelectMany(g => g).Select(x => x.CardUuid)],
             2 => [.. FilteredSideboardCards.Select(x => x.CardUuid)],
             _ => []
         };
@@ -710,6 +790,17 @@ public partial class DeckDetailViewModel(
 
         OnPropertyChanged(nameof(ShowCommanderHeroArt));
         OnPropertyChanged(nameof(ShowFilteredPartnersSection));
+        RebuildMainDeckGridItems();
+    }
+
+    private void RebuildMainDeckGridItems()
+    {
+        MainDeckGridItems.Clear();
+        foreach (var g in FilteredMainDeckGroups)
+        {
+            foreach (var item in g)
+                MainDeckGridItems.Add(item);
+        }
     }
 
     private static (List<DeckCardDisplayItem> commander, List<DeckCardDisplayItem> main, List<DeckCardDisplayItem> sideboard)
@@ -757,7 +848,13 @@ public partial class DeckDetailViewModel(
         var result = await _deckService.UpdateQuantityAsync(
             Deck.Id, item.Entity.CardId, prev + 1, item.Entity.Section);
         if (result.IsSuccess)
+        {
+            PushUndoFrame(
+            [
+                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, item.Entity.CardId, item.Entity.Section, null, prev)
+            ]);
             ApplyLocalPatchAfterQuantitySuccess(item, prev + 1, item.Entity.Section);
+        }
         else
         {
             StatusIsError = true;
@@ -769,11 +866,18 @@ public partial class DeckDetailViewModel(
     private async Task DecrementCardAsync(DeckCardDisplayItem item)
     {
         if (Deck == null) return;
-        int newQty = item.Entity.Quantity - 1;
+        int prev = item.Entity.Quantity;
+        int newQty = prev - 1;
         var result = await _deckService.UpdateQuantityAsync(
             Deck.Id, item.Entity.CardId, newQty, item.Entity.Section);
         if (result.IsSuccess)
+        {
+            PushUndoFrame(
+            [
+                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, item.Entity.CardId, item.Entity.Section, null, prev)
+            ], newQty <= 0 ? $"{item.DisplayName} removed from deck." : null);
             ApplyLocalPatchAfterQuantitySuccess(item, newQty, item.Entity.Section);
+        }
         else
         {
             StatusIsError = true;
@@ -786,7 +890,13 @@ public partial class DeckDetailViewModel(
     {
         if (Deck == null) return;
         string section = item.Entity.Section;
+        int q = item.Entity.Quantity;
+        string name = item.DisplayName;
         await _deckService.RemoveCardAsync(Deck.Id, item.Entity.CardId, section);
+        PushUndoFrame(
+        [
+            new DeckEditorMutation(DeckEditorMutationKind.Add, item.Entity.CardId, section, null, q)
+        ], $"{name} removed.");
         ApplyLocalPatchAfterQuantitySuccess(item, 0, section);
     }
 
@@ -873,6 +983,7 @@ public partial class DeckDetailViewModel(
         var mutations = items
             .Select(i => new DeckEditorMutation(DeckEditorMutationKind.Remove, i.Entity.CardId, i.Entity.Section))
             .ToList();
+        var snapshots = items.Select(i => (i.Entity.CardId, i.Entity.Section, i.Entity.Quantity)).ToList();
         var result = await _deckService.ApplyEditorMutationsAsync(Deck.Id, mutations);
         if (result.IsError)
         {
@@ -880,6 +991,10 @@ public partial class DeckDetailViewModel(
             StatusMessage = result.Message ?? UserMessages.CouldNotUpdateQuantity();
             return;
         }
+
+        PushUndoFrame(
+            [.. snapshots.Select(s => new DeckEditorMutation(DeckEditorMutationKind.Add, s.CardId, s.Section, null, s.Quantity))],
+            items.Count == 1 ? $"{items[0].DisplayName} removed." : $"Removed {items.Count} stack(s).");
 
         StatusIsError = false;
         StatusMessage = $"Removed {items.Count} stack(s).";
@@ -895,10 +1010,11 @@ public partial class DeckDetailViewModel(
             .ToList();
         if (items.Count == 0) return;
 
+        var snapshots = items.Select(i => (i.Entity.CardId, i.Entity.Quantity)).ToList();
         var mutations = items
             .Select(i => new DeckEditorMutation(DeckEditorMutationKind.Move, i.Entity.CardId, "Sideboard", "Main", 0))
             .ToList();
-        await FinishBulkMoveAsync(mutations, "Main");
+        await FinishBulkMoveAsync(mutations, "Main", snapshots);
     }
 
     private async Task BulkMoveSelectionToSideboardAsync()
@@ -909,13 +1025,17 @@ public partial class DeckDetailViewModel(
             .ToList();
         if (items.Count == 0) return;
 
+        var snapshots = items.Select(i => (i.Entity.CardId, i.Entity.Quantity)).ToList();
         var mutations = items
             .Select(i => new DeckEditorMutation(DeckEditorMutationKind.Move, i.Entity.CardId, "Main", "Sideboard", 0))
             .ToList();
-        await FinishBulkMoveAsync(mutations, "Sideboard");
+        await FinishBulkMoveAsync(mutations, "Sideboard", snapshots);
     }
 
-    private async Task FinishBulkMoveAsync(List<DeckEditorMutation> mutations, string targetLabel)
+    private async Task FinishBulkMoveAsync(
+        List<DeckEditorMutation> mutations,
+        string targetLabel,
+        List<(string CardId, int Quantity)> moveSnapshots)
     {
         if (Deck == null || mutations.Count == 0) return;
 
@@ -926,6 +1046,11 @@ public partial class DeckDetailViewModel(
             StatusMessage = result.Message ?? UserMessages.CouldNotUpdateQuantity();
             return;
         }
+
+        DeckEditorMutation[] inverse = string.Equals(targetLabel, "Main", StringComparison.OrdinalIgnoreCase)
+            ? [.. moveSnapshots.Select(s => new DeckEditorMutation(DeckEditorMutationKind.Move, s.CardId, "Main", "Sideboard", s.Quantity))]
+            : [.. moveSnapshots.Select(s => new DeckEditorMutation(DeckEditorMutationKind.Move, s.CardId, "Sideboard", "Main", s.Quantity))];
+        PushUndoFrame(inverse);
 
         StatusIsError = false;
         StatusMessage = $"Moved {mutations.Count} stack(s) to {targetLabel}.";
@@ -939,6 +1064,7 @@ public partial class DeckDetailViewModel(
         var items = GetSelectedVisibleItems().ToList();
         if (items.Count == 0) return;
 
+        var snapshots = items.Select(i => (i.Entity.CardId, i.Entity.Section, i.Entity.Quantity)).ToList();
         var mutations = items
             .Select(i => new DeckEditorMutation(DeckEditorMutationKind.Add, i.Entity.CardId, i.Entity.Section, null, 1))
             .ToList();
@@ -949,6 +1075,9 @@ public partial class DeckDetailViewModel(
             StatusMessage = result.Message ?? UserMessages.CouldNotUpdateQuantity();
             return;
         }
+
+        PushUndoFrame(
+            [.. snapshots.Select(s => new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, s.CardId, s.Section, null, s.Quantity))]);
 
         StatusIsError = false;
         StatusMessage = $"+1 to {items.Count} stack(s).";
@@ -961,6 +1090,7 @@ public partial class DeckDetailViewModel(
         var items = GetSelectedVisibleItems().ToList();
         if (items.Count == 0) return;
 
+        var snapshots = items.Select(i => (i.Entity.CardId, i.Entity.Section, i.Entity.Quantity)).ToList();
         var mutations = items
             .Select(i => new DeckEditorMutation(
                 DeckEditorMutationKind.SetQuantity,
@@ -977,6 +1107,9 @@ public partial class DeckDetailViewModel(
             return;
         }
 
+        PushUndoFrame(
+            [.. snapshots.Select(s => new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, s.CardId, s.Section, null, s.Quantity))]);
+
         StatusIsError = false;
         StatusMessage = $"-1 from {items.Count} stack(s).";
         await ReloadAsync(preserveState: true);
@@ -988,6 +1121,7 @@ public partial class DeckDetailViewModel(
         if (!string.Equals(item.Entity.Section, "Main", StringComparison.OrdinalIgnoreCase))
             return;
 
+        int q = item.Entity.Quantity;
         var result = await _deckService.ApplyEditorMutationsAsync(Deck.Id,
         [
             new DeckEditorMutation(DeckEditorMutationKind.Move, item.Entity.CardId, "Main", "Sideboard", 0)
@@ -998,6 +1132,11 @@ public partial class DeckDetailViewModel(
             StatusMessage = result.Message ?? UserMessages.CouldNotUpdateQuantity();
             return;
         }
+
+        PushUndoFrame(
+        [
+            new DeckEditorMutation(DeckEditorMutationKind.Move, item.Entity.CardId, "Sideboard", "Main", q)
+        ]);
 
         StatusIsError = false;
         StatusMessage = $"Moved {item.DisplayName} to Sideboard.";
@@ -1010,6 +1149,7 @@ public partial class DeckDetailViewModel(
         if (!string.Equals(item.Entity.Section, "Sideboard", StringComparison.OrdinalIgnoreCase))
             return;
 
+        int q = item.Entity.Quantity;
         var result = await _deckService.ApplyEditorMutationsAsync(Deck.Id,
         [
             new DeckEditorMutation(DeckEditorMutationKind.Move, item.Entity.CardId, "Sideboard", "Main", 0)
@@ -1020,6 +1160,11 @@ public partial class DeckDetailViewModel(
             StatusMessage = result.Message ?? UserMessages.CouldNotUpdateQuantity();
             return;
         }
+
+        PushUndoFrame(
+        [
+            new DeckEditorMutation(DeckEditorMutationKind.Move, item.Entity.CardId, "Main", "Sideboard", q)
+        ]);
 
         StatusIsError = false;
         StatusMessage = $"Moved {item.DisplayName} to Main.";
@@ -1111,6 +1256,10 @@ public partial class DeckDetailViewModel(
         }
 
         string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
+        var deckCardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
+        var qtyBeforeList = StagedAddItems
+            .Select(s => deckCardsBefore.FirstOrDefault(c => c.CardId == s.Card.Uuid && c.Section == section)?.Quantity ?? 0)
+            .ToList();
         var mutations = StagedAddItems
             .Select(s => new DeckEditorMutation(DeckEditorMutationKind.Add, s.Card.Uuid, section, null, s.Quantity))
             .ToList();
@@ -1123,6 +1272,10 @@ public partial class DeckDetailViewModel(
         }
 
         int total = StagedAddItems.Sum(s => s.Quantity);
+        PushUndoFrame(
+            [.. StagedAddItems.Select((s, i) =>
+                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, s.Card.Uuid, section, null, qtyBeforeList[i]))],
+            $"Added {total} card(s) to {section}.");
         StatusIsError = false;
         StatusMessage = $"Added {total} card(s) to {section}.";
         StagedAddItems.Clear();
@@ -1267,9 +1420,112 @@ public partial class DeckDetailViewModel(
         }
     }
 
-    /// <summary>Maps color identity string (e.g. "W", "GU") to a dark tint for list strip backgrounds. Matches WUBRG logic used in commander header.</summary>
+    /// <summary>
+    /// WUBRG letters for consistent ordering on dual-color gradient strips (matches typical guild/shard display order).
+    /// </summary>
+    private static ReadOnlySpan<char> WubrgOrder => "WUBRG";
+
+    /// <summary>
+    /// Resolves identity text for strip coloring: <see cref="Card.ColorIdentity"/> when set; for lands, produced mana or basic name; else <see cref="Card.Colors"/>.
+    /// </summary>
+    private static string GetDeckRowColorIdentityString(Card? card)
+    {
+        if (card == null)
+            return "";
+
+        if (!string.IsNullOrWhiteSpace(card.ColorIdentity))
+            return card.ColorIdentity;
+
+        string type = card.CardType ?? "";
+        if (type.Contains("Land", StringComparison.OrdinalIgnoreCase))
+        {
+            string fromProduced = NormalizeProducedManaLetters(card.ProducedMana);
+            if (!string.IsNullOrEmpty(fromProduced))
+                return fromProduced;
+
+            string? basic = BasicLandColorIdentityFromName(card.Name);
+            if (basic != null)
+                return basic;
+        }
+
+        return card.Colors ?? "";
+    }
+
+    /// <summary>Deck list row background: 0 = neutral, 1 = single pip tint, 2 = horizontal dual gradient (WUBRG order), 3+ = gold.</summary>
+    public static Brush GetDeckRowStripBackgroundBrush(Card? card) =>
+        GetStripBackgroundBrushFromIdentity(GetDeckRowColorIdentityString(card));
+
+    private static string NormalizeProducedManaLetters(string? producedMana)
+    {
+        if (string.IsNullOrWhiteSpace(producedMana))
+            return "";
+
+        Span<char> buf = stackalloc char[5];
+        int n = 0;
+        foreach (char raw in producedMana)
+        {
+            char c = char.ToUpperInvariant(raw);
+            if (c is not ('W' or 'U' or 'B' or 'R' or 'G'))
+                continue;
+            bool dup = false;
+            for (int i = 0; i < n; i++)
+            {
+                if (buf[i] == c) { dup = true; break; }
+            }
+
+            if (!dup && n < buf.Length)
+                buf[n++] = c;
+        }
+
+        return n == 0 ? "" : new string(buf[..n]);
+    }
+
+    private static string? BasicLandColorIdentityFromName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        ReadOnlySpan<char> n = name.AsSpan().Trim();
+        if (n.StartsWith("Snow-Covered ", StringComparison.OrdinalIgnoreCase))
+            n = n["Snow-Covered ".Length..];
+
+        return n.ToString() switch
+        {
+            "Plains" => "W",
+            "Island" => "U",
+            "Swamp" => "B",
+            "Mountain" => "R",
+            "Forest" => "G",
+            "Wastes" => "",
+            _ => null
+        };
+    }
+
+    private static Color StripColorForWubrgLetter(char letter) =>
+        char.ToUpperInvariant(letter) switch
+        {
+            'W' => Color.FromArgb("#3D3528"),
+            'U' => Color.FromArgb("#0D2E4F"),
+            'B' => Color.FromArgb("#1D1528"),
+            'R' => Color.FromArgb("#4F0D0D"),
+            'G' => Color.FromArgb("#0D351D"),
+            _ => Color.FromArgb("#2A2A33")
+        };
+
+    /// <summary>Dark solid for commander header / single-color strips; dual colors use <see cref="GetStripBackgroundBrushFromIdentity"/>.</summary>
     public static Color GetStripBackgroundColorFromIdentity(string colorIdentity)
     {
+        var brush = GetStripBackgroundBrushFromIdentity(colorIdentity);
+        if (brush is SolidColorBrush scb)
+            return scb.Color;
+        if (brush is LinearGradientBrush lgb && lgb.GradientStops.Count > 0)
+            return lgb.GradientStops[0].Color;
+        return Color.FromArgb("#2A2A33");
+    }
+
+    public static Brush GetStripBackgroundBrushFromIdentity(string colorIdentity)
+    {
+        colorIdentity = (colorIdentity ?? "").ToUpperInvariant();
         bool w = colorIdentity.Contains('W');
         bool u = colorIdentity.Contains('U');
         bool b = colorIdentity.Contains('B');
@@ -1277,15 +1533,47 @@ public partial class DeckDetailViewModel(
         bool g = colorIdentity.Contains('G');
         int count = (w ? 1 : 0) + (u ? 1 : 0) + (b ? 1 : 0) + (r ? 1 : 0) + (g ? 1 : 0);
 
-        if (count == 0) return Color.FromArgb("#2A2A33");
-        if (count >= 3) return Color.FromArgb("#3B2C0A"); // multicolor / gold dark
+        if (count == 0)
+            return new SolidColorBrush(Color.FromArgb("#2A2A33"));
+        if (count >= 3)
+            return new SolidColorBrush(Color.FromArgb("#3B2C0A"));
 
-        // Single or dual: use first color, darkened for strip
-        return (u ? Color.FromArgb("#0D2E4F")
-             : g ? Color.FromArgb("#0D351D")
-             : r ? Color.FromArgb("#4F0D0D")
-             : b ? Color.FromArgb("#1D1528")
-             : Color.FromArgb("#3D3528")); // white -> tan
+        if (count == 2)
+        {
+            char first = ' ';
+            char second = ' ';
+            int n = 0;
+            foreach (char ch in WubrgOrder)
+            {
+                if (!colorIdentity.Contains(ch)) continue;
+                if (n == 0) first = ch;
+                else second = ch;
+                n++;
+                if (n == 2) break;
+            }
+
+            Color c0 = StripColorForWubrgLetter(first);
+            Color c1 = StripColorForWubrgLetter(second);
+            return new LinearGradientBrush
+            {
+                StartPoint = new Point(0, 0.5),
+                EndPoint = new Point(1, 0.5),
+                GradientStops =
+                [
+                    new GradientStop(c0, 0f),
+                    new GradientStop(c1, 1f)
+                ]
+            };
+        }
+
+        // Single color
+        if (w && !u && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('W'));
+        if (u && !w && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('U'));
+        if (b && !w && !u && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('B'));
+        if (r && !w && !u && !b && !g) return new SolidColorBrush(StripColorForWubrgLetter('R'));
+        if (g && !w && !u && !b && !r) return new SolidColorBrush(StripColorForWubrgLetter('G'));
+
+        return new SolidColorBrush(Color.FromArgb("#2A2A33"));
     }
 
     private static ObservableCollection<DeckCardGroup> BuildGroups(List<DeckCardDisplayItem> items)
@@ -1358,6 +1646,4 @@ public partial class DeckDetailViewModel(
         stats.AvgCmc = cmcCount > 0 ? Math.Round(totalCmc / cmcCount, 2) : 0;
         return stats;
     }
-
-    private sealed record LastAddedInfo(string CardId, string Section, int Quantity, string CardName);
 }

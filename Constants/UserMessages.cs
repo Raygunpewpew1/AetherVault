@@ -84,6 +84,13 @@ public static class UserMessages
     public static string UndidLastAdd(int quantity, string cardName, string section) =>
         $"Undid last add: removed {quantity}× {cardName} from {section}.";
 
+    /// <summary>Deck editor undo succeeded.</summary>
+    public const string DeckEditUndone = "Undone.";
+
+    /// <summary>Deck editor could not apply undo mutations.</summary>
+    public static string CouldNotUndoDeckEdit(string? detail = null) =>
+        string.IsNullOrEmpty(detail) ? "Could not undo." : $"Could not undo: {detail}";
+
     public static string UpdatedQuantity(string itemName) => $"Updated {itemName} quantity.";
 
     public static string AddedLandsToMain(int count) => $"Added {count} basic lands to Main.";
@@ -99,6 +106,17 @@ public static class UserMessages
         $"Imported {deckCount} deck{(deckCount == 1 ? "" : "s")} ({cardCount} cards).";
 
     public const string DeckImportFailed = "Deck import failed.";
+
+    /// <summary>Moxfield-only URL import; ManaBox needs export/paste.</summary>
+    public const string ImportDeckFromUrlTitle = "Import from link";
+
+    public const string ImportDeckFromUrlPrompt = "Paste a public Moxfield deck URL.";
+
+    public const string ManaBoxDeckUrlHint =
+        "ManaBox links are not supported in-app yet. In ManaBox, open the menu (⋯) → Export, then import that file or use Paste list here.";
+
+    public const string UnsupportedDeckUrlHint =
+        "Unsupported link. Use a Moxfield deck URL, or Import file / Paste list.";
     public const string LoadingDeckList = "Loading deck list...";
     public const string ImportingMtgJsonDeck = "Importing deck...";
     public static string MtgJsonDeckImportedToast(string deckName, int cardCount) =>

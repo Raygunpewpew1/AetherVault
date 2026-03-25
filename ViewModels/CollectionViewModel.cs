@@ -98,18 +98,43 @@ public partial class CollectionViewModel : BaseViewModel
         if (_grid != null) _grid.ViewMode = value;
     }
 
+    private const int FilterTextDebounceMs = 300;
+
     private CancellationTokenSource? _filterCts;
+    private CancellationTokenSource? _filterDebounceCts;
 
     partial void OnSortModeChanged(CollectionSortMode value)
     {
         OnPropertyChanged(nameof(SortModeIndex));
-        _ = ApplyFilterAndSortAsync();
+        _ = ApplyFilterAndSortAsync(immediate: true);
     }
 
-    partial void OnFilterTextChanged(string value) => _ = ApplyFilterAndSortAsync();
+    partial void OnFilterTextChanged(string value) => _ = ApplyFilterAndSortAfterDebounceAsync();
 
-    private async Task ApplyFilterAndSortAsync()
+    /// <summary>Debounced path for filter text so each keystroke does not schedule a full filter+sort over the collection.</summary>
+    private async Task ApplyFilterAndSortAfterDebounceAsync()
     {
+        _filterDebounceCts?.Cancel();
+        _filterDebounceCts = new CancellationTokenSource();
+        var debounceToken = _filterDebounceCts.Token;
+        try
+        {
+            await Task.Delay(FilterTextDebounceMs, debounceToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        await ApplyFilterAndSortAsync(immediate: false).ConfigureAwait(false);
+    }
+
+    /// <param name="immediate">When true, cancels any pending debounced filter (e.g. sort change, reload).</param>
+    private async Task ApplyFilterAndSortAsync(bool immediate = true)
+    {
+        if (immediate)
+            _filterDebounceCts?.Cancel();
+
         _filterCts?.Cancel();
         _filterCts = new CancellationTokenSource();
         var token = _filterCts.Token;
