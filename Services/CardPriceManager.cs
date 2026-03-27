@@ -194,6 +194,7 @@ public class CardPriceManager : IDisposable
         else
         {
             OnProgress?.Invoke("Prices up to date.", 100);
+            PricePreferences.SetSyncPending(false);
         }
 
         // 3. Check for DB version update (weekly)
@@ -227,6 +228,7 @@ public class CardPriceManager : IDisposable
     private async Task<bool> DownloadAndSyncPricesAsync()
     {
         await _updateLock.WaitAsync();
+        PricePreferences.SetSyncPending(true);
         try
         {
             const int maxRetries = 3;
@@ -255,6 +257,7 @@ public class CardPriceManager : IDisposable
         }
         finally
         {
+            PricePreferences.SetSyncPending(false);
             _updateLock.Release();
         }
     }

@@ -15,9 +15,11 @@ public sealed class GridPriceLoadService : IGridPriceLoadService
     }
 
     /// <inheritdoc />
-    public void LoadVisiblePrices(CardGrid? grid, int start, int end)
+    public void LoadVisiblePrices(CardGrid? grid, int start, int end, bool isCollectionGrid = false)
     {
         if (grid == null) return;
+        if (!PricePreferences.PricesDataEnabled) return;
+        if (isCollectionGrid && !PricePreferences.CollectionPriceDisplayEnabled) return;
 
         _ = Task.Run(async () =>
         {

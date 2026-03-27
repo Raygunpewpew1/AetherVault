@@ -249,6 +249,8 @@ public static class AppDataManager
             }
 
             // 2. Sanity: full DB has `cards`; lite (Atomic) has `atomic_cards`
+            var hasCards = false;
+            var hasAtomic = false;
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = """
@@ -259,8 +261,8 @@ public static class AppDataManager
                 await using var reader = await cmd.ExecuteReaderAsync(ct);
                 if (!await reader.ReadAsync(ct))
                     return false;
-                var hasCards = reader.GetInt32(0) != 0;
-                var hasAtomic = reader.GetInt32(1) != 0;
+                hasCards = reader.GetInt32(0) != 0;
+                hasAtomic = reader.GetInt32(1) != 0;
                 if (!hasCards && !hasAtomic)
                 {
                     Logger.LogStuff("MTG DB sanity check failed: neither 'cards' nor 'atomic_cards' found.", LogLevel.Error);
@@ -270,6 +272,26 @@ public static class AppDataManager
                 {
                     Logger.LogStuff("MTG DB sanity check failed: unexpected mix of 'cards' and 'atomic_cards'.", LogLevel.Error);
                     return false;
+                }
+            }
+
+            // 3. Compact catalog builds v2+ must include identifiers_json for collection UUID bridging.
+            if (hasAtomic)
+            {
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = """
+                        SELECT 1 FROM pragma_table_info('atomic_cards')
+                        WHERE name = 'identifiers_json' LIMIT 1;
+                        """;
+                    var col = await cmd.ExecuteScalarAsync(ct);
+                    if (col is null || col is DBNull)
+                    {
+                        Logger.LogStuff(
+                            "MTG DB: atomic_cards missing identifiers_json; download the latest compact catalog.",
+                            LogLevel.Error);
+                        return false;
+                    }
                 }
             }
 

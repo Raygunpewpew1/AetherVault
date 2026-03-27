@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:constants="clr-namespace:AetherVault.Constants;assembly=AetherVault"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.LoadingPage"
              x:Name="SplashRoot"
@@ -62,6 +63,56 @@
                    HorizontalTextAlignment="Center"
                    Margin="0,0,0,48"
                    Opacity="0" />
+
+            <!-- First-run catalog choice -->
+            <VerticalStackLayout IsVisible="{Binding ShowCatalogChoice}"
+                                 Spacing="12"
+                                 HorizontalOptions="Center"
+                                 MaximumWidthRequest="320"
+                                 Margin="0,0,0,24">
+                <Border Stroke="{StaticResource SplashAccent}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        Padding="14,12"
+                        BackgroundColor="#1E1A2E">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{x:Static constants:UserMessages.FullCatalogChoiceTitle}"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource TextPrimary}" />
+                        <Label Text="{x:Static constants:UserMessages.FullCatalogChoiceDescription}"
+                               FontSize="13"
+                               TextColor="{StaticResource SplashMuted}"
+                               LineBreakMode="WordWrap" />
+                        <Button Text="Use full catalog"
+                                Command="{Binding ChooseFullCatalogCommand}"
+                                StyleClass="FilledButton"
+                                BackgroundColor="{StaticResource Primary}"
+                                TextColor="White"
+                                Margin="0,8,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Stroke="#6B6580"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 12"
+                        Padding="14,12"
+                        BackgroundColor="#1E1A2E">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="{x:Static constants:UserMessages.CompactCatalogChoiceTitle}"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource TextPrimary}" />
+                        <Label Text="{x:Static constants:UserMessages.CompactCatalogChoiceDescription}"
+                               FontSize="13"
+                               TextColor="{StaticResource SplashMuted}"
+                               LineBreakMode="WordWrap" />
+                        <Button Text="Use compact catalog"
+                                Command="{Binding ChooseCompactCatalogCommand}"
+                                StyleClass="FilledButton"
+                                BackgroundColor="#2D2640"
+                                TextColor="White"
+                                Margin="0,8,0,0" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
 
             <!-- Progress section -->
             <Grid x:Name="ProgressSection" IsVisible="{Binding IsBusy}" Opacity="0" Margin="0,0,0,16" WidthRequest="280" HorizontalOptions="Center">

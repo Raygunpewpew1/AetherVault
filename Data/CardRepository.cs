@@ -138,11 +138,11 @@ public class CardRepository : ICardRepository
         {
             if (_db.IsAtomicCatalog)
             {
+                var match = AtomicCatalogMapper.SqlAliasMatchesIdParameter("a", "id");
                 var json = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
-                    """
+                    $"""
                     SELECT a.rulings_json FROM atomic_cards a
-                    WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
-                       OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                    WHERE {match}
                     LIMIT 1
                     """,
                     new { id = uuid });
@@ -174,29 +174,33 @@ public class CardRepository : ICardRepository
         {
             if (_db.IsAtomicCatalog)
             {
+                var match = AtomicCatalogMapper.SqlAliasMatchesIdParameter("a", "id");
                 var self = await _db.MtgConnection.QueryFirstOrDefaultAsync<AtomicIdNameRow>(
-                    """
+                    $"""
                     SELECT a.id AS Id, a.name AS Name FROM atomic_cards a
-                    WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
-                       OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                    WHERE {match}
                     LIMIT 1
                     """,
                     new { id = uuid });
                 if (self is null || string.IsNullOrEmpty(self.Name))
                     return [];
 
-                var ids = await _db.MtgConnection.QueryAsync<string>(
+                var siblingRows = await _db.MtgConnection.QueryAsync<AtomicCatalogMapper.AtomicRow>(
                     """
-                    SELECT COALESCE(
-                      NULLIF(TRIM(scryfall_id), ''),
-                      NULLIF(TRIM(scryfall_oracle_id), ''),
-                      'atomic:' || CAST(id AS TEXT))
-                    FROM atomic_cards
-                    WHERE name = @n AND id <> @sid
-                    ORDER BY face_index
+                    SELECT
+                      a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
+                      a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
+                      a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
+                      a.identifiers_json, a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                      a.leadership_json, a.is_reserved, a.is_funny
+                    FROM atomic_cards a
+                    WHERE a.name = @n AND a.id <> @sid
+                    ORDER BY a.face_index
                     """,
                     new { n = self.Name, sid = self.Id });
-                return [.. ids];
+                return [.. siblingRows
+                    .Select(r => AtomicCatalogMapper.ToCard(r).Uuid)
+                    .Where(static s => !string.IsNullOrEmpty(s))];
             }
 
             var raw = await _db.MtgConnection.QueryFirstOrDefaultAsync<string>(
@@ -233,7 +237,7 @@ public class CardRepository : ICardRepository
                       a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
                       a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
                       a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
-                      a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                      a.identifiers_json, a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
                       a.leadership_json, a.is_reserved, a.is_funny
                     FROM atomic_cards a
                     WHERE a.name = @n
@@ -245,7 +249,7 @@ public class CardRepository : ICardRepository
                 foreach (var r in rows)
                 {
                     var c = AtomicCatalogMapper.ToCard(r);
-                    if (string.Equals(StableAtomicId(r), uuid, StringComparison.OrdinalIgnoreCase))
+                    if (AtomicCatalogMapper.RowMatchesLookupId(r, uuid))
                         c.Rulings = AtomicCatalogMapper.ParseRulings(r.rulings_json);
                     list.Add(c);
                 }
@@ -314,8 +318,7 @@ public class CardRepository : ICardRepository
                 for (int j = 0; j < chunk.Length; j++)
                 {
                     var p = "u" + (i + j);
-                    parts.Add(
-                        $"(a.scryfall_id = @{p} OR a.scryfall_oracle_id = @{p} OR ('atomic:' || CAST(a.id AS TEXT)) = @{p})");
+                    parts.Add(AtomicCatalogMapper.SqlAliasMatchesIdParameter("a", p));
                     dynamicParams.Add(p, chunk[j]);
                 }
 
@@ -325,7 +328,7 @@ public class CardRepository : ICardRepository
                       a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
                       a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
                       a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
-                      a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                      a.identifiers_json, a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
                       a.leadership_json, a.is_reserved, a.is_funny
                     FROM atomic_cards a
                     WHERE {string.Join(" OR ", parts)}
@@ -338,8 +341,7 @@ public class CardRepository : ICardRepository
                     foreach (var r in rows)
                     {
                         var card = AtomicCatalogMapper.ToCard(r);
-                        if (!string.IsNullOrEmpty(card.Uuid))
-                            result[card.Uuid] = card;
+                        AtomicCatalogMapper.AddAtomicRowToLookupDictionary(result, r, card);
                     }
                 }
                 finally
@@ -556,15 +558,6 @@ public class CardRepository : ICardRepository
 
     // ── Private helpers ─────────────────────────────────────────────
 
-    private static string StableAtomicId(AtomicCatalogMapper.AtomicRow r)
-    {
-        var sid = (r.scryfall_id ?? "").Trim();
-        var oracle = (r.scryfall_oracle_id ?? "").Trim();
-        if (!string.IsNullOrEmpty(sid)) return sid;
-        if (!string.IsNullOrEmpty(oracle)) return oracle;
-        return $"atomic:{r.id}";
-    }
-
     private sealed class AtomicIdNameRow
     {
         public int Id { get; set; }
@@ -576,17 +569,17 @@ public class CardRepository : ICardRepository
         await _lock.WaitAsync();
         try
         {
+            var match = AtomicCatalogMapper.SqlAliasMatchesIdParameter("a", "id");
             var row = await _db.MtgConnection.QueryFirstOrDefaultAsync<AtomicCatalogMapper.AtomicRow>(
                 $"""
                 SELECT
                   a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
                   a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
                   a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
-                  a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+                  a.identifiers_json, a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
                   a.leadership_json, a.is_reserved, a.is_funny
                 FROM atomic_cards a
-                WHERE a.scryfall_id = @id OR a.scryfall_oracle_id = @id
-                   OR ('atomic:' || CAST(a.id AS TEXT)) = @id
+                WHERE {match}
                 LIMIT 1
                 """,
                 new { id });

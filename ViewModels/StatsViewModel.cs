@@ -132,6 +132,18 @@ public partial class StatsViewModel : BaseViewModel
     {
         try
         {
+            if (!PricePreferences.PricesDataEnabled || !PricePreferences.CollectionPriceDisplayEnabled)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    var s = Stats;
+                    s.TotalValue = 0;
+                    Stats = s;
+                    OnPropertyChanged(nameof(Stats));
+                });
+                return;
+            }
+
             var total = await _cardManager.GetCollectionTotalValueAsync();
             MainThread.BeginInvokeOnMainThread(() =>
             {

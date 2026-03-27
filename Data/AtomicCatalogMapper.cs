@@ -28,6 +28,7 @@ public static class AtomicCatalogMapper
         public string? keywords { get; set; }
         public string? scryfall_id { get; set; }
         public string? scryfall_oracle_id { get; set; }
+        public string? identifiers_json { get; set; }
         public string? first_printing { get; set; }
         public string? printings_json { get; set; }
         public string? legalities_json { get; set; }
@@ -38,20 +39,137 @@ public static class AtomicCatalogMapper
         public int is_funny { get; set; }
     }
 
+    private sealed class IdentifiersDoc
+    {
+        public string? ScryfallId { get; init; }
+        public string? MtgjsonV4Id { get; init; }
+        public string? MtgjsonNonFoilVersionId { get; init; }
+        public string? MtgjsonFoilVersionId { get; init; }
+    }
+
+    private static IdentifiersDoc? TryParseIdentifiers(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return null;
+            static string? str(JsonElement el, string name) =>
+                el.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String
+                    ? p.GetString()
+                    : null;
+            return new IdentifiersDoc
+            {
+                ScryfallId = str(root, "scryfallId"),
+                MtgjsonV4Id = str(root, "mtgjsonV4Id"),
+                MtgjsonNonFoilVersionId = str(root, "mtgjsonNonFoilVersionId"),
+                MtgjsonFoilVersionId = str(root, "mtgjsonFoilVersionId")
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// SQL predicate: table alias <paramref name="alias"/> matches bound parameter <paramref name="paramName"/> (without @).
+    /// </summary>
+    public static string SqlAliasMatchesIdParameter(string alias, string paramName)
+    {
+        var p = paramName.TrimStart('@');
+        return $"""
+            ({alias}.scryfall_id = @{p} OR {alias}.scryfall_oracle_id = @{p}
+             OR ('atomic:' || CAST({alias}.id AS TEXT)) = @{p}
+             OR (IFNULL({alias}.identifiers_json, '') != ''
+                 AND (json_extract({alias}.identifiers_json, '$.mtgjsonV4Id') = @{p}
+                   OR json_extract({alias}.identifiers_json, '$.mtgjsonNonFoilVersionId') = @{p}
+                   OR json_extract({alias}.identifiers_json, '$.mtgjsonFoilVersionId') = @{p})))
+            """;
+    }
+
+    /// <summary>Every id string that can resolve this row (for dictionary hydration and rulings lookups).</summary>
+    public static IEnumerable<string> EnumerateLookupKeys(AtomicRow r)
+    {
+        string? t(string? s)
+        {
+            var v = (s ?? "").Trim();
+            return string.IsNullOrEmpty(v) ? null : v;
+        }
+
+        var a = t(r.scryfall_id);
+        if (a != null) yield return a;
+        a = t(r.scryfall_oracle_id);
+        if (a != null) yield return a;
+        yield return $"atomic:{r.id}";
+
+        if (TryParseIdentifiers(r.identifiers_json) is not { } ids)
+            yield break;
+
+        a = t(ids.ScryfallId);
+        if (a != null) yield return a;
+        a = t(ids.MtgjsonV4Id);
+        if (a != null) yield return a;
+        a = t(ids.MtgjsonNonFoilVersionId);
+        if (a != null) yield return a;
+        a = t(ids.MtgjsonFoilVersionId);
+        if (a != null) yield return a;
+    }
+
+    public static bool RowMatchesLookupId(AtomicRow r, string id)
+    {
+        if (string.IsNullOrEmpty(id))
+            return false;
+        foreach (var k in EnumerateLookupKeys(r))
+        {
+            if (string.Equals(k, id, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static void AddAtomicRowToLookupDictionary(Dictionary<string, Card> result, AtomicRow r, Card card)
+    {
+        foreach (var key in EnumerateLookupKeys(r))
+        {
+            if (string.IsNullOrEmpty(key) || string.IsNullOrEmpty(card.Uuid))
+                continue;
+            if (!result.ContainsKey(key))
+                result[key] = card;
+        }
+    }
+
     public static Card ToCard(AtomicRow r)
     {
-        var sid = (r.scryfall_id ?? "").Trim();
-        var oracle = (r.scryfall_oracle_id ?? "").Trim();
-        var stableId = !string.IsNullOrEmpty(sid)
-            ? sid
-            : !string.IsNullOrEmpty(oracle)
-                ? oracle
-                : $"atomic:{r.id}";
+        var ids = TryParseIdentifiers(r.identifiers_json);
+        var sidCol = (r.scryfall_id ?? "").Trim();
+        var sidJson = (ids?.ScryfallId ?? "").Trim();
+        var effectiveScryfallCardId = !string.IsNullOrEmpty(sidCol) ? sidCol : sidJson;
+
+        var mtgv4 = (ids?.MtgjsonV4Id ?? "").Trim();
+        var mtgNf = (ids?.MtgjsonNonFoilVersionId ?? "").Trim();
+        var mtgF = (ids?.MtgjsonFoilVersionId ?? "").Trim();
+
+        var publicUuid = !string.IsNullOrEmpty(mtgv4)
+            ? mtgv4
+            : !string.IsNullOrEmpty(mtgNf)
+                ? mtgNf
+                : !string.IsNullOrEmpty(mtgF)
+                    ? mtgF
+                    : !string.IsNullOrEmpty(effectiveScryfallCardId)
+                        ? effectiveScryfallCardId
+                        : $"atomic:{r.id}";
+
+        var imageKey = effectiveScryfallCardId;
 
         var card = new Card
         {
-            Uuid = stableId,
-            ScryfallId = stableId,
+            Uuid = publicUuid,
+            ScryfallId = effectiveScryfallCardId,
             Name = r.name ?? "",
             PrintedName = r.face_name ?? "",
             ManaCost = r.mana_cost ?? "",
@@ -74,9 +192,9 @@ public static class AtomicCatalogMapper
             IsReserved = r.is_reserved != 0,
             IsFunny = r.is_funny != 0,
             Legalities = ParseLegalities(r.legalities_json),
-            ImageUrl = string.IsNullOrEmpty(stableId)
+            ImageUrl = string.IsNullOrEmpty(imageKey)
                 ? ""
-                : ScryfallCdn.GetImageUrl(stableId, ScryfallSize.Small, ScryfallFace.Front)
+                : ScryfallCdn.GetImageUrl(imageKey, ScryfallSize.Small, ScryfallFace.Front)
         };
 
         return card;

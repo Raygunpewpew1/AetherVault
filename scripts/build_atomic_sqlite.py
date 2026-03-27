@@ -41,6 +41,7 @@ INSERT_COLUMNS = [
     "keywords",
     "scryfall_id",
     "scryfall_oracle_id",
+    "identifiers_json",
     "first_printing",
     "printings_json",
     "legalities_json",
@@ -101,6 +102,7 @@ def row_from_face(card_name: str, fi: int, face: dict) -> tuple:
         ",".join(face.get("keywords") or []) if face.get("keywords") else "",
         scryfall_id,
         scryfall_oracle_id,
+        jcompact(ids) if ids else None,
         (face.get("firstPrinting") or "").strip() or None,
         jcompact(face.get("printings")),
         jcompact(face.get("legalities")),
@@ -165,6 +167,7 @@ def main() -> None:
               keywords TEXT,
               scryfall_id TEXT,
               scryfall_oracle_id TEXT,
+              identifiers_json TEXT,
               first_printing TEXT,
               printings_json TEXT,
               legalities_json TEXT,
@@ -210,7 +213,7 @@ def main() -> None:
         cur.executemany(insert_sql, rows)
 
         cur.execute("INSERT INTO atomic_cards_fts(atomic_cards_fts) VALUES('rebuild')")
-        cur.execute("PRAGMA user_version = 1")
+        cur.execute("PRAGMA user_version = 2")
         conn.commit()
         print(f"Wrote {out_path} ({out_path.stat().st_size // 1024 // 1024} MB), rows={len(rows)}")
     finally:

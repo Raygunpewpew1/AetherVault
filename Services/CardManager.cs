@@ -229,6 +229,9 @@ public class CardManager : IDisposable
     /// </summary>
     public async Task InitializePricesAsync()
     {
+        if (!PricePreferences.PricesDataEnabled)
+            return;
+
         await _priceInitLock.WaitAsync();
         try
         {
@@ -257,6 +260,49 @@ public class CardManager : IDisposable
         {
             _priceInitLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Stops downloads/timers and releases price resources when the user disables price data in settings.
+    /// </summary>
+    public async Task DisablePricesSubsystemAsync()
+    {
+        if (PricePreferences.PricesDataEnabled)
+            return;
+
+        await _priceInitLock.WaitAsync();
+        try
+        {
+            _priceManager?.Dispose();
+            _priceManager = null;
+        }
+        finally
+        {
+            _priceInitLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// After an interrupted sync, resumes the update check when the app returns to the foreground.
+    /// </summary>
+    public void NotifyAppResumedForPrices()
+    {
+        if (!PricePreferences.PricesDataEnabled)
+            return;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await InitializePricesAsync();
+                if (PricePreferences.SyncPending && _priceManager != null)
+                    _priceManager.CheckForUpdates();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogStuff($"Price resume check failed: {ex.Message}", LogLevel.Warning);
+            }
+        });
     }
 
     /// <summary>
@@ -453,6 +499,9 @@ public class CardManager : IDisposable
     /// </summary>
     public async Task<double> GetCollectionTotalValueAsync()
     {
+        if (!PricePreferences.PricesDataEnabled || !PricePreferences.CollectionPriceDisplayEnabled)
+            return 0;
+
         if (_priceManager == null) return 0;
 
         var vendorPriority = PriceDisplayHelper.GetVendorPriority();

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+             x:Class="AetherVault.Pages.SettingsPage"
+             Title="Settings"
+             BackgroundColor="{StaticResource Background}">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="16">
+
+            <Border Style="{StaticResource CardStyle}">
+                <VerticalStackLayout Spacing="10" Padding="4,2">
+                    <Label Text="Card database"
+                           FontSize="18"
+                           FontAttributes="Bold" />
+                    <Label Text="Re-downloads from GitHub. Choose full vs compact catalog in Database below before starting."
+                           FontSize="13"
+                           TextColor="{StaticResource TextSecondary}" />
+                    <Button x:Name="ForceDbUpdateBtn"
+                            Text="Force database update"
+                            Clicked="OnDownloadDbClicked"
+                            StyleClass="FilledButton" />
+                    <ProgressBar x:Name="DownloadProgress"
+                                 IsVisible="False"
+                                 ProgressColor="{StaticResource Primary}" />
+                    <Label x:Name="DownloadStatusLabel"
+                           IsVisible="False"
+                           FontSize="12"
+                           TextColor="{StaticResource TextSecondary}" />
+                    <Button x:Name="CancelDownloadBtn"
+                            Text="Cancel download"
+                            Clicked="OnCancelDownloadClicked"
+                            IsVisible="False"
+                            BackgroundColor="{StaticResource CardBackground}"
+                            StyleClass="OutlinedButton" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <uranium:ExpanderView IsExpanded="True">
+                    <uranium:ExpanderView.Header>
+                        <Label Text="Database" FontSize="18" FontAttributes="Bold" />
+                    </uranium:ExpanderView.Header>
+                    <VerticalStackLayout Spacing="8" Padding="0,8,0,0">
+                        <Label x:Name="DbStatusLabel"
+                               Text="Checking..."
+                               FontSize="14"
+                               TextColor="{StaticResource TextSecondary}" />
+                        <Label Text="Card catalog (next download)"
+                               FontSize="13"
+                               TextColor="{StaticResource TextSecondary}"
+                               Margin="0,4,0,0" />
+                        <Picker x:Name="CatalogModePicker"
+                                Title="Catalog"
+                                Margin="0,4,0,0" />
+                    </VerticalStackLayout>
+                </uranium:ExpanderView>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <VerticalStackLayout Spacing="10" Padding="4,2">
+                    <Label Text="Prices"
+                           FontSize="18"
+                           FontAttributes="Bold" />
+                    <Label Text="Turn off price downloads to save storage and network use. You can hide collection totals and grid prices while keeping prices on search and card details."
+                           FontSize="13"
+                           TextColor="{StaticResource TextSecondary}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="Card price data (download and lookups)" VerticalOptions="Center" />
+                        <Switch Grid.Row="0" Grid.Column="1" x:Name="PricesDataSwitch" VerticalOptions="Center" Toggled="OnPricesDataToggled" />
+                        <Label Grid.Row="1" Grid.Column="0" Text="Collection value and grid prices" VerticalOptions="Center" />
+                        <Switch Grid.Row="1" Grid.Column="1" x:Name="CollectionPriceSwitch" VerticalOptions="Center" Toggled="OnCollectionPriceToggled" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <VerticalStackLayout x:Name="PriceSourceSection" Spacing="0" Padding="4,2">
+                    <Label Text="Price source" FontSize="18" FontAttributes="Bold" />
+                    <Label Text="Preferred vendor for displayed prices and collection total (Stats tab)."
+                           FontSize="13"
+                           TextColor="{StaticResource TextSecondary}"
+                           Margin="0,4,0,0" />
+                    <HorizontalStackLayout Spacing="8" Margin="0,8,0,0">
+                        <Label Text="Preferred vendor:" VerticalOptions="Center" TextColor="{StaticResource TextSecondary}" />
+                        <Picker x:Name="PriceVendorPicker" Title="Price vendor" WidthRequest="180" SelectedIndexChanged="OnPriceVendorPickerChanged" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <uranium:ExpanderView IsExpanded="True">
+                    <uranium:ExpanderView.Header>
+                        <Label Text="Storage" FontSize="18" FontAttributes="Bold" />
+                    </uranium:ExpanderView.Header>
+                    <VerticalStackLayout Spacing="8" Padding="0,8,0,0">
+                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
+                            <Label Text="MTG Database:" TextColor="{StaticResource TextSecondary}" />
+                            <Label x:Name="MtgDbSizeLabel" Grid.Column="1" Text="0.0 MB" HorizontalTextAlignment="End" />
+
+                            <Label Grid.Row="1" Text="Collection Database:" TextColor="{StaticResource TextSecondary}" />
+                            <Label x:Name="CollectionDbSizeLabel" Grid.Row="1" Grid.Column="1" Text="0.0 MB" HorizontalTextAlignment="End" />
+
+                            <Label Grid.Row="2" Text="Prices Database:" TextColor="{StaticResource TextSecondary}" />
+                            <Label x:Name="PricesDbSizeLabel" Grid.Row="2" Grid.Column="1" Text="0.0 MB" HorizontalTextAlignment="End" />
+
+                            <Label Grid.Row="3" Text="Image Cache:" TextColor="{StaticResource TextSecondary}" />
+                            <Label x:Name="ImageCacheSizeLabel" Grid.Row="3" Grid.Column="1" Text="0.0 MB" HorizontalTextAlignment="End" />
+
+                            <Label Grid.Row="4" Text="Total App Storage:" FontAttributes="Bold" Margin="0,4,0,0" />
+                            <Label x:Name="TotalStorageSizeLabel" Grid.Row="4" Grid.Column="1" Text="0.0 MB" HorizontalTextAlignment="End" FontAttributes="Bold" Margin="0,4,0,0" />
+                        </Grid>
+
+                        <Label x:Name="CacheStatsLabel"
+                               Text="Loading..."
+                               FontSize="13"
+                               Margin="0,8,0,0"
+                               TextColor="{StaticResource TextSecondary}" />
+                        <Button Text="Clear Cache"
+                                Clicked="OnClearCacheClicked"
+                                BackgroundColor="{StaticResource ErrorColor}" />
+                    </VerticalStackLayout>
+                </uranium:ExpanderView>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <uranium:ExpanderView IsExpanded="True">
+                    <uranium:ExpanderView.Header>
+                        <Label Text="App Info" FontSize="18" FontAttributes="Bold" />
+                    </uranium:ExpanderView.Header>
+                    <VerticalStackLayout Spacing="4" Padding="0,8,0,0">
+                        <Label Text="AetherVault Mobile" FontSize="14" FontAttributes="Bold" />
+                        <Label Text="Version 2.0 (.NET MAUI) Uranium UI 2.14.0"
+                               FontSize="12" TextColor="{StaticResource TextSecondary}" />
+                        <Label Text="Card data: MTGJSON | Images: Scryfall"
+                               FontSize="11" TextColor="{StaticResource TextSecondary}" />
+                        <Label Text="Share the app diagnostic log for troubleshooting (email, Drive, etc.)."
+                               FontSize="12"
+                               TextColor="{StaticResource TextSecondary}"
+                               Margin="0,12,0,0" />
+                        <Button Text="Export log"
+                                Clicked="OnExportLogClicked"
+                                Margin="0,8,0,0"
+                                StyleClass="OutlinedButton" />
+                    </VerticalStackLayout>
+                </uranium:ExpanderView>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

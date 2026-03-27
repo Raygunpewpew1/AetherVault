@@ -76,7 +76,8 @@ public class CardPriceSqLiteSync
         await conn.OpenAsync();
 
         await ExecuteAsync(conn, "PRAGMA journal_mode=WAL");
-        await ExecuteAsync(conn, "PRAGMA synchronous=OFF");
+        // Stronger durability than OFF for the bulk sync only (slower I/O but safer if the process dies mid-commit).
+        await ExecuteAsync(conn, "PRAGMA synchronous=NORMAL");
         await ExecuteAsync(conn, "PRAGMA cache_size=-65536");  // 64 MB — larger cache for bulk inserts
         await ExecuteAsync(conn, "PRAGMA temp_store=MEMORY");
         await ExecuteAsync(conn, "PRAGMA busy_timeout=60000");

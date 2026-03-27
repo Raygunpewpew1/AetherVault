@@ -82,8 +82,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<ICardImageSaveService, CardImageSaveService>();
         builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
-        builder.Services.AddSingleton<ILogBufferService, LogBufferService>();
-
         // ── ViewModels (singleton = shared state e.g. search; transient = new instance per navigation) ──
         builder.Services.AddSingleton<SearchViewModel>();
         builder.Services.AddSingleton<CollectionViewModel>();
@@ -95,7 +93,6 @@ public static class MauiProgram
         builder.Services.AddTransient<CardSearchPickerViewModel>();
         builder.Services.AddTransient<SearchFiltersViewModel>();
         builder.Services.AddTransient<MtgJsonDecksViewModel>();
-        builder.Services.AddSingleton<LogViewViewModel>();
         builder.Services.AddSingleton<ISearchFilterTarget>(sp => sp.GetRequiredService<SearchViewModel>());
         builder.Services.AddSingleton<Services.ISearchFiltersOpener, Services.SearchFiltersOpenerService>();
 
@@ -105,6 +102,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<SearchPage>();
         builder.Services.AddSingleton<CollectionPage>();
         builder.Services.AddSingleton<StatsPage>();
+        builder.Services.AddSingleton<SettingsPage>();
         builder.Services.AddSingleton<DecksPage>();
         builder.Services.AddTransient<CardDetailPage>();
         builder.Services.AddTransient<DeckDetailPage>();
@@ -116,8 +114,6 @@ public static class MauiProgram
         builder.Services.AddTransient<AddToDeckPage>();
         builder.Services.AddTransient<CollectionAddPage>();
         builder.Services.AddTransient<MtgJsonDecksPage>();
-        builder.Services.AddSingleton<LogViewPage>();
-
         return builder.Build();
     }
 }

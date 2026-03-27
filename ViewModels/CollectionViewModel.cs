@@ -217,7 +217,7 @@ public partial class CollectionViewModel : BaseViewModel
                     var (start, end) = _grid.GetVisibleRange();
                     if (end >= start && start >= 0)
                     {
-                        _gridPriceLoadService.LoadVisiblePrices(_grid, start, end);
+                        _gridPriceLoadService.LoadVisiblePrices(_grid, start, end, isCollectionGrid: true);
                     }
                 }
             });
@@ -387,7 +387,7 @@ public partial class CollectionViewModel : BaseViewModel
 
     private void OnVisibleRangeChanged(int start, int end)
     {
-        _gridPriceLoadService.LoadVisiblePrices(_grid, start, end);
+        _gridPriceLoadService.LoadVisiblePrices(_grid, start, end, isCollectionGrid: true);
     }
 
     private async Task ImportCollectionAsync()

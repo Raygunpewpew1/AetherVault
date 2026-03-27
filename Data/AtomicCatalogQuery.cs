@@ -14,7 +14,7 @@ public static class AtomicCatalogQuery
         a.id, a.name, a.face_index, a.ascii_name, a.face_name, a.mana_cost, a.mana_value,
         a.type_line, a.oracle_text, a.power, a.toughness, a.loyalty, a.defense, a.layout,
         a.colors, a.color_identity, a.keywords, a.scryfall_id, a.scryfall_oracle_id,
-        a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
+        a.identifiers_json, a.first_printing, a.printings_json, a.legalities_json, a.rulings_json, a.related_json,
         a.leadership_json, a.is_reserved, a.is_funny
         """;
 

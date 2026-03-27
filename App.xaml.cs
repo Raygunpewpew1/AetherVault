@@ -81,4 +81,17 @@ public partial class App : Application
         // LoadingViewModel creates the overlay when switching to AppShell.
         return new Window(loadingPage);
     }
+
+    protected override void OnResume()
+    {
+        base.OnResume();
+        try
+        {
+            _serviceProvider.GetRequiredService<CardManager>().NotifyAppResumedForPrices();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"OnResume price hook: {ex.Message}", LogLevel.Warning);
+        }
+    }
 }

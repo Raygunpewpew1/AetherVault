@@ -418,6 +418,14 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     private async Task LoadPriceAsync()
     {
+        if (!PricePreferences.PricesDataEnabled)
+        {
+            PriceDisplay = "";
+            PriceData = CardPriceData.Empty;
+            IsPriceVisible = false;
+            return;
+        }
+
         var (found, prices) = await _cardManager.GetCardPricesAsync(Card.Uuid);
         if (!found) { PriceDisplay = ""; PriceData = CardPriceData.Empty; IsPriceVisible = false; return; }
 

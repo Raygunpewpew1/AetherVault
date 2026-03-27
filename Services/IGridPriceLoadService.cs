@@ -12,5 +12,6 @@ public interface IGridPriceLoadService
     /// Fetches prices for cards in the given visible range that lack PriceData,
     /// then updates the grid on the main thread. No-op if grid is null or no UUIDs need loading.
     /// </summary>
-    void LoadVisiblePrices(CardGrid? grid, int start, int end);
+    /// <param name="isCollectionGrid">When true, respects <see cref="PricePreferences.CollectionPriceDisplayEnabled"/>.</param>
+    void LoadVisiblePrices(CardGrid? grid, int start, int end, bool isCollectionGrid = false);
 }

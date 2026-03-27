@@ -93,6 +93,23 @@ public sealed class DatabaseManager : IDisposable
                         var atomicName = await _mtgConnection.QueryFirstOrDefaultAsync<string>(
                             "SELECT name FROM sqlite_master WHERE type='table' AND name='atomic_cards' LIMIT 1;");
                         IsAtomicCatalog = !string.IsNullOrEmpty(atomicName);
+
+                        if (IsAtomicCatalog)
+                        {
+                            var identifiersCol = await _mtgConnection.QueryFirstOrDefaultAsync<int?>(
+                                """
+                                SELECT 1 FROM pragma_table_info('atomic_cards')
+                                WHERE name = 'identifiers_json' LIMIT 1;
+                                """);
+                            if (identifiersCol != 1)
+                            {
+                                Logger.LogStuff(
+                                    "atomic_cards missing identifiers_json; download the latest compact catalog.",
+                                    LogLevel.Error);
+                                DisconnectInternal();
+                                return false;
+                            }
+                        }
                     }
 
                     _isConnected = true;

@@ -35,10 +35,16 @@ public static class Logger
     private static readonly string[] LevelNames = ["DEBUG", "INFO", "WARNING", "ERROR"];
 
     /// <summary>
-    /// Fired for each log entry (after formatting). Subscribers receive (formattedLine, level).
-    /// Used by in-app log viewer; invoke on main thread if updating UI.
+    /// Path to the rotating diagnostic log file (<c>mtgfetch.log</c>). Ensures the parent directory exists.
     /// </summary>
-    public static event Action<string, LogLevel>? LogEmitted;
+    public static string GetLogFilePath()
+    {
+        var logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            MtgConstants.AppRootFolder);
+        Directory.CreateDirectory(logDir);
+        return Path.Combine(logDir, "mtgfetch.log");
+    }
 
     /// <summary>
     /// Primary logging entry point.
@@ -52,7 +58,6 @@ public static class Logger
         var entry = $"[{timestamp}] [{LevelNames[(int)level]}] [Thread {threadId:D5}] {message}";
 
         Queue.Enqueue(entry);
-        try { LogEmitted?.Invoke(entry, level); } catch { /* viewer must not crash logging */ }
     }
 
     private static void EnsureInitialized()
@@ -63,11 +68,7 @@ public static class Logger
         {
             if (_initialized) return;
 
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                MtgConstants.AppRootFolder);
-            Directory.CreateDirectory(logDir);
-            _logFilePath = Path.Combine(logDir, "mtgfetch.log");
+            _logFilePath = GetLogFilePath();
 
             _ = Task.Run(() => ProcessLoop(Cts.Token));
             _initialized = true;

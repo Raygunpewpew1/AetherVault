@@ -3,12 +3,12 @@ namespace AetherVault;
 using AetherVault.Pages;
 
 /// <summary>
-/// Main shell: tab bar (Search, Collection, Stats, Decks) and registered routes for modal/detail pages.
+/// Main shell: tab bar (Search, Collection, Stats, Decks, Settings) and registered routes for modal/detail pages.
 /// The DI container injects the four tab pages; we assign them to the tab content placeholders.
 /// </summary>
 public partial class AppShell : Shell
 {
-    public AppShell(SearchPage searchPage, CollectionPage collectionPage, StatsPage statsPage, DecksPage decksPage, LogViewPage logViewPage)
+    public AppShell(SearchPage searchPage, CollectionPage collectionPage, StatsPage statsPage, DecksPage decksPage, SettingsPage settingsPage)
     {
         InitializeComponent();
 
@@ -17,7 +17,7 @@ public partial class AppShell : Shell
         CollectionTab.Content = collectionPage;
         StatsTab.Content = statsPage;
         DecksTab.Content = decksPage;
-        LogTab.Content = logViewPage;
+        SettingsTab.Content = settingsPage;
 
         // Register routes so we can navigate with Shell.Current.GoToAsync("carddetail", new Dictionary<string, object> { ... })
         Routing.RegisterRoute("carddetail", typeof(CardDetailPage));
