@@ -137,16 +137,45 @@ public partial class CollectionPage : ContentPage
         await _viewModel.ReorderCollectionAsync(fromIndex, toIndex);
     }
 
-    private async void OnClearCollectionMenuClicked(object? sender, EventArgs e)
+    private async void OnCollectionMoreClicked(object? sender, EventArgs e)
     {
+        const string layout = "Switch card layout";
+        const string import = "Import";
+        const string export = "Export";
+        const string refresh = "Refresh";
+        const string clear = "Clear collection…";
+
+        var pick = await DisplayActionSheetAsync("Collection", "Cancel", null, layout, import, export, refresh, clear);
+        if (pick == layout)
+        {
+            if (_viewModel.ToggleViewModeCommand.CanExecute(null))
+                _viewModel.ToggleViewModeCommand.Execute(null);
+            return;
+        }
+        if (pick == import && _viewModel.ImportCollectionCommand.CanExecute(null))
+        {
+            await _viewModel.ImportCollectionCommand.ExecuteAsync(null);
+            return;
+        }
+        if (pick == export && _viewModel.ExportCollectionCommand.CanExecute(null))
+        {
+            await _viewModel.ExportCollectionCommand.ExecuteAsync(null);
+            return;
+        }
+        if (pick == refresh && _viewModel.RefreshCommand.CanExecute(null))
+        {
+            await _viewModel.RefreshCommand.ExecuteAsync(null);
+            return;
+        }
+        if (pick != clear)
+            return;
+
         bool confirmed = await DisplayAlertAsync(
             UserMessages.ClearCollectionTitle,
             UserMessages.ClearCollectionMessage,
             "Clear",
             "Cancel");
         if (confirmed)
-        {
             await _viewModel.ClearCollectionAsync();
-        }
     }
 }

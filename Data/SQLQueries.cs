@@ -418,6 +418,40 @@ public static class SqlQueries
     public const string CollectionGetForPricing =
         "SELECT card_uuid AS CardUuid, quantity, is_foil AS IsFoil, is_etched AS IsEtched FROM my_collection";
 
+    /// <summary>
+    /// Single round-trip load for the Collection tab grid: only columns needed for grid CardState, sort, filter,
+    /// and export — not full BaseCards text/JSON blobs. Joins col.my_collection to cards or tokens (one row per owned card).
+    /// </summary>
+    public const string CollectionGridLoad =
+        """
+        SELECT
+            mc.card_uuid AS CardUuid,
+            mc.quantity AS Quantity,
+            mc.date_added AS DateAdded,
+            mc.sort_order AS SortOrder,
+            mc.is_foil AS IsFoil,
+            mc.is_etched AS IsEtched,
+            COALESCE(c.uuid, t.uuid) AS Uuid,
+            COALESCE(c.name, t.name) AS Name,
+            COALESCE(c.type, t.type) AS CardType,
+            COALESCE(c.manaCost, t.manaCost) AS ManaCost,
+            c.manaValue AS ManaValue,
+            c.faceManaValue AS FaceManaValue,
+            COALESCE(c.colorIdentity, t.colorIdentity) AS ColorIdentity,
+            c.rarity AS Rarity,
+            COALESCE(c.setCode, t.setCode) AS SetCode,
+            COALESCE(c.number, t.number) AS Number,
+            COALESCE(c.isOnlineOnly, 0) AS IsOnlineOnly,
+            COALESCE(ci.scryfallId, tci.scryfallId) AS ScryfallId
+        FROM col.my_collection mc
+        LEFT JOIN cards c ON c.uuid = mc.card_uuid
+        LEFT JOIN tokens t ON t.uuid = mc.card_uuid AND c.uuid IS NULL
+        LEFT JOIN cardIdentifiers ci ON ci.uuid = c.uuid
+        LEFT JOIN tokenIdentifiers tci ON tci.uuid = t.uuid
+        WHERE COALESCE(c.uuid, t.uuid) IS NOT NULL
+        ORDER BY mc.sort_order ASC, mc.date_added DESC
+        """;
+
     public const string CollectionReorderItem =
         "UPDATE my_collection SET sort_order = @sortOrder WHERE card_uuid = @uuid";
 
@@ -529,7 +563,6 @@ public static class SqlQueries
     /// <summary>Returns one row if FTS table exists; used for runtime capability check.</summary>
     public const string FtsExistsCheck = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='av_cards_fts' LIMIT 1";
 
-    public const string AtomicFtsExistsCheck = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='atomic_cards_fts' LIMIT 1";
 
     /// <summary>Fragment: c.uuid IN (SELECT uuid FROM av_cards_fts WHERE av_cards_fts MATCH @paramName). Append param name + ")".</summary>
     public const string CondFtsMatchPrefix = "c.uuid IN (SELECT uuid FROM av_cards_fts WHERE av_cards_fts MATCH @";

@@ -37,9 +37,9 @@
     <Compile Include="..\Data\SearchOptionsApplier.cs" Link="Data\SearchOptionsApplier.cs" />
     <Compile Include="..\Data\SQLQueries.cs" Link="Data\SQLQueries.cs" />
     <Compile Include="..\Core\Enums.cs" Link="Core\Enums.cs" />
+    <Compile Include="..\Core\ScryfallCDN.cs" Link="Core\ScryfallCDN.cs" />
     <Compile Include="..\Core\SetInfo.cs" Link="Core\SetInfo.cs" />
     <Compile Include="..\Core\SearchOptions.cs" Link="Core\SearchOptions.cs" />
-    <Compile Include="..\Core\MtgCatalogMode.cs" Link="Core\MtgCatalogMode.cs" />
     <Compile Include="..\Core\Layout\GridLayoutEngine.cs" Link="Core\Layout\GridLayoutEngine.cs" />
     <Compile Include="..\Core\Layout\GridState.cs" Link="Core\Layout\GridState.cs" />
     <Compile Include="..\Services\CardPriceTypes.cs" Link="Services\CardPriceTypes.cs" />
@@ -65,7 +65,6 @@
     <Compile Include="..\Services\Logger.cs" Link="Services\Logger.cs" />
     <Compile Include="..\Services\NetworkHelper.cs" Link="Services\NetworkHelper.cs" />
     <Compile Include="..\Services\AppDataManager.cs" Link="Services\AppDataManager.cs" />
-    <Compile Include="..\Services\MtgCatalogPreferences.cs" Link="Services\MtgCatalogPreferences.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckValidator.cs" Link="Services\DeckBuilder\DeckValidator.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckBuilderService.cs" Link="Services\DeckBuilder\DeckBuilderService.cs" />
     <Compile Include="..\Services\ImportExport\DeckCsvV1.cs" Link="Services\ImportExport\DeckCsvV1.cs" />

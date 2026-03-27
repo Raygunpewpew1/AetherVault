@@ -9,7 +9,7 @@ namespace AetherVault.Data;
 
 /// <summary>
 /// CRUD for the user's collection (my_collection table in the Collection DB). Uses the same DatabaseManager as CardRepository;
-/// for queries that need card data (e.g. names, set) we use ICardRepository against the MTG DB. All writes go through CollectionConnection.
+/// list loads use a slim JOIN on the MTG connection (with <c>col</c> attached). All writes go through CollectionConnection.
 /// </summary>
 public class CollectionRepository : ICollectionRepository
 {
@@ -41,14 +41,35 @@ public class CollectionRepository : ICollectionRepository
         public int? IsEtched { get; set; }
     }
 
+    /// <summary>Dapper row for <see cref="SqlQueries.CollectionGridLoad"/>.</summary>
+    private sealed class CollectionGridJoinRow
+    {
+        public string CardUuid { get; set; } = "";
+        public int Quantity { get; set; }
+        public string DateAdded { get; set; } = "";
+        public int? SortOrder { get; set; }
+        public int? IsFoil { get; set; }
+        public int? IsEtched { get; set; }
+        public string Uuid { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string CardType { get; set; } = "";
+        public string ManaCost { get; set; } = "";
+        public double? ManaValue { get; set; }
+        public double? FaceManaValue { get; set; }
+        public string ColorIdentity { get; set; } = "";
+        public string Rarity { get; set; } = "";
+        public string SetCode { get; set; } = "";
+        public string Number { get; set; } = "";
+        public long? IsOnlineOnly { get; set; }
+        public string ScryfallId { get; set; } = "";
+    }
+
     private readonly DatabaseManager _db;
-    private readonly ICardRepository _cardRepo;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
-    public CollectionRepository(DatabaseManager databaseManager, ICardRepository cardRepository)
+    public CollectionRepository(DatabaseManager databaseManager)
     {
         _db = databaseManager;
-        _cardRepo = cardRepository;
     }
 
     /// <summary>Insert or update quantity for one card. Uses upsert so multiple adds accumulate quantity.</summary>
@@ -145,47 +166,60 @@ public class CollectionRepository : ICollectionRepository
 
     public async Task<CollectionItem[]> GetCollectionAsync()
     {
-        var items = new List<CollectionItem>();
-        IEnumerable<CollectionRow> entries;
-
-        await _lock.WaitAsync();
+        await _db.ConnectionLock.WaitAsync();
         try
         {
-            entries = await _db.CollectionConnection.QueryAsync<CollectionRow>(SqlQueries.CollectionGetAll);
+            var rows = (await _db.MtgConnection.QueryAsync<CollectionGridJoinRow>(SqlQueries.CollectionGridLoad)).AsList();
+            if (rows.Count == 0)
+                return [];
+
+            var items = new CollectionItem[rows.Count];
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                items[i] = new CollectionItem
+                {
+                    CardUuid = row.CardUuid,
+                    Quantity = row.Quantity,
+                    IsFoil = row.IsFoil.HasValue && row.IsFoil.Value != 0,
+                    IsEtched = row.IsEtched.HasValue && row.IsEtched.Value != 0,
+                    DateAdded = DateTime.TryParse(row.DateAdded, out var d) ? d : DateTime.Now,
+                    SortOrder = row.SortOrder ?? 0,
+                    Card = ToSlimCollectionCard(row),
+                };
+            }
+
+            return items;
         }
         finally
         {
-            _lock.Release();
+            _db.ConnectionLock.Release();
         }
+    }
 
-        var entryList = entries.ToList();
-        var uuids = entryList.Select(e => e.CardUuid).ToArray();
-
-        // Batch-load card details from MTG database
-        if (uuids.Length > 0)
+    /// <summary>Maps a slim SQL row to <see cref="Card"/> with only fields needed for collection grid, stats helper, and CSV export.</summary>
+    private static Card ToSlimCollectionCard(CollectionGridJoinRow row)
+    {
+        var uuid = row.Uuid ?? "";
+        var card = new Card
         {
-            var cardCache = await _cardRepo.GetCardsByUuiDsAsync(uuids);
-
-            foreach (var row in entryList)
-            {
-                if (cardCache.TryGetValue(row.CardUuid, out var card))
-                {
-                    DateTime dateAdded = DateTime.TryParse(row.DateAdded, out var d) ? d : DateTime.Now;
-                    items.Add(new CollectionItem
-                    {
-                        CardUuid = row.CardUuid,
-                        Quantity = row.Quantity,
-                        IsFoil = row.IsFoil.HasValue && row.IsFoil.Value != 0,
-                        IsEtched = row.IsEtched.HasValue && row.IsEtched.Value != 0,
-                        DateAdded = dateAdded,
-                        SortOrder = row.SortOrder ?? 0,
-                        Card = card
-                    });
-                }
-            }
-        }
-
-        return [.. items];
+            Uuid = uuid,
+            Name = row.Name ?? "",
+            CardType = row.CardType ?? "",
+            ManaCost = row.ManaCost ?? "",
+            Cmc = row.ManaValue ?? 0,
+            FaceManaValue = row.FaceManaValue ?? 0,
+            ColorIdentity = row.ColorIdentity ?? "",
+            Rarity = EnumExtensions.ParseCardRarity(row.Rarity),
+            SetCode = row.SetCode ?? "",
+            Number = row.Number ?? "",
+            IsOnlineOnly = row.IsOnlineOnly.HasValue && row.IsOnlineOnly.Value != 0,
+            ScryfallId = row.ScryfallId ?? "",
+        };
+        card.ImageUrl = string.IsNullOrEmpty(uuid)
+            ? ""
+            : ScryfallCdn.GetImageUrl(uuid, ScryfallSize.Small, ScryfallFace.Front);
+        return card;
     }
 
     public async Task<IReadOnlyList<(string Uuid, int Quantity, bool IsFoil, bool IsEtched)>> GetCollectionEntriesForPricingAsync()

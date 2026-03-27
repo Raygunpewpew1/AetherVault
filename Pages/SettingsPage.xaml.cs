@@ -1,4 +1,3 @@
-using AetherVault.Core;
 using AetherVault.Services;
 using AetherVault.ViewModels;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
@@ -10,7 +9,6 @@ public partial class SettingsPage : ContentPage
     private readonly StatsViewModel _statsViewModel;
     private readonly CardManager _cardManager;
     private bool _initializingPricePicker;
-    private bool _initializingCatalogPicker;
     private bool _initializingPricePrefSwitches;
 
     public SettingsPage(StatsViewModel statsViewModel, CardManager cardManager)
@@ -35,9 +33,7 @@ public partial class SettingsPage : ContentPage
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
-                DbStatusLabel.Text = _cardManager.IsAtomicCatalog
-                    ? "Connected (compact catalog)"
-                    : "Connected (full catalog)";
+                DbStatusLabel.Text = "Connected";
                 DbStatusLabel.TextColor = Color.FromArgb("#4CAF50");
                 DownloadProgress.IsVisible = false;
                 DownloadStatusLabel.Text = "Download complete!";
@@ -79,9 +75,7 @@ public partial class SettingsPage : ContentPage
         };
 
         InitPriceVendorPicker();
-        InitCatalogModePicker();
         InitPricePreferenceSwitches();
-        CatalogModePicker.SelectedIndexChanged += OnCatalogModePickerChanged;
         UpdatePriceSectionVisibility();
     }
 
@@ -157,35 +151,6 @@ public partial class SettingsPage : ContentPage
         await _statsViewModel.RefreshTotalValueAsync();
     }
 
-    private void InitCatalogModePicker()
-    {
-        _initializingCatalogPicker = true;
-        try
-        {
-            CatalogModePicker.ItemsSource = new[] { "Full catalog (all printings)", "Compact (AtomicCards)" };
-            CatalogModePicker.SelectedIndex = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite ? 1 : 0;
-        }
-        finally
-        {
-            _initializingCatalogPicker = false;
-        }
-    }
-
-    private async void OnCatalogModePickerChanged(object? sender, EventArgs e)
-    {
-        if (_initializingCatalogPicker || CatalogModePicker.SelectedIndex < 0)
-            return;
-
-        MtgCatalogPreferences.Mode = CatalogModePicker.SelectedIndex == 1
-            ? MtgCatalogMode.Lite
-            : MtgCatalogMode.Full;
-
-        await DisplayAlertAsync(
-            "Catalog mode",
-            "The next database download will use this choice (different file on disk). Tap Force database update if you need to fetch the matching catalog.",
-            "OK");
-    }
-
     private static readonly string[] PriceVendorNames = ["TCG Player", "Cardmarket", "Card Kingdom", "ManaPool"];
     private static readonly PriceVendor[] PriceVendorValues = [PriceVendor.TcgPlayer, PriceVendor.Cardmarket, PriceVendor.CardKingdom, PriceVendor.ManaPool];
 
@@ -220,9 +185,7 @@ public partial class SettingsPage : ContentPage
 
         if (_cardManager.DatabaseManager.IsConnected)
         {
-            DbStatusLabel.Text = _cardManager.IsAtomicCatalog
-                ? "Connected (compact catalog)"
-                : "Connected (full catalog)";
+            DbStatusLabel.Text = "Connected";
             DbStatusLabel.TextColor = Color.FromArgb("#4CAF50");
         }
         else if (!AppDataManager.MtgDatabaseExists())

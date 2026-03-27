@@ -75,9 +75,6 @@ public static class MtgConstants
     public const string DbDriverSqlite = "SQLite";
     public const string DatabaseDownloadUrl = "https://github.com/Raygunpewpew1/AetherVault/releases/latest/download/MTG_App_DB.zip";
 
-    /// <summary>Compact AtomicCards SQLite (same release tag as <see cref="DatabaseDownloadUrl"/>).</summary>
-    public const string AtomicDatabaseDownloadUrl = "https://github.com/Raygunpewpew1/AetherVault/releases/latest/download/AtomicCards.sqlite.zip";
-
     // ── MTGJSON Decks (catalog + individual deck download) ──────────────
 
     /// <summary>URL to download the full deck list catalog (zip containing DeckList.json).</summary>
@@ -98,8 +95,6 @@ public static class MtgConstants
     // NEW:
     public const string FileAllPrintings = "AllPrintings.sqlite";
     public const string FileAllPrintingsZip = "MTG_App_DB.zip"; // GitHub release asset
-    public const string FileAtomicSqlite = "AtomicCards.sqlite";
-    public const string FileAtomicSqliteZip = "AtomicCards.sqlite.zip"; 
     public const string FileCollectionDb = "MyCollection.sqlite";
     public const string FilePricesDb = "prices.sqlite";
     public const string FileSymbolCache = "SymbolCache.json";

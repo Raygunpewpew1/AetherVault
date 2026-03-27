@@ -319,11 +319,6 @@ public class DeckImportExportTests
         public Task<IReadOnlyList<SetInfo>> GetAllSetsAsync() => Task.FromResult<IReadOnlyList<SetInfo>>([]);
         public Task<bool> HasFtsAsync() => Task.FromResult(false);
 
-        public Task<Card[]> SearchAtomicCatalogAsync(SearchOptions options, int limit, int offset) =>
-            Task.FromResult(Array.Empty<Card>());
-
-        public Task<int> CountAtomicCatalogAsync(SearchOptions options) => Task.FromResult(0);
-
         public Task<Card?> GetCardByScryfallIdAsync(string scryfallId)
         {
             var card = _cards.Values.FirstOrDefault(c => string.Equals(c.ScryfallId, scryfallId, StringComparison.OrdinalIgnoreCase));

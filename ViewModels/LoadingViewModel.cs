@@ -1,4 +1,3 @@
-using AetherVault.Core;
 using AetherVault.Pages;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -49,10 +48,6 @@ public partial class LoadingViewModel : BaseViewModel
     [ObservableProperty]
     public partial bool ShowRetry { get; set; }
 
-    /// <summary>First launch: show full vs compact catalog buttons before download.</summary>
-    [ObservableProperty]
-    public partial bool ShowCatalogChoice { get; set; }
-
     public LoadingViewModel(CardManager cardManager, IServiceProvider serviceProvider, IDialogService dialogService)
     {
         _cardManager = cardManager;
@@ -72,20 +67,6 @@ public partial class LoadingViewModel : BaseViewModel
     private async Task RetryAsync()
     {
         await StartDownloadAsync();
-    }
-
-    [RelayCommand]
-    private Task ChooseFullCatalogAsync() => CompleteCatalogChoiceAndContinueAsync(MtgCatalogMode.Full);
-
-    [RelayCommand]
-    private Task ChooseCompactCatalogAsync() => CompleteCatalogChoiceAndContinueAsync(MtgCatalogMode.Lite);
-
-    private async Task CompleteCatalogChoiceAndContinueAsync(MtgCatalogMode mode)
-    {
-        MtgCatalogPreferences.Mode = mode;
-        MtgCatalogPreferences.CatalogSetupCompleted = true;
-        ShowCatalogChoice = false;
-        await InitAsync();
     }
 
     public async Task InitAsync()
@@ -108,7 +89,6 @@ public partial class LoadingViewModel : BaseViewModel
             // init), navigate straight to the shell — no re-initialization needed.
             if (_cardManager.DatabaseManager.IsConnected)
             {
-                MtgCatalogPreferences.CatalogSetupCompleted = true;
                 MainThread.BeginInvokeOnMainThread(() => SwitchToShellWithToastOverlay());
                 return;
             }
@@ -117,7 +97,6 @@ public partial class LoadingViewModel : BaseViewModel
             ShowRetry = false;
             StatusIsError = false;
             Progress = 0;
-            ShowCatalogChoice = false;
 
             // Ensure disconnected before checking/downloading to avoid locks.
             // Unlikely to be connected at this point, but safe practice.
@@ -129,7 +108,6 @@ public partial class LoadingViewModel : BaseViewModel
 
             if (dbExists)
             {
-                MtgCatalogPreferences.CatalogSetupCompleted = true;
                 var isValid = await Task.Run(async () => await AppDataManager.EnsureMtgDatabaseValidForStartupAsync());
                 if (isValid)
                 {
@@ -163,14 +141,6 @@ public partial class LoadingViewModel : BaseViewModel
             }
             else
             {
-                if (!MtgCatalogPreferences.CatalogSetupCompleted)
-                {
-                    ShowCatalogChoice = true;
-                    StatusMessage = UserMessages.ChooseCatalogPrompt;
-                    IsBusy = false;
-                    return;
-                }
-
                 AppDataManager.ClearPendingMtgDatabaseDownload();
                 await StartDownloadAsync();
             }

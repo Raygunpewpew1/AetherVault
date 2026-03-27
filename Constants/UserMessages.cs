@@ -45,16 +45,6 @@ public static class UserMessages
 
     // ── Loading / progress ────────────────────────────────────────────
 
-    /// <summary>First launch: prompt before any database download.</summary>
-    public const string ChooseCatalogPrompt =
-        "Choose a card database. Both require a one-time download. You can change this later in Settings.";
-
-    public const string FullCatalogChoiceTitle = "Full catalog";
-    public const string FullCatalogChoiceDescription = "All printings and editions (larger download). Best if you care about specific versions.";
-
-    public const string CompactCatalogChoiceTitle = "Compact catalog";
-    public const string CompactCatalogChoiceDescription = "Smaller download (oracle text, legality). Card images still load from the internet.";
-
     public const string CheckingDatabase = "Checking database...";
     public const string DownloadingDatabase = "Downloading database...";
     public const string Initializing = "Initializing...";

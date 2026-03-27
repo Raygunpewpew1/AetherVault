@@ -1,5 +1,4 @@
 using System.Data;
-using System.Text.Json;
 using AetherVault.Services;
 using Dapper;
 using Microsoft.Data.Sqlite;
@@ -19,9 +18,6 @@ public sealed class DatabaseManager : IDisposable
     private volatile bool _isConnected;
     private bool _disposed;
 
-    /// <summary>True when the MTG file is the lite AtomicCards schema (oracle-level rows) rather than full printings.</summary>
-    public bool IsAtomicCatalog { get; private set; }
-
     private const int MaxConnectionRetries = 3;
     private const int BusyTimeoutMs = 5000;
 
@@ -36,16 +32,6 @@ public sealed class DatabaseManager : IDisposable
     /// </summary>
     public async Task<bool> ConnectAsync(string mtgDbPath, string collectionDbPath)
     {
-        #region agent log
-        AgentDebugLog("initial", "H1", "Data/DatabaseManager.cs:ConnectAsync:entry", "ConnectAsync entered", new
-        {
-            mtgDbPath,
-            collectionDbPath,
-            mtgExists = File.Exists(mtgDbPath),
-            collectionExists = File.Exists(collectionDbPath),
-            isConnected = _isConnected
-        });
-        #endregion
         await _connectionLock.WaitAsync();
         try
         {
@@ -89,49 +75,13 @@ public sealed class DatabaseManager : IDisposable
                         // Attach collection DB as "col" so queries on MTG connection can reference col.my_collection, col.Decks, etc.
                         var escapedCollPath = collectionDbPath.Replace("'", "''");
                         await ExecuteNonQueryAsync(_mtgConnection, $"ATTACH DATABASE '{escapedCollPath}' AS col");
-
-                        var atomicName = await _mtgConnection.QueryFirstOrDefaultAsync<string>(
-                            "SELECT name FROM sqlite_master WHERE type='table' AND name='atomic_cards' LIMIT 1;");
-                        IsAtomicCatalog = !string.IsNullOrEmpty(atomicName);
-
-                        if (IsAtomicCatalog)
-                        {
-                            var identifiersCol = await _mtgConnection.QueryFirstOrDefaultAsync<int?>(
-                                """
-                                SELECT 1 FROM pragma_table_info('atomic_cards')
-                                WHERE name = 'identifiers_json' LIMIT 1;
-                                """);
-                            if (identifiersCol != 1)
-                            {
-                                Logger.LogStuff(
-                                    "atomic_cards missing identifiers_json; download the latest compact catalog.",
-                                    LogLevel.Error);
-                                DisconnectInternal();
-                                return false;
-                            }
-                        }
                     }
 
                     _isConnected = true;
-                    #region agent log
-                    AgentDebugLog("initial", "H1", "Data/DatabaseManager.cs:ConnectAsync:success", "ConnectAsync succeeded", new
-                    {
-                        mtgState = _mtgConnection?.State.ToString(),
-                        collectionState = _collectionConnection?.State.ToString(),
-                        isConnected = _isConnected
-                    });
-                    #endregion
                     return true;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    #region agent log
-                    AgentDebugLog("initial", "H1", "Data/DatabaseManager.cs:ConnectAsync:retry", "ConnectAsync retry due to exception", new
-                    {
-                        retryCount,
-                        error = ex.Message
-                    });
-                    #endregion
                     retryCount++;
                     if (retryCount >= MaxConnectionRetries) throw;
                     await Task.Delay(100 * retryCount);
@@ -345,7 +295,6 @@ public sealed class DatabaseManager : IDisposable
     private void DisconnectInternal()
     {
         _isConnected = false;
-        IsAtomicCatalog = false;
 
         // Close + dispose so the OS releases file handles before we replace AllPrintings.sqlite
         // (e.g. in-app DB update). A closed-but-not-disposed SqliteConnection can keep Android
@@ -395,18 +344,5 @@ public sealed class DatabaseManager : IDisposable
         _mtgConnection?.Dispose();
         _collectionConnection?.Dispose();
         _connectionLock.Dispose();
-    }
-
-    private static void AgentDebugLog(string runId, string hypothesisId, string location, string message, object data)
-    {
-        try
-        {
-            var dataJson = JsonSerializer.Serialize(data);
-            Logger.LogStuff($"DBG|session=068b48|run={runId}|h={hypothesisId}|loc={location}|msg={message}|data={dataJson}", LogLevel.Info);
-        }
-        catch
-        {
-            // Never fail app flow for debug logging.
-        }
     }
 }

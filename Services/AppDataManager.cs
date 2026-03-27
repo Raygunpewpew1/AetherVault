@@ -1,4 +1,3 @@
-using AetherVault.Core;
 using Microsoft.Data.Sqlite;
 using System.IO.Compression;
 
@@ -53,11 +52,7 @@ public static class AppDataManager
     }
 
     public static string GetMtgDatabasePath() =>
-        Path.Combine(
-            GetAppDataPath(),
-            MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-                ? MtgConstants.FileAtomicSqlite
-                : MtgConstants.FileAllPrintings);
+        Path.Combine(GetAppDataPath(), MtgConstants.FileAllPrintings);
 
     public static string GetCollectionDatabasePath() =>
         Path.Combine(GetAppDataPath(), MtgConstants.FileCollectionDb);
@@ -68,13 +63,8 @@ public static class AppDataManager
     public static string GetLogPath() =>
         Path.Combine(GetAppDataPath(), "mtgfetch.log");
 
-    /// <summary>Version tag file for the active catalog mode (full vs lite use separate files).</summary>
     public static string GetVersionFilePath() =>
-        Path.Combine(
-            GetAppDataPath(),
-            MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-                ? "atomic_db_version.txt"
-                : VersionFile);
+        Path.Combine(GetAppDataPath(), VersionFile);
 
     private static string GetQuickCheckMarkerPath() =>
         Path.Combine(GetAppDataPath(), QuickCheckMarkerFile);
@@ -223,8 +213,6 @@ public static class AppDataManager
         if (!File.Exists(path))
             return false;
 
-        TryMigrateAtomicIdentifiersJsonColumn(path);
-
         try
         {
             var builder = new SqliteConnectionStringBuilder
@@ -250,50 +238,17 @@ public static class AppDataManager
                 }
             }
 
-            // 2. Sanity: full DB has `cards`; lite (Atomic) has `atomic_cards`
-            var hasCards = false;
-            var hasAtomic = false;
+            // 2. Sanity: expect MTG master `cards` table
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = """
-                    SELECT MAX(CASE WHEN name = 'cards' THEN 1 ELSE 0 END),
-                           MAX(CASE WHEN name = 'atomic_cards' THEN 1 ELSE 0 END)
-                    FROM sqlite_master WHERE type='table';
+                    SELECT 1 FROM sqlite_master WHERE type='table' AND name='cards' LIMIT 1;
                     """;
-                await using var reader = await cmd.ExecuteReaderAsync(ct);
-                if (!await reader.ReadAsync(ct))
-                    return false;
-                hasCards = reader.GetInt32(0) != 0;
-                hasAtomic = reader.GetInt32(1) != 0;
-                if (!hasCards && !hasAtomic)
+                var hasCards = await cmd.ExecuteScalarAsync(ct);
+                if (hasCards is null or DBNull)
                 {
-                    Logger.LogStuff("MTG DB sanity check failed: neither 'cards' nor 'atomic_cards' found.", LogLevel.Error);
+                    Logger.LogStuff("MTG DB sanity check failed: 'cards' table not found.", LogLevel.Error);
                     return false;
-                }
-                if (hasCards && hasAtomic)
-                {
-                    Logger.LogStuff("MTG DB sanity check failed: unexpected mix of 'cards' and 'atomic_cards'.", LogLevel.Error);
-                    return false;
-                }
-            }
-
-            // 3. Compact catalog builds v2+ must include identifiers_json for collection UUID bridging.
-            if (hasAtomic)
-            {
-                await using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = """
-                        SELECT 1 FROM pragma_table_info('atomic_cards')
-                        WHERE name = 'identifiers_json' LIMIT 1;
-                        """;
-                    var col = await cmd.ExecuteScalarAsync(ct);
-                    if (col is null || col is DBNull)
-                    {
-                        Logger.LogStuff(
-                            "MTG DB: atomic_cards missing identifiers_json after migration attempt; download the latest compact catalog.",
-                            LogLevel.Error);
-                        return false;
-                    }
                 }
             }
 
@@ -340,13 +295,11 @@ public static class AppDataManager
         {
             // A single HEAD request with redirect following disabled lets us read the
             // Location header, which encodes the release tag in its path segments:
-            // .../releases/download/<TAG>/MTG_App_DB.zip (or AtomicCards.sqlite.zip)
+            // .../releases/download/<TAG>/MTG_App_DB.zip
             using var handler = new HttpClientHandler { AllowAutoRedirect = false };
             // Shorter timeout to avoid ANR window (10s) when device is offline; HEAD request is quick when online.
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(8), handler);
-            var headUrl = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-                ? MtgConstants.AtomicDatabaseDownloadUrl
-                : MtgConstants.DatabaseDownloadUrl;
+            var headUrl = MtgConstants.DatabaseDownloadUrl;
             using var request = new HttpRequestMessage(HttpMethod.Head, headUrl);
             using var response = await client.SendAsync(request);
 
@@ -382,20 +335,14 @@ public static class AppDataManager
         // 2. ADDED: Wait for the lock before doing anything
         await DownloadLock.WaitAsync(ct);
 
-        var zipName = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-            ? MtgConstants.FileAtomicSqliteZip
-            : MtgConstants.FileAllPrintingsZip;
+        var zipName = MtgConstants.FileAllPrintingsZip;
         var zipPath = Path.Combine(GetAppDataPath(), zipName);
-        var downloadUrl = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-            ? MtgConstants.AtomicDatabaseDownloadUrl
-            : MtgConstants.DatabaseDownloadUrl;
+        var downloadUrl = MtgConstants.DatabaseDownloadUrl;
         string? remoteVersion = null;
 
         try
         {
-            Logger.LogStuff(
-                $"Starting MTG catalog download ({MtgCatalogPreferences.Mode}).",
-                LogLevel.Info);
+            Logger.LogStuff("Starting MTG database download (full catalog).", LogLevel.Info);
             UpdateProgress("Checking version...", 0);
             // Try to get version before download to save it later
             remoteVersion = await GetRemoteDatabaseVersionAsync();
@@ -514,9 +461,7 @@ public static class AppDataManager
         try
         {
             using var client = NetworkHelper.CreateHttpClient(TimeSpan.FromSeconds(ResponseTimeoutSeconds));
-            var url = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-                ? MtgConstants.AtomicDatabaseDownloadUrl
-                : MtgConstants.DatabaseDownloadUrl;
+            var url = MtgConstants.DatabaseDownloadUrl;
             using var request = new HttpRequestMessage(HttpMethod.Head, url);
             using var response = await client.SendAsync(request, ct);
             return response.IsSuccessStatusCode;
@@ -535,9 +480,7 @@ public static class AppDataManager
 
         // Use a temp file for extraction to avoid locking the real DB if the app crashes mid-extract
         var tempDbPath = targetPath + ".tmp";
-        var dbFile = MtgCatalogPreferences.Mode == MtgCatalogMode.Lite
-            ? MtgConstants.FileAtomicSqlite
-            : MtgConstants.FileAllPrintings;
+        var dbFile = MtgConstants.FileAllPrintings;
 
         try
         {
@@ -626,68 +569,6 @@ public static class AppDataManager
         }
 
         File.Move(tempDbPath, targetPath);
-        TryMigrateAtomicIdentifiersJsonColumn(targetPath);
-    }
-
-    /// <summary>
-    /// Older GitHub-published compact catalogs omitted <c>identifiers_json</c>. Add the column and backfill
-    /// from <c>scryfall_id</c> / <c>scryfall_oracle_id</c> so collection UUID and image keys still resolve.
-    /// </summary>
-    private static void TryMigrateAtomicIdentifiersJsonColumn(string dbPath)
-    {
-        try
-        {
-            var cs = new SqliteConnectionStringBuilder
-            {
-                DataSource = dbPath,
-                Mode = SqliteOpenMode.ReadWriteCreate
-            };
-            using var conn = new SqliteConnection(cs.ConnectionString);
-            conn.Open();
-            using (var probe = conn.CreateCommand())
-            {
-                probe.CommandText =
-                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='atomic_cards' LIMIT 1;";
-                if (probe.ExecuteScalar() is null or DBNull)
-                    return;
-
-                probe.CommandText =
-                    "SELECT 1 FROM pragma_table_info('atomic_cards') WHERE name = 'identifiers_json' LIMIT 1;";
-                if (probe.ExecuteScalar() is not null and not DBNull)
-                    return;
-            }
-
-            Logger.LogStuff(
-                "Compact catalog: upgrading legacy atomic_cards (ADD identifiers_json, backfill from Scryfall id columns).",
-                LogLevel.Info);
-
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = "ALTER TABLE atomic_cards ADD COLUMN identifiers_json TEXT;";
-                cmd.ExecuteNonQuery();
-            }
-
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = """
-                    UPDATE atomic_cards
-                    SET identifiers_json = json_object(
-                      'scryfallId', NULLIF(TRIM(scryfall_id), ''),
-                      'scryfallOracleId', NULLIF(TRIM(scryfall_oracle_id), '')
-                    )
-                    WHERE (identifiers_json IS NULL OR TRIM(COALESCE(identifiers_json, '')) = '')
-                      AND (
-                        (scryfall_id IS NOT NULL AND TRIM(scryfall_id) != '')
-                        OR (scryfall_oracle_id IS NOT NULL AND TRIM(scryfall_oracle_id) != '')
-                      );
-                    """;
-                cmd.ExecuteNonQuery();
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogStuff($"Atomic identifiers_json migration failed: {ex.Message}", LogLevel.Error);
-        }
     }
 
     private static void UpdateProgress(string message, int percent)

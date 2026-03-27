@@ -37,17 +37,17 @@ Everything runs locally. No account needed, no data sent anywhere.
 
 ## Platforms and cross-device use
 
-**Android today.** The shipped beta targets Android only.
+The shipped beta is **Android only**. “PC support” and “cross-platform” usually mean one of three different goals:
 
-When people ask about PC support or “cross-platform,” they often mean different things:
+| Goal | Notes |
+|------|--------|
+| **Same app on more OSes** (e.g. a Windows build) | Mostly packaging and distribution; it does not by itself keep data in sync across machines. |
+| **Data portability** | **CSV import and export** with a **Moxfield-style** column layout — back up, edit in a spreadsheet, or round-trip with other tools without lock-in. |
+| **Live sync** | Same collection and decks on phone and another surface (PC or browser) without swapping files. That requires accounts, hosted storage, and conflict handling. **Not in the app today.** |
 
-1. **The same app on more OSes** (for example a Windows install) — mostly a packaging problem, separate from keeping data in sync.
-2. **Data portability** — importing and exporting so you can use your list elsewhere or round-trip with other tools. AetherVault supports **CSV import and export** with a **Moxfield-style** column layout so you can back up, edit in a spreadsheet, or move data without lock-in.
-3. **Live sync** — your phone and another surface (PC or browser) always show the same collection and decks without emailing files. That needs identity, hosted storage, and rules for conflicting edits. **That is not in the app today.**
+A **browser-based** companion is a different product milestone than a **desktop installer**: a Windows build alone does not provide “open a tab anywhere” or automatic sync.
 
-Many players also say they want **a web page on PC**, not another installed catalog program. A browser companion or cloud sync would be a **separate milestone** from a desktop build; shipping Windows alone would not by itself give “open a tab anywhere” or automatic sync.
-
-**How to describe AetherVault honestly:** local-first Android, full **offline search** against the bundled MTG database, no account. CSV is the bridge to the rest of your workflow until any future sync exists.
+**In short:** AetherVault is **local-first** on Android, with **offline search** against the bundled MTG database and **no account**. **CSV** is the supported way to move data into the rest of your workflow until any future sync ships.
 
 ---
 

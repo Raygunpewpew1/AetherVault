@@ -29,33 +29,22 @@
                                         TitleColor="{StaticResource TextSecondary}"
                                         AccentColor="{StaticResource Primary}"
                                         AllowClear="True" />
-                    <Button Grid.Column="1"
-                            VerticalOptions="Center"
-                            BackgroundColor="{StaticResource CardBackground}"
-                            WidthRequest="44"
-                            HeightRequest="40"
-                            Padding="0"
-                            Text="{x:Static fa:Solid.EllipsisVertical}"
-                            FontFamily="FASolid"
-                            FontSize="18"
-                            TextColor="{StaticResource Primary}"
-                            StyleClass="ElevatedButton"
-                            ToolTipProperties.Text="More actions">
-                        <Button.Flyout>
-                            <MenuFlyout>
-                                <MenuFlyoutItem Text="Switch card layout"
-                                                Command="{Binding ToggleViewModeCommand}" />
-                                <MenuFlyoutItem Text="Import"
-                                                Command="{Binding ImportCollectionCommand}" />
-                                <MenuFlyoutItem Text="Export"
-                                                Command="{Binding ExportCollectionCommand}" />
-                                <MenuFlyoutItem Text="Refresh"
-                                                Command="{Binding RefreshCommand}" />
-                                <MenuFlyoutItem Text="Clear collection…"
-                                                Clicked="OnClearCollectionMenuClicked" />
-                            </MenuFlyout>
-                        </Button.Flyout>
-                    </Button>
+                    <ImageButton Grid.Column="1"
+                                 VerticalOptions="Center"
+                                 BackgroundColor="{StaticResource CardBackground}"
+                                 WidthRequest="44"
+                                 HeightRequest="40"
+                                 Padding="10,8"
+                                 CornerRadius="20"
+                                 ToolTipProperties.Text="More actions"
+                                 Clicked="OnCollectionMoreClicked">
+                        <ImageButton.Source>
+                            <FontImageSource FontFamily="FASolid"
+                                             Glyph="{x:Static fa:Solid.EllipsisVertical}"
+                                             Color="{StaticResource Primary}"
+                                             Size="18" />
+                        </ImageButton.Source>
+                    </ImageButton>
                 </Grid>
 
                 <!-- Stats, status, busy, sort -->

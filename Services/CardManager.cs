@@ -62,9 +62,6 @@ public class CardManager : IDisposable
 
     public DatabaseManager DatabaseManager => _databaseManager;
 
-    /// <summary>True when the connected MTG file is the compact AtomicCards schema.</summary>
-    public bool IsAtomicCatalog => _databaseManager.IsAtomicCatalog;
-
     public ImageDownloadService ImageService => _imageService;
 
     /// <summary>
@@ -321,25 +318,8 @@ public class CardManager : IDisposable
         return await _cardRepository.SearchCardsAsync(nameFilter, limit);
     }
 
-    public Task<Card[]> SearchAtomicCatalogAsync(SearchOptions options, int limit, int offset) =>
-        _cardRepository.SearchAtomicCatalogAsync(options, limit, offset);
-
-    public Task<int> CountAtomicCatalogAsync(SearchOptions options) =>
-        _cardRepository.CountAtomicCatalogAsync(options);
-
     public async Task<Card[]> SearchByNameAsync(string name, int limit = 25)
     {
-        if (_databaseManager.IsAtomicCatalog)
-        {
-            var o = new SearchOptions
-            {
-                NameFilter = name,
-                PrimarySideOnly = true,
-                IncludeTokens = false
-            };
-            return await _cardRepository.SearchAtomicCatalogAsync(o, limit, 0);
-        }
-
         var helper = _cardRepository.CreateSearchHelper();
         helper.SearchCards()
             .WhereNameContains(name)
@@ -351,17 +331,6 @@ public class CardManager : IDisposable
 
     public async Task<Card[]> SearchByTypeAsync(string cardType, int limit = 25)
     {
-        if (_databaseManager.IsAtomicCatalog)
-        {
-            var o = new SearchOptions
-            {
-                TypeFilter = cardType,
-                PrimarySideOnly = true,
-                IncludeTokens = false
-            };
-            return await _cardRepository.SearchAtomicCatalogAsync(o, limit, 0);
-        }
-
         var helper = _cardRepository.CreateSearchHelper();
         helper.SearchCards()
             .WhereType(cardType)
@@ -373,17 +342,6 @@ public class CardManager : IDisposable
 
     public async Task<Card[]> SearchByColorsAsync(string colors, int limit = 25)
     {
-        if (_databaseManager.IsAtomicCatalog)
-        {
-            var o = new SearchOptions
-            {
-                ColorFilter = colors,
-                PrimarySideOnly = true,
-                IncludeTokens = false
-            };
-            return await _cardRepository.SearchAtomicCatalogAsync(o, limit, 0);
-        }
-
         var helper = _cardRepository.CreateSearchHelper();
         helper.SearchCards()
             .WhereColors(colors)

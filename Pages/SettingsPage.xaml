@@ -14,7 +14,7 @@
                     <Label Text="Card database"
                            FontSize="18"
                            FontAttributes="Bold" />
-                    <Label Text="Re-downloads from GitHub. Choose full vs compact catalog in Database below before starting."
+                    <Label Text="Re-downloads the full card database from GitHub."
                            FontSize="13"
                            TextColor="{StaticResource TextSecondary}" />
                     <Button x:Name="ForceDbUpdateBtn"
@@ -47,13 +47,6 @@
                                Text="Checking..."
                                FontSize="14"
                                TextColor="{StaticResource TextSecondary}" />
-                        <Label Text="Card catalog (next download)"
-                               FontSize="13"
-                               TextColor="{StaticResource TextSecondary}"
-                               Margin="0,4,0,0" />
-                        <Picker x:Name="CatalogModePicker"
-                                Title="Catalog"
-                                Margin="0,4,0,0" />
                     </VerticalStackLayout>
                 </uranium:ExpanderView>
             </Border>
