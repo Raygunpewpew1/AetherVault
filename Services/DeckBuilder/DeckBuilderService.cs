@@ -381,9 +381,10 @@ public class DeckBuilderService
             return ValidationResult.Success();
 
         var message = string.Join(" ", messages);
+        var lines = (IReadOnlyList<string>)[.. messages];
         return level == ValidationLevel.Error
-            ? ValidationResult.Error(message)
-            : ValidationResult.Warning(message);
+            ? new ValidationResult { Level = ValidationLevel.Error, Message = message, DetailLines = lines }
+            : new ValidationResult { Level = ValidationLevel.Warning, Message = message, DetailLines = lines };
     }
 
     /// <summary>

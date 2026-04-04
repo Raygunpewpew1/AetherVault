@@ -109,6 +109,7 @@ public enum CollectionSortMode
     Cmc = 2,
     Rarity = 3,
     Color = 4,
+    Price = 5,
 }
 
 /// <summary>Main / sideboard list presentation on the deck editor page.</summary>

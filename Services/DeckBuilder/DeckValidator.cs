@@ -16,13 +16,28 @@ public class ValidationResult
     public ValidationLevel Level { get; set; }
     public string Message { get; set; } = "";
 
+    /// <summary>Separate lines for UI (e.g. validation detail sheet). Empty when not populated.</summary>
+    public IReadOnlyList<string> DetailLines { get; set; } = [];
+
     public bool IsSuccess => Level == ValidationLevel.Success;
     public bool IsError => Level == ValidationLevel.Error;
     public bool IsWarning => Level == ValidationLevel.Warning;
 
     public static ValidationResult Success() => new() { Level = ValidationLevel.Success };
-    public static ValidationResult Error(string message) => new() { Level = ValidationLevel.Error, Message = message };
-    public static ValidationResult Warning(string message) => new() { Level = ValidationLevel.Warning, Message = message };
+
+    public static ValidationResult Error(string message) => new()
+    {
+        Level = ValidationLevel.Error,
+        Message = message,
+        DetailLines = string.IsNullOrWhiteSpace(message) ? [] : [message]
+    };
+
+    public static ValidationResult Warning(string message) => new()
+    {
+        Level = ValidationLevel.Warning,
+        Message = message,
+        DetailLines = string.IsNullOrWhiteSpace(message) ? [] : [message]
+    };
 }
 
 public class DeckValidator

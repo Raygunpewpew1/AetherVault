@@ -163,6 +163,8 @@ public partial class DeckDetailViewModel(
     private CancellationTokenSource? _deckListFilterCts;
     private const string PrefDeckEditorLayoutMode = "DeckEditorLayoutMode";
     private bool _deckEditorLayoutPrefLoaded;
+    private static bool _gridLayoutHintShownThisProcess;
+    private IReadOnlyList<string> _validationDetailLines = [];
 
     /// <summary>Raised on the main thread after deck data has been reloaded (so the page can force layout/redraw).</summary>
     public event Action? ReloadCompleted;
@@ -240,6 +242,11 @@ public partial class DeckDetailViewModel(
         OnPropertyChanged(nameof(IsDeckEditorLayoutStandard));
         OnPropertyChanged(nameof(IsDeckEditorLayoutCompact));
         OnPropertyChanged(nameof(IsDeckEditorLayoutGrid));
+        if (value == DeckEditorLayoutMode.Grid && !_gridLayoutHintShownThisProcess)
+        {
+            _gridLayoutHintShownThisProcess = true;
+            _toast.Show(UserMessages.DeckGridLayoutHint, 5000);
+        }
         try
         {
             Preferences.Default.Set(PrefDeckEditorLayoutMode, value.ToString());
@@ -249,6 +256,38 @@ public partial class DeckDetailViewModel(
             // ignore storage failures
         }
     }
+
+    /// <summary>Show validation bullet list (page shows an alert).</summary>
+    public bool ShowValidationDetailsEntry => _validationDetailLines.Count > 0;
+
+    /// <summary>Raised with joined validation lines when user taps Details.</summary>
+    public event Func<string, Task>? ValidationDetailsAlertRequested;
+
+    [RelayCommand(CanExecute = nameof(CanShowValidationDetails))]
+    private async Task ShowValidationDetails()
+    {
+        if (_validationDetailLines.Count == 0 || ValidationDetailsAlertRequested == null)
+            return;
+        string body = string.Join($"{Environment.NewLine}{Environment.NewLine}", _validationDetailLines);
+        await ValidationDetailsAlertRequested.Invoke(body);
+    }
+
+    private bool CanShowValidationDetails() => _validationDetailLines.Count > 0;
+
+    private void SetValidationDetailLines(ValidationResult validation)
+    {
+        _validationDetailLines = validation.DetailLines.Count > 0
+            ? validation.DetailLines
+            : (!string.IsNullOrWhiteSpace(validation.Message) ? [validation.Message] : []);
+        OnPropertyChanged(nameof(ShowValidationDetailsEntry));
+        ShowValidationDetailsCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>Raised when FAB add-cards flow should open (e.g. commander empty state).</summary>
+    public event Action? AddCardsModalRequested;
+
+    [RelayCommand]
+    private void RequestAddCardsModal() => AddCardsModalRequested?.Invoke();
 
     /// <summary>Called from <see cref="Pages.DeckDetailPage"/> layout action sheet (and tests).</summary>
     public void SetDeckEditorLayout(DeckEditorLayoutMode mode) => DeckEditorLayoutMode = mode;
@@ -361,6 +400,9 @@ public partial class DeckDetailViewModel(
     public int SelectedCardCount => GetSelectedVisibleItems().Count();
 
     public bool HasSelection => SelectedCardCount > 0;
+
+    /// <summary>Bulk toolbar label (e.g. "3 selected").</summary>
+    public string BulkSelectionCountText => $"{SelectedCardCount} selected";
 
     private IAsyncRelayCommand? _undoDeckEditCommand;
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
@@ -512,6 +554,7 @@ public partial class DeckDetailViewModel(
     {
         if (!value)
             ClearDeckListSelection();
+        OnPropertyChanged(nameof(BulkSelectionCountText));
     }
 
     partial void OnDeckListFilterTextChanged(string value)
@@ -567,6 +610,12 @@ public partial class DeckDetailViewModel(
         }
     }
 
+    /// <summary>
+    /// Set by <see cref="Pages.DeckAddCardsPage"/> while the add-cards modal is open.
+    /// Invoked after a successful commander set so the modal can pop without requiring Done.
+    /// </summary>
+    public Func<Task>? AddCardsModalDismissAction { get; set; }
+
     /// <summary>Clears add-card search state when the sheet closes.</summary>
     public void ClearAddCardSearch()
     {
@@ -602,6 +651,9 @@ public partial class DeckDetailViewModel(
                 StatusIsError = false;
                 StatusMessage = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : $"{card.Name} set as commander.";
                 await ReloadAsync(preserveState: true);
+                var dismiss = AddCardsModalDismissAction;
+                if (dismiss != null)
+                    await dismiss();
             }
             return;
         }
@@ -719,6 +771,7 @@ public partial class DeckDetailViewModel(
                 RefreshDeckListFilter();
                 StatusIsError = validation.Level == ValidationLevel.Error;
                 StatusMessage = statusMessage;
+                SetValidationDetailLines(validation);
                 ReloadCompleted?.Invoke();
             });
         }
@@ -918,6 +971,7 @@ public partial class DeckDetailViewModel(
     {
         OnPropertyChanged(nameof(SelectedCardCount));
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(BulkSelectionCountText));
     }
 
     private IEnumerable<DeckCardDisplayItem> GetSelectedVisibleItems()
@@ -1387,6 +1441,7 @@ public partial class DeckDetailViewModel(
         {
             StatusIsError = v.Level == ValidationLevel.Error;
             StatusMessage = GetValidationStatusMessage(v, total);
+            SetValidationDetailLines(v);
         });
     }
 

@@ -138,6 +138,44 @@ public class CardPriceDatabase : IDisposable
     }
 
     /// <summary>
+    /// Loads paper prices for every distinct card UUID in the user's collection via one query (collection DB attached as col).
+    /// Cards with no price rows are omitted from the dictionary (same as bulk-by-uuid).
+    /// </summary>
+    public async Task<Dictionary<string, CardPriceData>> GetCardPricesForCollectionAsync()
+    {
+        await _lock.WaitAsync();
+        try
+        {
+            if (!IsConnected) return [];
+
+            await EnsureCollectionAttachedAsync(_connection!);
+
+            var rows = (await _connection!.QueryAsync<BulkPriceRow>(SqlQueries.PricesGetAllForCollection)).ToList();
+            var result = new Dictionary<string, CardPriceData>(StringComparer.Ordinal);
+            foreach (var g in rows.GroupBy(r => r.Uuid))
+            {
+                result[g.Key] = new CardPriceData
+                {
+                    Uuid = g.Key,
+                    Paper = BuildPaperPlatform(g.Cast<PriceRow>().ToList(), []),
+                    LastUpdated = DateTime.Now
+                };
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"GetCardPricesForCollection failed: {ex.Message}", LogLevel.Error);
+            return [];
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
     /// Computes collection total value directly in SQLite using provider priority and finish fallback.
     /// Expects the collection DB to be attached as alias "col" (attached on demand if needed).
     /// </summary>

@@ -559,6 +559,16 @@ public class CardManager : IDisposable
             : [];
     }
 
+    /// <summary>
+    /// All price rows for distinct collection UUIDs in one query (for collection price sort / caching).
+    /// </summary>
+    public async Task<Dictionary<string, CardPriceData>> GetCollectionCardPricesAsync()
+    {
+        return _priceManager != null
+            ? await _priceManager.GetCardPricesForCollectionAsync()
+            : [];
+    }
+
     // ── Dispose ──────────────────────────────────────────────────────
 
     public void Dispose()

@@ -63,38 +63,70 @@ public partial class DeckDetailPage : ContentPage
                 }
             }
         };
-
-        CommanderTabView.CommanderMenuRequested += OnCommanderMenuRequested;
     }
 
-    private async void OnDeckLayoutClicked(object? sender, EventArgs e)
+    private async void OnDeckDetailMoreClicked(object? sender, EventArgs e)
+    {
+        const string cancel = "Cancel";
+        string pick = await DisplayActionSheetAsync(
+            UserMessages.DeckDetailMoreMenuTitle,
+            cancel,
+            null,
+            UserMessages.DeckDetailMoreImportCsv,
+            UserMessages.DeckDetailMoreExportCsv,
+            UserMessages.DeckDetailMoreLayout);
+
+        if (pick == UserMessages.DeckDetailMoreImportCsv)
+            await ImportDeckCsvAsync();
+        else if (pick == UserMessages.DeckDetailMoreExportCsv)
+            await ExportDeckAsync();
+        else if (pick == UserMessages.DeckDetailMoreLayout)
+            await PickDeckLayoutAsync();
+    }
+
+    private async Task PickDeckLayoutAsync()
     {
         if (_viewModel.IsStatsTab)
         {
-            await DisplayAlertAsync("Layout", "Layout options apply to Main deck and Sideboard.", "OK");
+            await DisplayAlertAsync(UserMessages.DeckDetailLayoutSheetTitle, UserMessages.DeckDetailLayoutStatsHint, "OK");
             return;
         }
 
-        const string list = "List (full)";
-        const string compact = "List (compact)";
-        const string grid = "Card grid";
-        var pick = await DisplayActionSheetAsync("Deck layout", "Cancel", null, list, compact, grid);
-        if (pick == list)
+        var pick = await DisplayActionSheetAsync(
+            UserMessages.DeckDetailLayoutSheetTitle,
+            "Cancel",
+            null,
+            UserMessages.DeckDetailLayoutListFull,
+            UserMessages.DeckDetailLayoutListCompact,
+            UserMessages.DeckDetailLayoutCardGrid);
+        if (pick == UserMessages.DeckDetailLayoutListFull)
             _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Standard);
-        else if (pick == compact)
+        else if (pick == UserMessages.DeckDetailLayoutListCompact)
             _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Compact);
-        else if (pick == grid)
+        else if (pick == UserMessages.DeckDetailLayoutCardGrid)
             _viewModel.SetDeckEditorLayout(DeckEditorLayoutMode.Grid);
     }
 
     private async void OnAddCardsClicked(object? sender, EventArgs e)
     {
-        // Full-screen modal avoids Shell tab bar jumping with IME (AdjustResize); popup was resizing the whole window.
+        await OpenAddCardsModalAsync();
+    }
+
+    private async Task OpenAddCardsModalAsync()
+    {
         var page = _serviceProvider.GetRequiredService<DeckAddCardsPage>();
         var nav = Navigation;
         page.Init(_viewModel, async () => await nav.PopModalAsync());
         await Navigation.PushModalAsync(page);
     }
+
+    private void OnAddCardsModalRequested()
+    {
+        MainThread.BeginInvokeOnMainThread(() => _ = OpenAddCardsModalAsync());
+    }
+
+    private async Task OnValidationDetailsAlertRequested(string body) =>
+        await DisplayAlertAsync(UserMessages.ValidationDetailsTitle, body, "OK");
 
     private async void OnCommanderMenuRequested(object? sender, EventArgs e)
     {
@@ -118,7 +150,7 @@ public partial class DeckDetailPage : ContentPage
         await Shell.Current.GoToAsync($"carddetail?uuid={Uri.EscapeDataString(item.CardUuid)}");
     }
 
-    private async void OnImportCsvClicked(object? sender, EventArgs e)
+    private async Task ImportDeckCsvAsync()
     {
         if (_viewModel.Deck == null) return;
 
@@ -159,7 +191,7 @@ public partial class DeckDetailPage : ContentPage
         }
     }
 
-    private async void OnExportDeckClicked(object? sender, EventArgs e)
+    private async Task ExportDeckAsync()
     {
         if (_viewModel.Deck == null) return;
 
@@ -197,7 +229,7 @@ public partial class DeckDetailPage : ContentPage
         {
             Logger.LogStuff($"Failed to export deck: {ex.Message}", LogLevel.Error);
             _viewModel.StatusIsError = true;
-            _viewModel.StatusMessage = $"Export failed: {ex.Message}";
+            _viewModel.StatusMessage = UserMessages.ExportFailed(ex.Message);
         }
         finally
         {
@@ -251,6 +283,9 @@ public partial class DeckDetailPage : ContentPage
         base.OnAppearing();
         _viewModel.ReloadCompleted += RunDeferredLayoutPass;
         _viewModel.RequestShowQuickDetail += OnRequestShowQuickDetail;
+        _viewModel.ValidationDetailsAlertRequested += OnValidationDetailsAlertRequested;
+        _viewModel.AddCardsModalRequested += OnAddCardsModalRequested;
+        CommanderTabView.CommanderMenuRequested += OnCommanderMenuRequested;
         // Reload commander art when returning to the page (it was cleared in OnDisappearing).
         _ = TryLoadCommanderArtAsync();
         try { CommanderArtCanvas?.InvalidateSurface(); } catch { /* ignore if view detached */ }
@@ -262,6 +297,8 @@ public partial class DeckDetailPage : ContentPage
         CommanderTabView.CommanderMenuRequested -= OnCommanderMenuRequested;
         _viewModel.ReloadCompleted -= RunDeferredLayoutPass;
         _viewModel.RequestShowQuickDetail -= OnRequestShowQuickDetail;
+        _viewModel.ValidationDetailsAlertRequested -= OnValidationDetailsAlertRequested;
+        _viewModel.AddCardsModalRequested -= OnAddCardsModalRequested;
         _commanderArtImage?.Dispose();
         _commanderArtImage = null;
     }

@@ -25,6 +25,12 @@ public partial class CollectionViewModel : BaseViewModel
     private bool _hasLoadedOnce;
     private int _lastLoadedCollectionVersion = -1;
 
+    private readonly Dictionary<string, CardPriceData> _collectionPriceCache = new(StringComparer.Ordinal);
+    private readonly object _collectionPriceCacheLock = new();
+    private readonly SemaphoreSlim _collectionPriceSnapshotGate = new(1, 1);
+    private int _priceSnapshotCollectionVersion = -1;
+    private int _collectionPriceInvalidationEpoch;
+
     // ── Bindable properties ──
 
     [ObservableProperty]
@@ -45,7 +51,7 @@ public partial class CollectionViewModel : BaseViewModel
     public partial string FilterText { get; set; } = "";
 
     /// <summary>Labels for the sort-mode picker (Manual, Name, CMC, etc.).</summary>
-    public List<string> SortModeOptions { get; } = ["Manual", "Name", "CMC", "Rarity", "Color"];
+    public List<string> SortModeOptions { get; } = ["Manual", "Name", "CMC", "Rarity", "Color", "Price"];
 
     /// <summary>Single-line summary for the collection toolbar (card totals).</summary>
     public string CollectionStatsSummary => $"{TotalCards} cards · {UniqueCards} unique";
@@ -89,6 +95,23 @@ public partial class CollectionViewModel : BaseViewModel
                 IsImportingPrices = pct < 100;
             });
         };
+
+        _cardManager.OnPricesUpdated += OnCardManagerPricesUpdated;
+    }
+
+    private void OnCardManagerPricesUpdated()
+    {
+        InvalidateCollectionPriceSnapshot();
+    }
+
+    private void InvalidateCollectionPriceSnapshot()
+    {
+        Interlocked.Increment(ref _collectionPriceInvalidationEpoch);
+        lock (_collectionPriceCacheLock)
+        {
+            _collectionPriceCache.Clear();
+            _priceSnapshotCollectionVersion = -1;
+        }
     }
 
     /// <summary>Called by CollectionPage when the card grid is created. Needed for visible-range updates (e.g. loading prices).</summary>
@@ -167,18 +190,39 @@ public partial class CollectionViewModel : BaseViewModel
 
         try
         {
-            var (filtered, displayedTotal, displayedUnique) = await Task.Run(() =>
+            var filteredForSort = await Task.Run(() =>
             {
-                if (token.IsCancellationRequested) return ([], 0, 0);
+                if (token.IsCancellationRequested) return Array.Empty<CollectionItem>();
 
                 IEnumerable<CollectionItem> result = _allItems;
 
-                // Filter by name
                 var filter = FilterText?.Trim();
                 if (!string.IsNullOrEmpty(filter))
                     result = result.Where(i => i.Card.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
 
-                // Sort
+                return result.ToArray();
+            }, token);
+
+            if (token.IsCancellationRequested) return;
+
+            var usePriceSort = SortMode == CollectionSortMode.Price
+                && PricePreferences.PricesDataEnabled
+                && PricePreferences.CollectionPriceDisplayEnabled;
+
+            Dictionary<string, CardPriceData> priceMap = [];
+            if (usePriceSort && filteredForSort.Length > 0)
+            {
+                await EnsureCollectionPriceSnapshotAsync(token).ConfigureAwait(false);
+                if (token.IsCancellationRequested) return;
+                priceMap = BuildPriceLookupForFilteredUuids(filteredForSort);
+            }
+
+            var (filtered, displayedTotal, displayedUnique) = await Task.Run(() =>
+            {
+                if (token.IsCancellationRequested) return ([], 0, 0);
+
+                IEnumerable<CollectionItem> result = filteredForSort;
+
                 if (token.IsCancellationRequested) return ([], 0, 0);
 
                 result = SortMode switch
@@ -187,6 +231,9 @@ public partial class CollectionViewModel : BaseViewModel
                     CollectionSortMode.Cmc => result.OrderBy(i => i.Card.EffectiveManaValue).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Rarity => result.OrderByDescending(i => i.Card.Rarity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Color => result.OrderBy(i => i.Card.ColorIdentity.Length).ThenBy(i => i.Card.ColorIdentity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.Price when usePriceSort => result.OrderByDescending(i => PriceDisplayHelper.GetNumericPrice(
+                        priceMap.GetValueOrDefault(i.CardUuid), i.IsFoil, i.IsEtched)).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.Price => result.OrderBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     _ => result // Manual: keep loaded order
                 };
 
@@ -231,6 +278,83 @@ public partial class CollectionViewModel : BaseViewModel
             });
         }
         catch (OperationCanceledException) { /* Expected when operation is cancelled (e.g. new search). */ }
+    }
+
+    /// <summary>
+    /// Fills <see cref="_collectionPriceCache"/> once per <see cref="CardManager.CollectionVersion"/> using a single DB query
+    /// (faster than many parallel chunked bulk UUID lookups).
+    /// </summary>
+    private async Task EnsureCollectionPriceSnapshotAsync(CancellationToken cancellationToken)
+    {
+        var version = _cardManager.CollectionVersion;
+        lock (_collectionPriceCacheLock)
+        {
+            if (_priceSnapshotCollectionVersion == version)
+                return;
+        }
+
+        await _collectionPriceSnapshotGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            version = _cardManager.CollectionVersion;
+            lock (_collectionPriceCacheLock)
+            {
+                if (_priceSnapshotCollectionVersion == version)
+                    return;
+            }
+
+            var snapshotCommitted = false;
+            for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
+            {
+                var epoch0 = Volatile.Read(ref _collectionPriceInvalidationEpoch);
+                var v0 = _cardManager.CollectionVersion;
+                var map = await _cardManager.GetCollectionCardPricesAsync().ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                var v1 = _cardManager.CollectionVersion;
+                if (v0 != v1) continue;
+                if (epoch0 != Volatile.Read(ref _collectionPriceInvalidationEpoch)) continue;
+
+                lock (_collectionPriceCacheLock)
+                {
+                    _collectionPriceCache.Clear();
+                    foreach (var kv in map)
+                        _collectionPriceCache[kv.Key] = kv.Value;
+                    _priceSnapshotCollectionVersion = v1;
+                }
+
+                snapshotCommitted = true;
+                break;
+            }
+
+            if (!snapshotCommitted)
+            {
+                lock (_collectionPriceCacheLock)
+                {
+                    _collectionPriceCache.Clear();
+                    _priceSnapshotCollectionVersion = -1;
+                }
+            }
+        }
+        finally
+        {
+            _collectionPriceSnapshotGate.Release();
+        }
+    }
+
+    private Dictionary<string, CardPriceData> BuildPriceLookupForFilteredUuids(CollectionItem[] filtered)
+    {
+        var distinct = filtered.Select(i => i.CardUuid).Distinct().ToArray();
+        lock (_collectionPriceCacheLock)
+        {
+            var map = new Dictionary<string, CardPriceData>(distinct.Length, StringComparer.Ordinal);
+            foreach (var u in distinct)
+            {
+                if (_collectionPriceCache.TryGetValue(u, out var d))
+                    map[u] = d;
+            }
+
+            return map;
+        }
     }
 
     private async Task RefreshAsync()
@@ -315,6 +439,8 @@ public partial class CollectionViewModel : BaseViewModel
 
         try
         {
+            InvalidateCollectionPriceSnapshot();
+
             _allItems = await Task.Run(() => _cardManager.GetCollectionAsync());
             Logger.LogStuff($"[CollectionUI] LoadCollectionAsync: loaded _allItems.Count={_allItems.Length}", LogLevel.Debug);
 

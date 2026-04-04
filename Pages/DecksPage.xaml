@@ -36,10 +36,10 @@
             </VerticalStackLayout>
         </Border>
 
-        <!-- Primary CTA + import/export actions -->
+        <!-- Primary CTA + deck tools (import/export in one sheet) -->
         <VerticalStackLayout Grid.Row="1"
-                             Margin="16,0,16,12"
-                             Spacing="10">
+                             Margin="16,0,16,8"
+                             Spacing="8">
             <Button Clicked="OnNewDeckClicked"
                     Text="New deck"
                     BackgroundColor="{StaticResource Accent}"
@@ -57,65 +57,16 @@
                                      Color="Black" />
                 </Button.ImageSource>
             </Button>
-
-            <Grid ColumnDefinitions="*,*"
-                  ColumnSpacing="12"
-                  RowDefinitions="Auto,Auto"
-                  RowSpacing="10">
-                <Button Grid.Row="0"
-                        Grid.Column="0"
-                        Command="{Binding ImportDecksCommand}"
-                        Text="Import file"
-                        BackgroundColor="{StaticResource Surface}"
-                        TextColor="{StaticResource TextPrimary}"
-                        FontSize="14"
-                        CornerRadius="12"
-                        HeightRequest="44"
-                        HorizontalOptions="Fill"
-                        BorderWidth="0" />
-                <Button Grid.Row="0"
-                        Grid.Column="1"
-                        Command="{Binding ExportDecksCommand}"
-                        Text="Export all"
-                        BackgroundColor="{StaticResource Surface}"
-                        TextColor="{StaticResource TextPrimary}"
-                        FontSize="14"
-                        CornerRadius="12"
-                        HeightRequest="44"
-                        HorizontalOptions="Fill"
-                        BorderWidth="0" />
-                <Button Grid.Row="1"
-                        Grid.Column="0"
-                        Clicked="OnImportFromUrlClicked"
-                        Text="From link"
-                        BackgroundColor="{StaticResource Surface}"
-                        TextColor="{StaticResource TextPrimary}"
-                        FontSize="14"
-                        CornerRadius="12"
-                        HeightRequest="44"
-                        HorizontalOptions="Fill"
-                        BorderWidth="0" />
-                <Button Grid.Row="1"
-                        Grid.Column="1"
-                        Clicked="OnPasteDecklistClicked"
-                        Text="Paste list"
-                        BackgroundColor="{StaticResource Surface}"
-                        TextColor="{StaticResource TextPrimary}"
-                        FontSize="14"
-                        CornerRadius="12"
-                        HeightRequest="44"
-                        HorizontalOptions="Fill"
-                        BorderWidth="0" />
-            </Grid>
-            <Button Clicked="OnBrowseMTGJsonClicked"
-                    Text="Browse Decks"
+            <Button Clicked="OnDeckToolsClicked"
+                    Text="Deck tools"
                     BackgroundColor="{StaticResource Surface}"
                     TextColor="{StaticResource TextPrimary}"
                     FontSize="14"
                     CornerRadius="12"
                     HeightRequest="44"
                     HorizontalOptions="Fill"
-                    BorderWidth="0" />
+                    BorderWidth="0"
+                    SemanticProperties.Hint="Import, export, or browse sample decks" />
         </VerticalStackLayout>
 
         <!-- Content area -->

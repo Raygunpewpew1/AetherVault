@@ -193,6 +193,18 @@ public static class SqlQueries
         "SELECT uuid, provider, price_type AS PriceType, finish, currency, price FROM card_prices WHERE uuid IN ({0}) AND source = 'paper'";
 
     /// <summary>
+    /// All paper price rows for distinct cards in the user's collection (requires collection DB attached as <c>col</c>).
+    /// Single round-trip for collection-wide price sort / cache warm; history omitted.
+    /// </summary>
+    public const string PricesGetAllForCollection =
+        """
+        SELECT p.uuid, p.provider, p.price_type AS PriceType, p.finish, p.currency, p.price
+        FROM card_prices p
+        WHERE p.source = 'paper'
+          AND p.uuid IN (SELECT DISTINCT card_uuid FROM col.my_collection)
+        """;
+
+    /// <summary>
     /// Computes total collection value by joining attached collection DB (alias: col) with card_prices.
     /// Provider priority is passed via @v1..@v4 and finish fallback mirrors PriceDisplayHelper.GetNumericPrice().
     /// </summary>

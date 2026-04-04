@@ -123,6 +123,41 @@ public static class UserMessages
         $"Imported \"{deckName}\" ({cardCount} cards).";
     public const string MtgJsonDeckImportFailed = "Could not import deck.";
     public const string NoDecksToExport = "No decks to export.";
+
+    /// <summary>Decks hub — action sheet title for import/export/discovery.</summary>
+    public const string DeckToolsActionSheetTitle = "Import or export decks";
+
+    public const string DeckToolsImportFile = "Import deck file";
+    public const string DeckToolsImportLink = "Import from link";
+    public const string DeckToolsPasteList = "Paste decklist";
+    public const string DeckToolsBrowseMtgJson = "Browse sample decks";
+    public const string DeckToolsExportAll = "Export all decks";
+
+    /// <summary>Deck detail — overflow menu title.</summary>
+    public const string DeckDetailMoreMenuTitle = "Deck actions";
+
+    public const string DeckDetailMoreImportCsv = "Import into this deck";
+    public const string DeckDetailMoreExportCsv = "Export this deck";
+    public const string DeckDetailMoreLayout = "Deck layout…";
+
+    public const string DeckGridLayoutHint =
+        "Grid view: use + and − on each card. Switch to list layout for swipe to move or remove.";
+
+    public const string DeckDetailLayoutSheetTitle = "Deck layout";
+
+    public const string DeckDetailLayoutListFull = "List (full)";
+
+    public const string DeckDetailLayoutListCompact = "List (compact)";
+
+    public const string DeckDetailLayoutCardGrid = "Card grid";
+
+    public const string DeckDetailLayoutStatsHint = "Layout options apply to Main deck and Sideboard.";
+
+    public const string ValidationDetailsTitle = "Validation details";
+
+    public const string ValidationDetailsButton = "Details";
+
+    public const string AddCommander = "Add commander";
     public const string NothingToExport = "Nothing to export.";
     public const string ExportFailedToast = "Export failed.";
 

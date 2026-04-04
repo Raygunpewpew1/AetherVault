@@ -9,6 +9,7 @@
              xmlns:pages="clr-namespace:AetherVault.Pages"
              xmlns:views="clr-namespace:AetherVault.Views"
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:constants="clr-namespace:AetherVault.Constants"
              x:Class="AetherVault.Pages.DeckDetailPage"
              Title="{Binding Deck.Name}"
              BackgroundColor="{StaticResource Background}"
@@ -23,18 +24,10 @@
                      Command="{Binding ToggleSelectionModeCommand}"
                      Order="Primary"
                      Priority="1" />
-        <ToolbarItem Text="Import"
-                     Clicked="OnImportCsvClicked"
+        <ToolbarItem Text="More"
+                     Clicked="OnDeckDetailMoreClicked"
                      Order="Primary"
                      Priority="2" />
-        <ToolbarItem Text="Export"
-                     Clicked="OnExportDeckClicked"
-                     Order="Primary"
-                     Priority="3" />
-        <ToolbarItem Text="Layout"
-                     Clicked="OnDeckLayoutClicked"
-                     Order="Primary"
-                     Priority="4" />
     </ContentPage.ToolbarItems>
 
     <Grid x:Name="DeckDetailRoot" RowDefinitions="100,Auto,Auto,Auto,*,Auto">
@@ -103,6 +96,13 @@
                         HorizontalScrollBarVisibility="Never">
                 <HorizontalStackLayout Spacing="6"
                                        VerticalOptions="Center">
+                    <Label Text="{Binding BulkSelectionCountText}"
+                           FontSize="12"
+                           TextColor="{StaticResource TextPrimary}"
+                           VerticalOptions="Center"
+                           VerticalTextAlignment="Center"
+                           Margin="0,0,4,0"
+                           MinimumWidthRequest="72" />
                     <Button Text="All"
                             Command="{Binding SelectAllInCurrentSectionCommand}"
                             Padding="10,6"
@@ -163,13 +163,20 @@
                 BackgroundColor="{StaticResource Background}"
                 StrokeThickness="0"
                 IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertedBool}}">
-            <material:TextField Title="Find in deck…"
-                                Text="{Binding DeckListFilterText, Mode=TwoWay}"
-                                BackgroundColor="{StaticResource Surface}"
-                                TextColor="{StaticResource TextPrimary}"
-                                TitleColor="{StaticResource TextSecondary}"
-                                AccentColor="{StaticResource Primary}"
-                                AllowClear="True" />
+            <VerticalStackLayout Spacing="4">
+                <material:TextField Title="Find in deck…"
+                                    Text="{Binding DeckListFilterText, Mode=TwoWay}"
+                                    BackgroundColor="{StaticResource Surface}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    TitleColor="{StaticResource TextSecondary}"
+                                    AccentColor="{StaticResource Primary}"
+                                    AllowClear="True" />
+                <Label Text="{x:Static constants:UserMessages.DeckGridLayoutHint}"
+                       FontSize="11"
+                       TextColor="{StaticResource TextSecondary}"
+                       LineBreakMode="WordWrap"
+                       IsVisible="{Binding IsDeckEditorLayoutGrid}" />
+            </VerticalStackLayout>
         </Border>
 
         <!-- Row 4: Tab content + floating add button -->
@@ -222,13 +229,29 @@
                    TextColor="White"
                    HorizontalOptions="Center"
                    VerticalOptions="Center" />
-            <Label Grid.Row="1"
-                   Text="{Binding StatusDisplayText}"
-                   FontSize="12"
-                   TextColor="{Binding StatusTextColor}"
-                   HorizontalOptions="Center"
-                   VerticalOptions="Center"
-                   Opacity="0.9" />
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8"
+                  VerticalOptions="Center">
+                <Label Grid.Column="0"
+                       Text="{Binding StatusDisplayText}"
+                       FontSize="12"
+                       TextColor="{Binding StatusTextColor}"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       Opacity="0.9" />
+                <Button Grid.Column="1"
+                        Text="{x:Static constants:UserMessages.ValidationDetailsButton}"
+                        Command="{Binding ShowValidationDetailsCommand}"
+                        IsVisible="{Binding ShowValidationDetailsEntry}"
+                        BackgroundColor="#33FFFFFF"
+                        TextColor="White"
+                        FontSize="12"
+                        Padding="12,6"
+                        CornerRadius="8"
+                        VerticalOptions="Center" />
+            </Grid>
         </Grid>
 
     </Grid>

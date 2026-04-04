@@ -69,12 +69,35 @@ public partial class DecksPage : ContentPage
             await _viewModel.DeleteDeckAsync(deck);
     }
 
-    private async void OnBrowseMTGJsonClicked(object? sender, EventArgs e)
+    private async void OnDeckToolsClicked(object? sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync("mtgjsondecks");
+        if (_viewModel.IsBusy)
+            return;
+
+        const string cancel = "Cancel";
+        string pick = await DisplayActionSheetAsync(
+            UserMessages.DeckToolsActionSheetTitle,
+            cancel,
+            null,
+            UserMessages.DeckToolsImportFile,
+            UserMessages.DeckToolsImportLink,
+            UserMessages.DeckToolsPasteList,
+            UserMessages.DeckToolsBrowseMtgJson,
+            UserMessages.DeckToolsExportAll);
+
+        if (pick == UserMessages.DeckToolsImportFile)
+            await _viewModel.ImportDecks();
+        else if (pick == UserMessages.DeckToolsImportLink)
+            await OnImportFromUrlAsync();
+        else if (pick == UserMessages.DeckToolsPasteList)
+            await OnPasteDecklistAsync();
+        else if (pick == UserMessages.DeckToolsBrowseMtgJson)
+            await Shell.Current.GoToAsync("mtgjsondecks");
+        else if (pick == UserMessages.DeckToolsExportAll)
+            await _viewModel.ExportDecks();
     }
 
-    private async void OnImportFromUrlClicked(object? sender, EventArgs e)
+    private async Task OnImportFromUrlAsync()
     {
         if (_viewModel.IsBusy)
             return;
@@ -93,7 +116,7 @@ public partial class DecksPage : ContentPage
         await _viewModel.ImportDeckFromUrlAsync(url.Trim());
     }
 
-    private async void OnPasteDecklistClicked(object? sender, EventArgs e)
+    private async Task OnPasteDecklistAsync()
     {
         if (_viewModel.IsBusy)
             return;
@@ -104,6 +127,7 @@ public partial class DecksPage : ContentPage
         if (!string.IsNullOrWhiteSpace(text))
             await _viewModel.ImportDeckFromPlainTextAsync(text);
     }
+
 
     private async void OnDeckSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {

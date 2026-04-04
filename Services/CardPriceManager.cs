@@ -118,6 +118,14 @@ public class CardPriceManager : IDisposable
     }
 
     /// <summary>
+    /// All price data for cards in the user's collection in one database round trip.
+    /// </summary>
+    public async Task<Dictionary<string, CardPriceData>> GetCardPricesForCollectionAsync()
+    {
+        return await _database.GetCardPricesForCollectionAsync();
+    }
+
+    /// <summary>
     /// Computes collection total value directly in SQLite for the given vendor priority.
     /// </summary>
     public async Task<double> GetCollectionTotalValueAsync(IReadOnlyList<PriceVendor> vendorPriority)

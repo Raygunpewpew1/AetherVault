@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:pages="clr-namespace:AetherVault.Pages"
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:constants="clr-namespace:AetherVault.Constants"
              x:Class="AetherVault.Views.DeckCommanderTabView"
              x:DataType="vm:DeckDetailViewModel">
     <ScrollView Padding="16,8"
@@ -28,12 +29,20 @@
                        FontAttributes="Bold"
                        TextColor="{StaticResource TextPrimary}"
                        HorizontalOptions="Center" />
-                <Label Text="Tap the + button to search and add a legendary creature as your commander."
+                <Label Text="Search and add a legendary creature (or planeswalker that can be your commander)."
                        FontSize="14"
                        TextColor="{StaticResource TextSecondary}"
                        HorizontalOptions="Center"
                        HorizontalTextAlignment="Center"
-                       MaxLines="3" />
+                       MaxLines="4" />
+                <Button Command="{Binding RequestAddCardsModalCommand}"
+                        Text="{x:Static constants:UserMessages.AddCommander}"
+                        BackgroundColor="{StaticResource Accent}"
+                        TextColor="Black"
+                        FontSize="14"
+                        CornerRadius="12"
+                        Padding="20,10"
+                        HorizontalOptions="Center" />
             </VerticalStackLayout>
 
             <Label Text="Commander is hidden by your filter — clear “Find in deck” to show."

@@ -16,12 +16,20 @@ public partial class DeckAddCardsPage : ContentPage
     {
         BindingContext = viewModel;
         _dismissModal = dismissModal;
+        viewModel.AddCardsModalDismissAction = async () =>
+        {
+            viewModel.ClearAddCardSearch();
+            await dismissModal();
+        };
     }
 
     protected override void OnDisappearing()
     {
         if (BindingContext is DeckDetailViewModel vm)
+        {
+            vm.AddCardsModalDismissAction = null;
             vm.ClearAddCardSearch();
+        }
         base.OnDisappearing();
     }
 

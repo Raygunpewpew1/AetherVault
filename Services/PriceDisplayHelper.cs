@@ -68,7 +68,7 @@ public static class PriceDisplayHelper
     public static string GetDisplayPrice(CardPriceData? data, bool preferFoilLabel = false, bool preferEtchedLabel = false)
     {
         if (data == null) return "";
-        var (price, isFoil, isEtched, currency) = GetNumericPriceAndFinish(data, false, false);
+        var (price, isFoil, isEtched, currency) = GetNumericPriceAndFinish(data, false, false, vendorPriorityOverride: null);
         if (price <= 0) return "";
 
         var suffix = "";
@@ -82,18 +82,19 @@ public static class PriceDisplayHelper
     /// Returns the numeric price for collection total: uses vendor priority and picks
     /// RetailNormal, RetailFoil, or RetailEtched based on the item's finish.
     /// </summary>
-    public static double GetNumericPrice(CardPriceData? data, bool isFoil, bool isEtched)
+    /// <param name="vendorPriorityOverride">When non-null, used instead of app preferences (e.g. unit tests).</param>
+    public static double GetNumericPrice(CardPriceData? data, bool isFoil, bool isEtched, PriceVendor[]? vendorPriorityOverride = null)
     {
         if (data == null) return 0;
-        var (price, _, _, _) = GetNumericPriceAndFinish(data, isFoil, isEtched);
+        var (price, _, _, _) = GetNumericPriceAndFinish(data, isFoil, isEtched, vendorPriorityOverride);
         return price;
     }
 
     private static (double price, bool usedFoil, bool usedEtched, PriceCurrency currency) GetNumericPriceAndFinish(
-        CardPriceData data, bool preferFoil, bool preferEtched)
+        CardPriceData data, bool preferFoil, bool preferEtched, PriceVendor[]? vendorPriorityOverride)
     {
         var paper = data.Paper;
-        var order = GetVendorPriority();
+        var order = vendorPriorityOverride ?? GetVendorPriority();
 
         foreach (var vendor in order)
         {
