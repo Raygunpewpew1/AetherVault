@@ -17,19 +17,27 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Build trimmed price database
+        env:
+          # MTGJSON returns 403 for generic Python-urllib / empty UA; match app-style identification.
+          MTGJSON_UA: 'AetherVault/1.0 (GitHub Actions; +https://github.com/Raygunpewpew1/AetherVault)'
         run: |
           set -euo pipefail
           python3 <<'PY'
           import json
+          import os
           import urllib.request
-          with urllib.request.urlopen("https://mtgjson.com/api/v5/Meta.json", timeout=120) as r:
+
+          url = "https://mtgjson.com/api/v5/Meta.json"
+          ua = os.environ.get("MTGJSON_UA", "AetherVault/1.0")
+          req = urllib.request.Request(url, headers={"User-Agent": ua})
+          with urllib.request.urlopen(req, timeout=120) as r:
               j = json.load(r)
           data = j.get("data") or j.get("meta") or j
           date = (data.get("date") or "").strip()
           open("prices_bundle_meta.txt", "w", encoding="utf-8").write(date)
           print("prices_bundle_meta.txt:", repr(date))
           PY
-          curl -fL --retry 3 --retry-delay 5 -o AllPricesToday.sqlite.zip \
+          curl -fL -A "$MTGJSON_UA" --retry 3 --retry-delay 5 -o AllPricesToday.sqlite.zip \
             "https://mtgjson.com/api/v5/AllPricesToday.sqlite.zip"
           unzip -j -o AllPricesToday.sqlite.zip -d .
           shopt -s nullglob
