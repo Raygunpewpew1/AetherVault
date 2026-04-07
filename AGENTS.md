@@ -108,3 +108,51 @@ Pages bind to ViewModels via MAUI data binding. ViewModels expose `ObservablePro
 ---
 
 By adhering to these rules, you will minimize crashes, performance bottlenecks, and regressions in AetherVault.
+
+---
+
+## Cursor Cloud specific instructions
+
+### Environment
+
+The VM uses the .NET 10 SDK installed via the `dotnet-install.sh` script to `$HOME/.dotnet`. The following environment variables must be set in each shell session (they are persisted in `~/.bashrc`):
+
+```
+export DOTNET_ROOT=$HOME/.dotnet
+export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools
+export ANDROID_SDK_ROOT=$HOME/android-sdk
+export ANDROID_HOME=$ANDROID_SDK_ROOT
+export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
+```
+
+### Running Tests
+
+```bash
+dotnet test AetherVault.Tests/AetherVault.Tests.csproj
+```
+
+Target the test project directly — do **not** run `dotnet test` on the solution, as it will attempt to build the Android app which adds unnecessary time.
+
+### Building the Android App
+
+```bash
+dotnet build AetherVault.csproj -f net10.0-android -m -p:AndroidSdkDirectory=$HOME/android-sdk
+```
+
+The `-m` flag enables parallel builds. The `AndroidSdkDirectory` property is required when `ANDROID_HOME` is not picked up automatically.
+
+### Linting / Formatting
+
+The project uses `.editorconfig` for style rules. `EnableNETAnalyzers` is disabled in the main `.csproj`. To check formatting:
+
+```bash
+dotnet format AetherVault.Tests/AetherVault.Tests.csproj --verify-no-changes
+```
+
+Note: pre-existing whitespace issues exist in the repository; `--verify-no-changes` may return non-zero even without your changes.
+
+### Key Gotchas
+
+- This is an Android-only MAUI app — there is no runnable dev server. The "hello world" for this codebase is building the APK and running unit tests.
+- The test project (`net10.0`) uses linked source files and has no Android dependency, so it builds and runs without the Android SDK or MAUI workload.
+- When the Android SDK platform for the required API level (currently 36) is missing, run: `dotnet build -t:InstallAndroidDependencies -f net10.0-android "-p:AndroidSdkDirectory=$HOME/android-sdk" "-p:AcceptAndroidSDKLicenses=true" AetherVault.csproj`
