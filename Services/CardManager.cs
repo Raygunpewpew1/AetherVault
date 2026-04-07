@@ -25,7 +25,7 @@ public class CardManager : IDisposable
     private double _cachedTotalValue;
     private DateTime _totalValueCacheExpiry = DateTime.MinValue;
     private string _cachedTotalValueVendorKey = "";
-    private static readonly TimeSpan TotalValueCacheTtl = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan TotalValueCacheTtl = TimeSpan.FromMinutes(15);
     private bool? _ftsAvailable;
     private int _collectionVersion;
 
@@ -152,6 +152,18 @@ public class CardManager : IDisposable
     /// a successful <see cref="TryBeginStartup"/> call.
     /// </summary>
     public void EndStartup() => _startupLock.Release();
+
+    /// <summary>
+    /// Waits until the current startup owner calls <see cref="EndStartup"/> (non-owning wait).
+    /// Use when <see cref="TryBeginStartup"/> returned false so a redundant <c>LoadingPage</c>
+    /// instance can dismiss after the peer that holds the lock finishes (avoids a stuck splash
+    /// when Android delivers overlapping <c>OnAppearing</c> and the wrong <c>_initTask</c> is awaited).
+    /// </summary>
+    public async Task WaitForStartupReleasedAsync(CancellationToken cancellationToken = default)
+    {
+        await _startupLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        _startupLock.Release();
+    }
 
     /// <summary>
     /// Checks if a new main database version is available.

@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# Local MSBuild overrides (release URLs, repo metadata — see AetherVault.Local.props.example)
+AetherVault.Local.props
+
 # dotenv files
 .env
 

@@ -48,6 +48,12 @@ public class GridLayoutEngineTests
         var cmd = result.Commands[0] as DrawCardCommand;
         Assert.NotNull(cmd);
         Assert.Equal("1", cmd.Card.Id.Value);
+
+        Assert.True(GridLayoutEngine.TryGetWorldRectForCardIndex(state, 0, out var worldRect));
+        Assert.Equal(cmd.Rect.Left, worldRect.Left, 0.05f);
+        Assert.Equal(cmd.Rect.Top, worldRect.Top, 0.05f);
+        Assert.Equal(cmd.Rect.Right, worldRect.Right, 0.05f);
+        Assert.Equal(cmd.Rect.Bottom, worldRect.Bottom, 0.05f);
     }
 
     [Fact]

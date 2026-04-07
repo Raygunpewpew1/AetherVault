@@ -86,7 +86,12 @@ public partial class LoadingViewModel : BaseViewModel
         // downloads again and calls File.Delete on the file that the first just opened — crash.
         if (!_cardManager.TryBeginStartup())
         {
-            Logger.LogStuff("LoadingViewModel.InitAsync: startup already in progress; skipping.", LogLevel.Warning);
+            Logger.LogStuff(
+                "LoadingViewModel.InitAsync: startup already in progress; waiting for peer then syncing navigation.",
+                LogLevel.Warning);
+            await _cardManager.WaitForStartupReleasedAsync().ConfigureAwait(false);
+            if (_cardManager.DatabaseManager.IsConnected)
+                await MainThread.InvokeOnMainThreadAsync(SwitchToShellWithToastOverlay);
             return;
         }
 

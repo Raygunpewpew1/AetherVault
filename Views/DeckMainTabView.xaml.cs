@@ -10,8 +10,8 @@ public partial class DeckMainTabView : ContentView
     }
 
     /// <summary>
-    /// SwipeView + tap on the same row fights for touches on Android; SelectionChanged avoids that (see AGENTS.md).
-    /// Shared by standard, compact, and grid <see cref="CollectionView"/>s.
+    /// Row tap opens quick detail via CollectionView SelectionChanged (avoids gesture fights on Android; see AGENTS.md).
+    /// List rows use ⋯ on the thumbnail for move/remove (same sheet as grid); no SwipeView.
     /// </summary>
     private void OnMainDeckItemSelected(object? sender, SelectionChangedEventArgs e)
     {

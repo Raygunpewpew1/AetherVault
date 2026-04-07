@@ -14,6 +14,7 @@ public partial class DeckAddCardsPage : ContentPage
     /// <summary>Pops the modal using the same navigation object that opened it.</summary>
     public void Init(DeckDetailViewModel viewModel, Func<Task> dismissModal)
     {
+        viewModel.PrepareAddCardsModal();
         BindingContext = viewModel;
         _dismissModal = dismissModal;
         viewModel.AddCardsModalDismissAction = async () =>

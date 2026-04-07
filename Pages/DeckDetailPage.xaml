@@ -157,20 +157,91 @@
             </ScrollView>
         </Border>
 
-        <!-- Row 3: Quick find cards already in this deck -->
+        <!-- Row 3: Quick find + Main/Sideboard layout toggles -->
         <Border Grid.Row="3"
                 Padding="12,6"
                 BackgroundColor="{StaticResource Background}"
                 StrokeThickness="0"
                 IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertedBool}}">
             <VerticalStackLayout Spacing="4">
-                <material:TextField Title="Find in deck…"
-                                    Text="{Binding DeckListFilterText, Mode=TwoWay}"
-                                    BackgroundColor="{StaticResource Surface}"
-                                    TextColor="{StaticResource TextPrimary}"
-                                    TitleColor="{StaticResource TextSecondary}"
-                                    AccentColor="{StaticResource Primary}"
-                                    AllowClear="True" />
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8"
+                      RowDefinitions="Auto">
+                    <material:TextField Grid.Column="0"
+                                        Title="Find in deck…"
+                                        Text="{Binding DeckListFilterText, Mode=TwoWay}"
+                                        BackgroundColor="{StaticResource Surface}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        TitleColor="{StaticResource TextSecondary}"
+                                        AccentColor="{StaticResource Primary}"
+                                        AllowClear="True" />
+                    <HorizontalStackLayout Grid.Column="1"
+                                           Spacing="4"
+                                           VerticalOptions="End"
+                                           Margin="0,0,0,2"
+                                           IsVisible="{Binding IsMainOrSideboardTab}">
+                        <Button Command="{Binding SelectDeckLayoutStandardCommand}"
+                                WidthRequest="44"
+                                HeightRequest="40"
+                                Padding="0"
+                                CornerRadius="10"
+                                FontFamily="FASolid"
+                                FontSize="16"
+                                Text="{x:Static fa:Solid.List}"
+                                TextColor="{StaticResource TextPrimary}"
+                                BackgroundColor="{StaticResource CardBackground}"
+                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDetailLayoutListFull}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsDeckEditorLayoutStandard}"
+                                             Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                    <Setter Property="TextColor" Value="Black" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Command="{Binding SelectDeckLayoutCompactCommand}"
+                                WidthRequest="44"
+                                HeightRequest="40"
+                                Padding="0"
+                                CornerRadius="10"
+                                FontFamily="FASolid"
+                                FontSize="16"
+                                Text="{x:Static fa:Solid.Bars}"
+                                TextColor="{StaticResource TextPrimary}"
+                                BackgroundColor="{StaticResource CardBackground}"
+                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDetailLayoutListCompact}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsDeckEditorLayoutCompact}"
+                                             Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                    <Setter Property="TextColor" Value="Black" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Command="{Binding SelectDeckLayoutGridCommand}"
+                                WidthRequest="44"
+                                HeightRequest="40"
+                                Padding="0"
+                                CornerRadius="10"
+                                FontFamily="FASolid"
+                                FontSize="16"
+                                Text="{x:Static fa:Solid.TableCells}"
+                                TextColor="{StaticResource TextPrimary}"
+                                BackgroundColor="{StaticResource CardBackground}"
+                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDetailLayoutCardGrid}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsDeckEditorLayoutGrid}"
+                                             Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                    <Setter Property="TextColor" Value="Black" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </HorizontalStackLayout>
+                </Grid>
                 <Label Text="{x:Static constants:UserMessages.DeckGridLayoutHint}"
                        FontSize="11"
                        TextColor="{StaticResource TextSecondary}"
@@ -178,6 +249,7 @@
                        IsVisible="{Binding IsDeckEditorLayoutGrid}" />
             </VerticalStackLayout>
         </Border>
+
 
         <!-- Row 4: Tab content + floating add button -->
         <Grid Grid.Row="4"
@@ -232,7 +304,8 @@
             <Grid Grid.Row="1"
                   ColumnDefinitions="*,Auto"
                   ColumnSpacing="8"
-                  VerticalOptions="Center">
+                  VerticalOptions="Center"
+                  IsVisible="{Binding ShowDeckDetailStatusRow}">
                 <Label Grid.Column="0"
                        Text="{Binding StatusDisplayText}"
                        FontSize="12"

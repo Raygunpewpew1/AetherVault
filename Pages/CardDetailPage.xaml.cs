@@ -44,6 +44,18 @@ public partial class CardDetailPage : ContentPage
         //   _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
 
+    /// <summary>Back button returns to the deck editor via modal pop instead of Shell routes.</summary>
+    public void PrepareAsDeckChildModal(Func<Task> dismissModalAsync)
+    {
+        _viewModel.BackNavigationAsync = dismissModalAsync;
+    }
+
+    protected override void OnDisappearing()
+    {
+        _viewModel.BackNavigationAsync = null;
+        base.OnDisappearing();
+    }
+
     private async Task LoadCard()
     {
         if (string.IsNullOrEmpty(_cardUuid)) return;

@@ -141,7 +141,41 @@ public static class UserMessages
     public const string DeckDetailMoreLayout = "Deck layout…";
 
     public const string DeckGridLayoutHint =
-        "Grid view: use + and − on each card. Switch to list layout for swipe to move or remove.";
+        "Use +/− for quantity. Tap ⋯ on the card thumbnail for move, remove, or card details (list and grid).";
+
+    /// <summary>Add-cards modal — staging summary when empty.</summary>
+    public const string DeckAddStagingEmpty = "Nothing staged.";
+
+    public static string DeckAddStagingSummary(int distinctTypes, int totalCards) =>
+        $"{distinctTypes} · {totalCards} cards";
+
+    public const string DeckAddApplyToMain = "Add to main";
+
+    public const string DeckAddApplyToSideboard = "Add to sideboard";
+
+    public const string DeckAddTargetPickerTitle = "Add to";
+
+    public const string DeckAddTargetMainShort = "Main";
+
+    public const string DeckAddTargetSideboardShort = "Sideboard";
+
+    public const string DeckAddHintStaged = "Tap results to stage or unstage.";
+
+    public const string DeckAddHintCommander = "Tap a card to set commander.";
+
+    public const string DeckAddRowHintStage = "Tap to stage or unstage.";
+
+    public const string DeckAddRowHintCommander = "Tap to set commander.";
+
+    public const string DeckGridCardActionsTitle = "Card";
+
+    public const string DeckGridMoveToSideboard = "Move to sideboard";
+
+    public const string DeckGridMoveToMain = "Move to main";
+
+    public const string DeckGridRemoveCard = "Remove from deck";
+
+    public const string DeckGridViewDetails = "View details";
 
     public const string DeckDetailLayoutSheetTitle = "Deck layout";
 
@@ -156,6 +190,9 @@ public static class UserMessages
     public const string ValidationDetailsTitle = "Validation details";
 
     public const string ValidationDetailsButton = "Details";
+
+    /// <summary>Shown when validation returns an error with no message text.</summary>
+    public const string DeckValidationUnknownError = "Validation error.";
 
     public const string AddCommander = "Add commander";
     public const string NothingToExport = "Nothing to export.";

@@ -111,6 +111,16 @@ public static class SqlQueries
     public const string CreatePricesUuidSourceIndex =
         "CREATE INDEX IF NOT EXISTS idx_prices_uuid_source ON card_prices(uuid, source)";
 
+    /// <summary>
+    /// Narrowing index for collection price JOINs (uuid + paper + retail). Complements PK prefix lookups.
+    /// </summary>
+    public const string CreatePricesPaperRetailIndex =
+        """
+        CREATE INDEX IF NOT EXISTS idx_prices_uuid_paper_retail
+        ON card_prices(uuid)
+        WHERE source = 'paper' AND price_type = 'retail'
+        """;
+
     public const string DropPricesIndex = "DROP INDEX IF EXISTS idx_prices_uuid";
 
     // Detects old wide-column schema (pre-refactor). Used for one-time migration.
@@ -164,40 +174,62 @@ public static class SqlQueries
         """
         SELECT p.uuid, p.provider, p.price_type AS PriceType, p.finish, p.currency, p.price
         FROM card_prices p
-        WHERE p.source = 'paper'
+        WHERE lower(p.source) = 'paper'
+          AND lower(p.price_type) = 'retail'
           AND p.uuid IN (SELECT DISTINCT card_uuid FROM col.my_collection)
         """;
 
     /// <summary>
     /// Computes total collection value by joining attached collection DB (alias: col) with card_prices.
+    /// Aggregates prices once per distinct collection UUID (not per line) to avoid repeated JOIN work.
     /// Provider priority is passed via @v1..@v4 and finish fallback mirrors PriceDisplayHelper.GetNumericPrice().
     /// </summary>
     public const string PricesGetCollectionTotalValue =
         """
-        WITH price_rows AS (
+        WITH coll_uuids AS (
+            SELECT DISTINCT card_uuid FROM col.my_collection
+        ),
+        price_agg AS (
             SELECT
-                mc.card_uuid,
-                mc.quantity,
-                mc.is_foil,
-                mc.is_etched,
-                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v1_normal,
-                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v1_foil,
-                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v1_etched,
-                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v2_normal,
-                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v2_foil,
-                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v2_etched,
-                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v3_normal,
-                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v3_foil,
-                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v3_etched,
-                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v4_normal,
-                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v4_foil,
-                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v4_etched
-            FROM col.my_collection mc
+                cu.card_uuid,
+                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v1_normal,
+                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v1_foil,
+                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v1_etched,
+                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v2_normal,
+                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v2_foil,
+                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v2_etched,
+                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v3_normal,
+                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v3_foil,
+                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v3_etched,
+                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v4_normal,
+                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v4_foil,
+                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v4_etched
+            FROM coll_uuids cu
             LEFT JOIN card_prices p
-                ON p.uuid = mc.card_uuid
-               AND p.source = 'paper'
-               AND p.price_type = 'retail'
-            GROUP BY mc.card_uuid, mc.quantity, mc.is_foil, mc.is_etched
+                ON p.uuid = cu.card_uuid
+               AND lower(p.source) = 'paper'
+               AND lower(p.price_type) = 'retail'
+            GROUP BY cu.card_uuid
+        ),
+        line_values AS (
+            SELECT
+                mc.quantity,
+                COALESCE(mc.is_foil, 0) AS is_foil,
+                COALESCE(mc.is_etched, 0) AS is_etched,
+                COALESCE(pa.v1_normal, 0) AS v1_normal,
+                COALESCE(pa.v1_foil, 0) AS v1_foil,
+                COALESCE(pa.v1_etched, 0) AS v1_etched,
+                COALESCE(pa.v2_normal, 0) AS v2_normal,
+                COALESCE(pa.v2_foil, 0) AS v2_foil,
+                COALESCE(pa.v2_etched, 0) AS v2_etched,
+                COALESCE(pa.v3_normal, 0) AS v3_normal,
+                COALESCE(pa.v3_foil, 0) AS v3_foil,
+                COALESCE(pa.v3_etched, 0) AS v3_etched,
+                COALESCE(pa.v4_normal, 0) AS v4_normal,
+                COALESCE(pa.v4_foil, 0) AS v4_foil,
+                COALESCE(pa.v4_etched, 0) AS v4_etched
+            FROM col.my_collection mc
+            LEFT JOIN price_agg pa ON pa.card_uuid = mc.card_uuid
         )
         SELECT COALESCE(SUM(quantity * COALESCE(
             CASE
@@ -250,7 +282,7 @@ public static class SqlQueries
             END,
             0
         )), 0.0)
-        FROM price_rows
+        FROM line_values
         """;
 
     // ============================================================================

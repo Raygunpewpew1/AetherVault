@@ -146,6 +146,7 @@ public partial class SearchPage : ContentPage
                 {
                     _viewModel.StatusIsError = false;
                     _viewModel.StatusMessage = UserMessages.CardAddedToDeck(deckResult.Quantity, card.Name, deckResult.DeckName);
+                    CardGrid.PlayAddToDeckTrail(card.Uuid);
                 }
             }
         }

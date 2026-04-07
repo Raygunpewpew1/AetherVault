@@ -1,6 +1,7 @@
 using AetherVault.Services;
 using AetherVault.ViewModels;
 using System.ComponentModel;
+using System.Threading;
 
 namespace AetherVault.Pages;
 
@@ -13,6 +14,8 @@ public partial class LoadingPage : ContentPage
     private readonly LoadingViewModel _viewModel;
     private bool _entranceDone;
     private Task? _initTask;
+    /// <summary>Single-flight guard: duplicate Android <c>OnAppearing</c> before <see cref="_initTask"/> is set must not start a second <see cref="LoadingViewModel.InitAsync"/> or overwrite <see cref="_initTask"/>.</summary>
+    private int _initSingleFlight;
 
     public LoadingPage(LoadingViewModel viewModel)
     {
@@ -29,6 +32,9 @@ public partial class LoadingPage : ContentPage
         // Android can deliver OnAppearing more than once; a second run would see TryBeginStartup==false
         // and return without work while the visible page never leaves the loading state.
         if (_initTask is { IsCompleted: false })
+            return;
+
+        if (Interlocked.CompareExchange(ref _initSingleFlight, 1, 0) != 0)
             return;
 
         var entranceTask = RunEntranceAnimationsAsync();

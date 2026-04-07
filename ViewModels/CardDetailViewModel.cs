@@ -6,6 +6,7 @@ using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.ApplicationModel.DataTransfer;
+using Microsoft.Maui.Controls;
 using SkiaSharp;
 using System.Windows.Input;
 
@@ -659,6 +660,18 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         };
 
         return string.Join(separator, parts);
+    }
+
+    /// <summary>When set (e.g. card detail opened as a modal from the deck editor), <see cref="BackCommand"/> uses this instead of Shell navigation.</summary>
+    public Func<Task>? BackNavigationAsync { get; set; }
+
+    [RelayCommand]
+    private async Task Back()
+    {
+        if (BackNavigationAsync != null)
+            await BackNavigationAsync.Invoke();
+        else
+            await Shell.Current.GoToAsync("..");
     }
 
     private static void AgentDebugLog(string runId, string hypothesisId, string location, string message, object data)

@@ -165,6 +165,19 @@ public partial class DeckDetailViewModel(
     private bool _deckEditorLayoutPrefLoaded;
     private static bool _gridLayoutHintShownThisProcess;
     private IReadOnlyList<string> _validationDetailLines = [];
+    private bool _deckDetailStatusBindingsRegistered;
+
+    /// <summary>Subscribes once so <see cref="ShowDeckDetailStatusRow"/> tracks <see cref="BaseViewModel.HasStatusMessage"/> and validation details.</summary>
+    private void EnsureDeckDetailStatusBindings()
+    {
+        if (_deckDetailStatusBindingsRegistered) return;
+        _deckDetailStatusBindingsRegistered = true;
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(HasStatusMessage) or nameof(ShowValidationDetailsEntry))
+                OnPropertyChanged(nameof(ShowDeckDetailStatusRow));
+        };
+    }
 
     /// <summary>Raised on the main thread after deck data has been reloaded (so the page can force layout/redraw).</summary>
     public event Action? ReloadCompleted;
@@ -260,6 +273,9 @@ public partial class DeckDetailViewModel(
     /// <summary>Show validation bullet list (page shows an alert).</summary>
     public bool ShowValidationDetailsEntry => _validationDetailLines.Count > 0;
 
+    /// <summary>Bottom status strip: errors, warnings, transient edits, or validation details — hidden when only counts apply (see summary bar).</summary>
+    public bool ShowDeckDetailStatusRow => HasStatusMessage || ShowValidationDetailsEntry;
+
     /// <summary>Raised with joined validation lines when user taps Details.</summary>
     public event Func<string, Task>? ValidationDetailsAlertRequested;
 
@@ -280,6 +296,7 @@ public partial class DeckDetailViewModel(
             ? validation.DetailLines
             : (!string.IsNullOrWhiteSpace(validation.Message) ? [validation.Message] : []);
         OnPropertyChanged(nameof(ShowValidationDetailsEntry));
+        OnPropertyChanged(nameof(ShowDeckDetailStatusRow));
         ShowValidationDetailsCommand.NotifyCanExecuteChanged();
     }
 
@@ -291,6 +308,15 @@ public partial class DeckDetailViewModel(
 
     /// <summary>Called from <see cref="Pages.DeckDetailPage"/> layout action sheet (and tests).</summary>
     public void SetDeckEditorLayout(DeckEditorLayoutMode mode) => DeckEditorLayoutMode = mode;
+
+    [RelayCommand]
+    private void SelectDeckLayoutStandard() => SetDeckEditorLayout(DeckEditorLayoutMode.Standard);
+
+    [RelayCommand]
+    private void SelectDeckLayoutCompact() => SetDeckEditorLayout(DeckEditorLayoutMode.Compact);
+
+    [RelayCommand]
+    private void SelectDeckLayoutGrid() => SetDeckEditorLayout(DeckEditorLayoutMode.Grid);
 
     [ObservableProperty]
     public partial DeckStats Stats { get; set; } = new();
@@ -318,6 +344,9 @@ public partial class DeckDetailViewModel(
     public bool IsMainTab => SelectedSectionIndex == 1;
     public bool IsSideboardTab => SelectedSectionIndex == 2;
     public bool IsStatsTab => SelectedSectionIndex == 3;
+
+    /// <summary>Main and Sideboard share list/grid layout controls (not Commander or Stats).</summary>
+    public bool IsMainOrSideboardTab => IsMainTab || IsSideboardTab;
 
     private static readonly Color TabSelectedColor = Color.FromArgb("#03DAC5");
     private static readonly Color TabUnselectedColor = Color.FromArgb("#888888");
@@ -384,14 +413,54 @@ public partial class DeckDetailViewModel(
     [ObservableProperty]
     public partial ObservableCollection<StagedDeckAddItem> StagedAddItems { get; set; } = [];
 
+    /// <summary>0 = commander quick-add, 1 = main, 2 = sideboard. Set when the add modal opens; user can switch Main/Side in the sheet.</summary>
+    [ObservableProperty]
+    public partial int AddCardsModalTargetSectionIndex { get; set; } = 1;
+
     /// <summary>True when the add-cards sheet should show batch-add UI (Main / Sideboard).</summary>
-    public bool IsStagedAddActive => SelectedSectionIndex is 1 or 2;
+    public bool IsStagedAddActive => AddCardsModalTargetSectionIndex is 1 or 2;
+
+    /// <summary>Commander-only flow in the add modal (tap to set commander, no staging).</summary>
+    public bool IsAddModalCommanderFlow => AddCardsModalTargetSectionIndex == 0;
+
+    public bool IsAddModalTargetMain => AddCardsModalTargetSectionIndex == 1;
+
+    public bool IsAddModalTargetSideboard => AddCardsModalTargetSectionIndex == 2;
+
+    /// <summary>Primary action label for staged batch (depends on <see cref="AddCardsModalTargetSectionIndex"/>).</summary>
+    public string AddStagedCardsToDeckButtonText =>
+        AddCardsModalTargetSectionIndex == 2
+            ? UserMessages.DeckAddApplyToSideboard
+            : UserMessages.DeckAddApplyToMain;
 
     /// <summary>Summary line for staged cards in the add sheet.</summary>
     public string StagedAddSummaryText =>
         StagedAddItems.Count == 0
-            ? "No cards staged."
-            : $"{StagedAddItems.Count} type(s) • {StagedAddItems.Sum(s => s.Quantity)} card(s) staged";
+            ? UserMessages.DeckAddStagingEmpty
+            : UserMessages.DeckAddStagingSummary(StagedAddItems.Count, StagedAddItems.Sum(s => s.Quantity));
+
+    partial void OnAddCardsModalTargetSectionIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsStagedAddActive));
+        OnPropertyChanged(nameof(IsAddModalCommanderFlow));
+        OnPropertyChanged(nameof(IsAddModalTargetMain));
+        OnPropertyChanged(nameof(IsAddModalTargetSideboard));
+        OnPropertyChanged(nameof(AddStagedCardsToDeckButtonText));
+    }
+
+    /// <summary>Sync add-modal target from the current deck tab when opening the sheet.</summary>
+    public void PrepareAddCardsModal()
+    {
+        AddCardsModalTargetSectionIndex = SelectedSectionIndex switch
+        {
+            0 => 0,
+            2 => 2,
+            _ => 1
+        };
+    }
+
+    /// <summary>Raised for main/sideboard grid ⋯ menu (page shows action sheet).</summary>
+    public event Action<DeckCardDisplayItem, bool>? DeckGridOverflowRequested;
 
     [ObservableProperty]
     public partial bool IsSelectionMode { get; set; }
@@ -523,6 +592,26 @@ public partial class DeckDetailViewModel(
     private void SelectStats() => SelectedSectionIndex = 3;
 
     [RelayCommand]
+    private void SetAddModalTargetMain() => AddCardsModalTargetSectionIndex = 1;
+
+    [RelayCommand]
+    private void SetAddModalTargetSideboard() => AddCardsModalTargetSectionIndex = 2;
+
+    [RelayCommand]
+    private void RequestMainDeckGridMenu(DeckCardDisplayItem? item)
+    {
+        if (item != null)
+            DeckGridOverflowRequested?.Invoke(item, true);
+    }
+
+    [RelayCommand]
+    private void RequestSideboardDeckGridMenu(DeckCardDisplayItem? item)
+    {
+        if (item != null)
+            DeckGridOverflowRequested?.Invoke(item, false);
+    }
+
+    [RelayCommand]
     private void ShowCardQuickDetail(DeckCardDisplayItem item) => RequestShowQuickDetail?.Invoke(item);
 
     partial void OnAddCardSearchTextChanged(string value)
@@ -547,7 +636,7 @@ public partial class DeckDetailViewModel(
     {
         IsSelectionMode = false;
         ClearDeckListSelection();
-        OnPropertyChanged(nameof(IsStagedAddActive));
+        OnPropertyChanged(nameof(IsMainOrSideboardTab));
     }
 
     partial void OnIsSelectionModeChanged(bool value)
@@ -638,7 +727,7 @@ public partial class DeckDetailViewModel(
     {
         if (card == null || Deck == null) return;
 
-        if (SelectedSectionIndex == 0) // Commander
+        if (AddCardsModalTargetSectionIndex == 0)
         {
             var result = await _deckService.SetCommanderAsync(Deck.Id, card.Uuid);
             if (result.IsError)
@@ -658,7 +747,7 @@ public partial class DeckDetailViewModel(
             return;
         }
 
-        string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
+        string section = AddCardsModalTargetSectionIndex == 2 ? "Sideboard" : "Main";
         var cardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
         int qtyBefore = cardsBefore.FirstOrDefault(c => c.CardId == card.Uuid && c.Section == section)?.Quantity ?? 0;
         var addResult = await _deckService.AddCardAsync(Deck.Id, card.Uuid, 1, section);
@@ -683,6 +772,7 @@ public partial class DeckDetailViewModel(
 
     public async Task LoadAsync(int deckId, bool preserveState = false)
     {
+        EnsureDeckDetailStatusBindings();
         _deckId = deckId;
         if (!_deckEditorLayoutPrefLoaded)
         {
@@ -885,12 +975,21 @@ public partial class DeckDetailViewModel(
 
     private static string GetValidationStatusMessage(ValidationResult validation, int totalCardCount)
     {
-        var baseMessage = $"{totalCardCount} cards";
-        if (validation.Level == ValidationLevel.Warning && !string.IsNullOrWhiteSpace(validation.Message))
-            return $"{baseMessage} • {validation.Message}";
-        if (validation.Level == ValidationLevel.Error && !string.IsNullOrWhiteSpace(validation.Message))
-            return validation.Message;
-        return baseMessage;
+        if (validation.Level == ValidationLevel.Error)
+            return string.IsNullOrWhiteSpace(validation.Message)
+                ? UserMessages.DeckValidationUnknownError
+                : validation.Message;
+
+        if (validation.Level == ValidationLevel.Warning)
+        {
+            var baseMessage = $"{totalCardCount} cards";
+            return string.IsNullOrWhiteSpace(validation.Message)
+                ? baseMessage
+                : $"{baseMessage} • {validation.Message}";
+        }
+
+        // Success: counts already appear in DeckSummaryText; keep the footer quiet.
+        return "";
     }
 
     [RelayCommand]
@@ -1229,7 +1328,7 @@ public partial class DeckDetailViewModel(
     {
         if (row == null || Deck == null) return;
 
-        if (SelectedSectionIndex == 0)
+        if (AddCardsModalTargetSectionIndex == 0)
         {
             _ = AddCardFromSearchAsync(row.Card);
             return;
@@ -1285,7 +1384,7 @@ public partial class DeckDetailViewModel(
     {
         if (Deck == null || StagedAddItems.Count == 0) return;
 
-        if (SelectedSectionIndex == 0)
+        if (AddCardsModalTargetSectionIndex == 0)
         {
             var first = StagedAddItems[0].Card;
             var result = await _deckService.SetCommanderAsync(Deck.Id, first.Uuid);
@@ -1309,7 +1408,7 @@ public partial class DeckDetailViewModel(
             return;
         }
 
-        string section = SelectedSectionIndex == 2 ? "Sideboard" : "Main";
+        string section = AddCardsModalTargetSectionIndex == 2 ? "Sideboard" : "Main";
         var deckCardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
         var qtyBeforeList = StagedAddItems
             .Select(s => deckCardsBefore.FirstOrDefault(c => c.CardId == s.Card.Uuid && c.Section == section)?.Quantity ?? 0)

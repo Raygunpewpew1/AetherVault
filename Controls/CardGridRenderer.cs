@@ -5,6 +5,15 @@ using System.Diagnostics;
 
 namespace AetherVault.Controls;
 
+/// <summary>Ephemeral mana burst from a card toward the top of the viewport (e.g. after add-to-deck).</summary>
+internal readonly record struct ManaTrailState(
+    string[] Symbols,
+    float StartX,
+    float StartY,
+    float TargetX,
+    float TargetY,
+    long StartTickMs);
+
 /// <summary>
 /// Owns all Skia resources and card-drawing logic for CardGrid.
 /// Pure renderer: reads images via a delegate, triggers no side effects.
@@ -40,6 +49,7 @@ internal sealed class CardGridRenderer : IDisposable
     private SKPaint? _chipBgPaint;
     private SKPaint? _shimmerPaint;
     private SKShader? _shimmerShader;
+    private SKPaint? _trailParticlePaint;
 
     // Theme background (matches App Background #121212) so empty/zero-size canvas never shows black.
     private static readonly SKColor ThemeBackground = new SKColor(0x12, 0x12, 0x12);
@@ -85,6 +95,7 @@ internal sealed class CardGridRenderer : IDisposable
             [SKColors.Transparent, new SKColor(255, 255, 255, 55), SKColors.Transparent],
             [0f, 0.5f, 1f],
             SKShaderTileMode.Clamp);
+        _trailParticlePaint ??= new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill };
     }
 
     /// <summary>Rebuilds size-dependent fonts and schedules a repaint.</summary>
@@ -123,12 +134,56 @@ internal sealed class CardGridRenderer : IDisposable
         _chipBgPaint?.Dispose(); _chipBgPaint = null;
         _shimmerPaint?.Dispose(); _shimmerPaint = null;
         _shimmerShader?.Dispose(); _shimmerShader = null;
+        _trailParticlePaint?.Dispose(); _trailParticlePaint = null;
         _cardRoundRect?.Dispose(); _cardRoundRect = null;
         _imageRoundRect?.Dispose(); _imageRoundRect = null;
     }
 
+    internal static string[] ParseManaSymbolsForTrail(string? manaCost, int max = 6)
+    {
+        if (string.IsNullOrEmpty(manaCost) || max <= 0)
+            return ["C"];
+
+        var list = new List<string>(max);
+        int i = 0;
+        while (i < manaCost.Length && list.Count < max)
+        {
+            if (manaCost[i] == '{')
+            {
+                int end = manaCost.IndexOf('}', i);
+                if (end > i)
+                {
+                    list.Add(manaCost.Substring(i + 1, end - i - 1));
+                    i = end + 1;
+                    continue;
+                }
+            }
+            i++;
+        }
+
+        return list.Count > 0 ? list.ToArray() : ["C"];
+    }
+
+    private static SKColor TrailColorForManaSymbol(string symbol)
+    {
+        string s = symbol.Trim().ToUpperInvariant();
+        if (s.Contains('W')) return new SKColor(250, 248, 228);
+        if (s.Contains('U')) return new SKColor(75, 155, 235);
+        if (s.Contains('B')) return new SKColor(70, 72, 82);
+        if (s.Contains('R')) return new SKColor(235, 95, 75);
+        if (s.Contains('G')) return new SKColor(95, 205, 115);
+        return new SKColor(175, 178, 195);
+    }
+
     /// <summary>Draws the grid to a Skia canvas (GPU via SKGLView or CPU via SKCanvasView).</summary>
-    public void Paint(SKCanvas canvas, SKImageInfo info, RenderList list, float scrollY, float viewWidth, DragState? dragState = null)
+    public void Paint(
+        SKCanvas canvas,
+        SKImageInfo info,
+        RenderList list,
+        float scrollY,
+        float viewWidth,
+        DragState? dragState = null,
+        ManaTrailState? manaTrail = null)
     {
         if (info.Width <= 0 || info.Height <= 0)
         {
@@ -188,6 +243,9 @@ internal sealed class CardGridRenderer : IDisposable
                 }
             }
 
+            if (manaTrail != null)
+                DrawManaTrail(canvas, manaTrail.Value);
+
             // Draw the floating drag card at the pointer position
             if (dragState?.DraggedCard != null && (dragState.CanvasX != 0 || dragState.CanvasY != 0))
             {
@@ -214,6 +272,40 @@ internal sealed class CardGridRenderer : IDisposable
         {
             canvas.Clear(new SKColor(18, 18, 18));
             Logger.LogStuff($"[CardGridRenderer] Paint error: {ex}", LogLevel.Error);
+        }
+    }
+
+    private void DrawManaTrail(SKCanvas canvas, ManaTrailState trail)
+    {
+        if (_trailParticlePaint == null) return;
+
+        long elapsed = Environment.TickCount64 - trail.StartTickMs;
+        const int durationMs = 720;
+        if (elapsed < 0 || elapsed >= durationMs) return;
+
+        float tGlobal = elapsed / (float)durationMs;
+        string[] symbols = trail.Symbols;
+        int n = Math.Min(6, Math.Max(1, symbols.Length));
+
+        for (int i = 0; i < n; i++)
+        {
+            float stagger = i * 0.09f;
+            float denom = Math.Max(0.15f, 1f - stagger * 0.45f);
+            float t = Math.Clamp((tGlobal - stagger) / denom, 0f, 1f);
+            float ease = t * t * (3f - 2f * t);
+            float arc = MathF.Sin(ease * MathF.PI) * 36f;
+            float wobble = MathF.Sin(i * 2.1f + tGlobal * 8f) * 10f * (1f - ease);
+
+            float x = trail.StartX + (trail.TargetX - trail.StartX) * ease + wobble;
+            float y = trail.StartY + (trail.TargetY - trail.StartY) * ease - arc;
+
+            float alpha = (1f - t) * 0.92f;
+            if (alpha <= 0.02f) continue;
+
+            float radius = 5.5f + 3.5f * (1f - ease);
+            var baseColor = TrailColorForManaSymbol(symbols[i % symbols.Length]);
+            _trailParticlePaint.Color = new SKColor(baseColor.Red, baseColor.Green, baseColor.Blue, (byte)(alpha * 255));
+            canvas.DrawCircle(x, y, radius, _trailParticlePaint);
         }
     }
 

@@ -7,11 +7,13 @@
     - **Goal**: Improve "eye candy" (better inputs, floating labels, styled checkboxes).
     - **Result**: Implemented **UraniumUI** for inputs/styling (MIT License) in Search and Filters pages.
     - **Note**: UraniumUI lacks charts, so a separate library (e.g., Microcharts, LiveCharts2) would be needed for the Stats page.
+- [x] **Stats tab charts**
+    - **Result**: **Microcharts.Maui** on the Stats page — donut charts for card type (creatures / spells / lands) and rarity, driven by existing `CollectionStats` aggregates (`CollectionStatsCharts` + `StatsViewModel`). **LiveCharts2** was not needed for this scope.
 
 ## Features
-- [ ] **Deck Building**
-    - **Status**: In progress.
-    - **Description**: Implement functionality to build and manage decks.
+- [x] **Deck Building (v1)**
+    - **Status**: Core flow shipped (Decks tab, create/rename/delete, detail editor, validation, import/export, add-to-deck from cards). Further polish (extra formats, UX) can be tracked as follow-ups.
+    - **Description**: Build and manage decks locally.
 
 ## Server / Backend (future — revisit later)
 - [ ] **Backend options (noted for later)**

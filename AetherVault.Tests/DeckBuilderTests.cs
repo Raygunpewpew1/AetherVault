@@ -549,6 +549,18 @@ public class DeckBuilderTests
         var sb = cards.Single(c => c.Section == "Sideboard");
         Assert.Equal(3, sb.Quantity);
     }
+
+    [Fact]
+    public void DeckFormat_UsesCommanderZone_MatchesEditorTabs()
+    {
+        Assert.True(DeckFormat.Commander.UsesCommanderZone());
+        Assert.True(DeckFormat.Brawl.UsesCommanderZone());
+        Assert.True(DeckFormat.PauperCommander.UsesCommanderZone());
+        Assert.True(DeckFormat.Oathbreaker.UsesCommanderZone());
+        Assert.True(DeckFormat.StandardBrawl.UsesCommanderZone());
+        Assert.False(DeckFormat.Standard.UsesCommanderZone());
+        Assert.False(DeckFormat.Modern.UsesCommanderZone());
+    }
 }
 
 // ── Mocks ─────────────────────────────────────────────────────────────

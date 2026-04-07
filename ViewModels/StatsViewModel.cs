@@ -2,6 +2,7 @@ using AetherVault.Models;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microcharts;
 
 namespace AetherVault.ViewModels;
 
@@ -12,7 +13,6 @@ namespace AetherVault.ViewModels;
 public partial class StatsViewModel : BaseViewModel
 {
     private readonly CardManager _cardManager;
-    private bool _storageStatsCached;
 
     /// <summary>True when stats need to be reloaded (e.g. collection was mutated since last load).</summary>
     public bool IsStatsStale { get; private set; } = true;
@@ -20,6 +20,18 @@ public partial class StatsViewModel : BaseViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatsDisplay))]
     public partial CollectionStats Stats { get; set; } = new();
+
+    /// <summary>Donut chart for rarity mix; null when collection is empty.</summary>
+    [ObservableProperty]
+    public partial Chart? RarityDistributionChart { get; set; }
+
+    /// <summary>Donut chart for creature / spell / lands; null when collection is empty.</summary>
+    [ObservableProperty]
+    public partial Chart? CardTypeDistributionChart { get; set; }
+
+    /// <summary>True when <see cref="RarityDistributionChart"/> and <see cref="CardTypeDistributionChart"/> are shown.</summary>
+    [ObservableProperty]
+    public partial bool HasCollectionCharts { get; set; }
 
     [ObservableProperty]
     public partial StorageStats Storage { get; set; } = new();
@@ -38,11 +50,29 @@ public partial class StatsViewModel : BaseViewModel
         _cardManager.CollectionChanged += InvalidateStats;
     }
 
+    partial void OnStatsChanged(CollectionStats value) => ApplyDistributionCharts(value);
+
+    private void ApplyDistributionCharts(CollectionStats s)
+    {
+        if (!CollectionStatsCharts.TryCreateDistributionCharts(s, out var rarity, out var type))
+        {
+            HasCollectionCharts = false;
+            RarityDistributionChart = null;
+            CardTypeDistributionChart = null;
+            return;
+        }
+
+        HasCollectionCharts = true;
+        RarityDistributionChart = rarity;
+        CardTypeDistributionChart = type;
+    }
+
     /// <summary>Marks stats as stale so the next OnAppearing triggers a reload.</summary>
     public void InvalidateStats()
     {
         IsStatsStale = true;
-        _storageStatsCached = false;
+        // Do not reset image-cache / storage snapshot here: every collection edit would re-scan
+        // thousands of cache files on the next Stats visit. File sizes still refresh each visit below.
     }
 
     [RelayCommand]
@@ -63,7 +93,6 @@ public partial class StatsViewModel : BaseViewModel
             CacheStats = await _cardManager.GetImageCacheStatsAsync();
             Storage.ImageCacheSize = _cardManager.ImageService.Cache.GetTotalCacheSize();
             OnPropertyChanged(nameof(Storage)); // notify UI about the total size update
-            _storageStatsCached = false; // storage sizes changed after cache clear
             StatusMessage = UserMessages.CacheCleared;
         }
         catch (Exception ex)
@@ -161,8 +190,6 @@ public partial class StatsViewModel : BaseViewModel
 
     private async Task LoadStorageAndCacheInBackgroundAsync()
     {
-        if (_storageStatsCached) return;
-
         try
         {
             var cacheStats = await _cardManager.GetImageCacheStatsAsync();
@@ -170,8 +197,6 @@ public partial class StatsViewModel : BaseViewModel
             var collSize = GetFileSize(AppDataManager.GetCollectionDatabasePath());
             var pricesSize = GetFileSize(AppDataManager.GetPricesDatabasePath());
             var cacheSize = _cardManager.ImageService.Cache.GetTotalCacheSize();
-
-            _storageStatsCached = true;
 
             MainThread.BeginInvokeOnMainThread(() =>
             {

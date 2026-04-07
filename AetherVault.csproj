@@ -1,4 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="AetherVault.Local.props" Condition="Exists('AetherVault.Local.props')" />
+
+	<PropertyGroup Label="AetherVault footprint">
+		<AetherVaultRepositoryWebUrl Condition="'$(AetherVaultRepositoryWebUrl)' == ''">https://github.com/Raygunpewpew1/AetherVault</AetherVaultRepositoryWebUrl>
+		<AetherVaultReleasesRoot Condition="'$(AetherVaultReleasesRoot)' == ''">$(AetherVaultRepositoryWebUrl)/releases</AetherVaultReleasesRoot>
+	</PropertyGroup>
+
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
 		<OutputType>Exe</OutputType>
@@ -32,9 +39,9 @@
 
 		<Description>magic the gathering stuff</Description>
 
-		<PackageProjectUrl></PackageProjectUrl>
+		<PackageProjectUrl>$(AetherVaultRepositoryWebUrl)</PackageProjectUrl>
 
-		<RepositoryUrl>https://github.com/Raygunpewpew1/AetherVault</RepositoryUrl>
+		<RepositoryUrl>$(AetherVaultRepositoryWebUrl)</RepositoryUrl>
 
 		<DefaultLanguage>en</DefaultLanguage>
 	</PropertyGroup>
@@ -57,6 +64,7 @@
 		<PackageReference Include="AppoMobi.Maui.Gestures" Version="1.11.9.2" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="Microcharts.Maui" Version="1.0.1" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.41" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
 		<PackageReference Include="Dapper" Version="2.1.66" />
@@ -98,5 +106,32 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="AetherVault.Tests" />
 	</ItemGroup>
+
+	<!-- Release DB / prices URLs: defaults follow GitHub Releases layout; override with full URLs or AetherVaultReleasesRoot in AetherVault.Local.props -->
+	<Target Name="GenerateAetherVaultReleaseEndpoints" BeforeTargets="CoreCompile">
+		<PropertyGroup>
+			<_AvDbUrl>$(AetherVaultDatabaseDownloadUrl)</_AvDbUrl>
+			<_AvDbUrl Condition="'$(_AvDbUrl)' == ''">$(AetherVaultReleasesRoot)/latest/download/MTG_App_DB.zip</_AvDbUrl>
+			<_AvPricesZip>$(AetherVaultPricesBundleDownloadUrl)</_AvPricesZip>
+			<_AvPricesZip Condition="'$(_AvPricesZip)' == ''">$(AetherVaultReleasesRoot)/download/aethervault-prices-rolling/AetherVault_Prices.sqlite.zip</_AvPricesZip>
+			<_AvPricesMeta>$(AetherVaultPricesBundleMetaUrl)</_AvPricesMeta>
+			<_AvPricesMeta Condition="'$(_AvPricesMeta)' == ''">$(AetherVaultReleasesRoot)/download/aethervault-prices-rolling/prices_bundle_meta.txt</_AvPricesMeta>
+			<_AvGenFile>$(IntermediateOutputPath)AetherVault.ReleaseEndpoints.g.cs</_AvGenFile>
+		</PropertyGroup>
+		<ItemGroup>
+			<_AvGenLines Include="// &lt;auto-generated /&gt;" />
+			<_AvGenLines Include="namespace AetherVault.Constants%3b" />
+			<_AvGenLines Include="public static partial class MtgConstants" />
+			<_AvGenLines Include="{" />
+			<_AvGenLines Include="    public const string DatabaseDownloadUrl = &quot;$(_AvDbUrl)&quot;%3b" />
+			<_AvGenLines Include="    public const string PricesBundleDownloadUrl = &quot;$(_AvPricesZip)&quot;%3b" />
+			<_AvGenLines Include="    public const string PricesBundleMetaUrl = &quot;$(_AvPricesMeta)&quot;%3b" />
+			<_AvGenLines Include="}" />
+		</ItemGroup>
+		<WriteLinesToFile File="$(_AvGenFile)" Lines="@(_AvGenLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+		<ItemGroup>
+			<Compile Include="$(_AvGenFile)" />
+		</ItemGroup>
+	</Target>
 
 </Project>

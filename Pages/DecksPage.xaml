@@ -72,53 +72,137 @@
         <!-- Content area -->
         <Grid Grid.Row="2" BackgroundColor="{StaticResource Background}">
 
-            <!-- Deck List -->
+            <!-- Deck grid: art-forward tiles (ManaBox-style hub) -->
             <CollectionView ItemsSource="{Binding Decks}"
                             IsVisible="{Binding IsEmpty, Converter={StaticResource InvertedBool}}"
                             SelectionMode="Single"
                             SelectionChanged="OnDeckSelectionChanged"
-                            Margin="0,0,0,8">
+                            Margin="12,0,12,8">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical"
+                                     Span="2"
+                                     HorizontalItemSpacing="10"
+                                     VerticalItemSpacing="10" />
+                </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:DeckEntity">
-                        <Border Style="{StaticResource CardStyle}"
-                                Margin="16,6"
-                                Padding="16,14"
-                                MinimumHeightRequest="110">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-                                <controls:DeckListItem Grid.Row="0"
-                                                      Grid.RowSpan="3"
-                                                      Grid.Column="0" />
-                                <HorizontalStackLayout Grid.Row="0"
-                                                       Grid.Column="1"
-                                                       Spacing="8"
-                                                       VerticalOptions="Center">
-                                    <Button Clicked="OnRenameDeckButtonClicked"
-                                            BackgroundColor="Transparent"
-                                            Padding="8"
-                                            HeightRequest="40"
-                                            WidthRequest="40"
-                                            CommandParameter="{Binding .}">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="FASolid"
-                                                             Glyph="{x:Static fa:Solid.PenToSquare}"
-                                                             Size="16"
-                                                             Color="{StaticResource TextSecondary}" />
-                                        </Button.ImageSource>
-                                    </Button>
-                                    <Button Clicked="OnDeleteDeckButtonClicked"
-                                            BackgroundColor="Transparent"
-                                            Padding="8"
-                                            HeightRequest="40"
-                                            WidthRequest="40"
-                                            CommandParameter="{Binding .}">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="FASolid"
-                                                             Glyph="{x:Static fa:Solid.TrashCan}"
-                                                             Size="16"
-                                                             Color="{StaticResource ErrorColor}" />
-                                        </Button.ImageSource>
-                                    </Button>
-                                </HorizontalStackLayout>
+                        <Border HeightRequest="196"
+                                Padding="0"
+                                StrokeShape="RoundRectangle 14"
+                                Stroke="{StaticResource CardBackground}"
+                                StrokeThickness="1"
+                                BackgroundColor="{StaticResource Surface}">
+                            <Grid>
+                                <Grid IsVisible="{Binding HasPreviewImage}">
+                                    <controls:CachedCardImage CardUuid="{Binding PreviewImageUuid}"
+                                                               ImageSize="art_crop"
+                                                               InputTransparent="True"
+                                                               HorizontalOptions="Fill"
+                                                               VerticalOptions="Fill" />
+                                </Grid>
+                                <Grid IsVisible="{Binding HasPreviewImage, Converter={StaticResource InvertedBool}}">
+                                    <Border BackgroundColor="#2C2C36"
+                                            StrokeThickness="0" />
+                                    <Label FontFamily="FASolid"
+                                           Text="{x:Static fa:Solid.LayerGroup}"
+                                           FontSize="36"
+                                           TextColor="#555560"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           InputTransparent="True" />
+                                </Grid>
+                                <Border InputTransparent="True"
+                                        StrokeThickness="0"
+                                        VerticalOptions="Fill"
+                                        HorizontalOptions="Fill">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#33000000" Offset="0.0" />
+                                            <GradientStop Color="#D9000000" Offset="0.55" />
+                                            <GradientStop Color="#F2000000" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                                <Grid Padding="10,8"
+                                      RowDefinitions="Auto,*,Auto"
+                                      RowSpacing="4">
+                                    <Grid Grid.Row="0"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="6">
+                                        <Label Grid.Column="0"
+                                               Text="{Binding Name}"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="2"
+                                               TextColor="White"
+                                               FontSize="14"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Start"
+                                               Shadow="{Shadow Brush=Black, Offset='0,1', Radius=2, Opacity=0.85}" />
+                                        <HorizontalStackLayout Grid.Column="1"
+                                                               Spacing="2"
+                                                               VerticalOptions="Start">
+                                            <Button Clicked="OnRenameDeckButtonClicked"
+                                                    BackgroundColor="#99000000"
+                                                    Padding="6"
+                                                    HeightRequest="36"
+                                                    WidthRequest="36"
+                                                    CornerRadius="18"
+                                                    CommandParameter="{Binding .}">
+                                                <Button.ImageSource>
+                                                    <FontImageSource FontFamily="FASolid"
+                                                                     Glyph="{x:Static fa:Solid.PenToSquare}"
+                                                                     Size="14"
+                                                                     Color="White" />
+                                                </Button.ImageSource>
+                                            </Button>
+                                            <Button Clicked="OnDeleteDeckButtonClicked"
+                                                    BackgroundColor="#99000000"
+                                                    Padding="6"
+                                                    HeightRequest="36"
+                                                    WidthRequest="36"
+                                                    CornerRadius="18"
+                                                    CommandParameter="{Binding .}">
+                                                <Button.ImageSource>
+                                                    <FontImageSource FontFamily="FASolid"
+                                                                     Glyph="{x:Static fa:Solid.TrashCan}"
+                                                                     Size="14"
+                                                                     Color="#FFAB91" />
+                                                </Button.ImageSource>
+                                            </Button>
+                                        </HorizontalStackLayout>
+                                    </Grid>
+                                    <Grid Grid.Row="2"
+                                          ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="8"
+                                          VerticalOptions="End">
+                                        <Label Grid.Column="0"
+                                               VerticalOptions="Center"
+                                               LineBreakMode="TailTruncation">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="{Binding FormatDisplay}"
+                                                          TextColor="#EEEEEE"
+                                                          FontSize="12" />
+                                                    <Span Text=" · "
+                                                          TextColor="#AAAAAA"
+                                                          FontSize="12" />
+                                                    <Span Text="{Binding CardCount}"
+                                                          TextColor="#CCCCCC"
+                                                          FontSize="12" />
+                                                    <Span Text=" cards"
+                                                          TextColor="#CCCCCC"
+                                                          FontSize="12" />
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                        <controls:ManaCostView Grid.Column="1"
+                                                                ManaText="{Binding ColorIdentityManaText}"
+                                                                SymbolSize="18"
+                                                                InputTransparent="True"
+                                                                VerticalOptions="Center"
+                                                                IsVisible="{Binding HasColorIdentity}" />
+                                    </Grid>
+                                </Grid>
                             </Grid>
                         </Border>
                     </DataTemplate>

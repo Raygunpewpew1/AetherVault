@@ -44,6 +44,7 @@ public class CardPriceDatabase : IDisposable
         await ExecuteAsync(SqlQueries.CreatePricesTable);
         await ExecuteAsync(SqlQueries.CreatePricesIndex);
         await ExecuteAsync(SqlQueries.CreatePricesUuidSourceIndex);
+        await ExecuteAsync(SqlQueries.CreatePricesPaperRetailIndex);
     }
 
     /// <summary>
@@ -178,25 +179,7 @@ public class CardPriceDatabase : IDisposable
         if (vendorPriority.Count == 0)
             return 0;
 
-        // Ensure we always have 4 providers so SQL can bind @v1..@v4.
-        var providers = new List<string>(4);
-        foreach (var vendor in vendorPriority)
-        {
-            var provider = ToProviderName(vendor);
-            if (!providers.Contains(provider, StringComparer.Ordinal))
-                providers.Add(provider);
-        }
-
-        var defaults = new[] { "tcgplayer", "cardmarket", "cardkingdom", "manapool" };
-        foreach (var provider in defaults)
-        {
-            if (providers.Count >= 4) break;
-            if (!providers.Contains(provider, StringComparer.Ordinal))
-                providers.Add(provider);
-        }
-
-        while (providers.Count < 4)
-            providers.Add(defaults[providers.Count]);
+        var providers = BuildSqlProviderNames(vendorPriority);
 
         await _lock.WaitAsync();
         try
@@ -226,6 +209,30 @@ public class CardPriceDatabase : IDisposable
         {
             _lock.Release();
         }
+    }
+
+    private static string[] BuildSqlProviderNames(IReadOnlyList<PriceVendor> vendorPriority)
+    {
+        var providers = new List<string>(4);
+        foreach (var vendor in vendorPriority)
+        {
+            var provider = ToProviderName(vendor);
+            if (!providers.Contains(provider, StringComparer.Ordinal))
+                providers.Add(provider);
+        }
+
+        var defaults = new[] { "tcgplayer", "cardmarket", "cardkingdom", "manapool" };
+        foreach (var provider in defaults)
+        {
+            if (providers.Count >= 4) break;
+            if (!providers.Contains(provider, StringComparer.Ordinal))
+                providers.Add(provider);
+        }
+
+        while (providers.Count < 4)
+            providers.Add(defaults[providers.Count]);
+
+        return [providers[0], providers[1], providers[2], providers[3]];
     }
 
     private static async Task<Dictionary<string, CardPriceData>> QueryChunkAsync(string dbPath, List<string> chunk)
@@ -337,11 +344,16 @@ public class CardPriceDatabase : IDisposable
 
     private static VendorPrices BuildVendorPrices(List<PriceRow> rows, string provider)
     {
-        var vendorRows = rows.Where(r => r.Provider == provider).ToList();
+        var vendorRows = rows
+            .Where(r => string.Equals(r.Provider, provider, StringComparison.OrdinalIgnoreCase))
+            .ToList();
         if (vendorRows.Count == 0) return VendorPrices.Empty;
 
         double Get(string priceType, string finish) =>
-            vendorRows.FirstOrDefault(r => r.PriceType == priceType && r.Finish == finish)?.Price ?? 0;
+            vendorRows.FirstOrDefault(r =>
+                    string.Equals(r.PriceType, priceType, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(r.Finish, finish, StringComparison.OrdinalIgnoreCase))
+                ?.Price ?? 0;
 
         return new VendorPrices
         {

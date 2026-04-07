@@ -2,7 +2,10 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+             xmlns:charts="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
+             xmlns:viewmodels="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.StatsPage"
+             x:DataType="viewmodels:StatsViewModel"
              Title="Stats"
              BackgroundColor="{StaticResource Background}">
 
@@ -52,6 +55,12 @@
                             </VerticalStackLayout>
                         </Grid>
 
+                        <charts:ChartView Chart="{Binding CardTypeDistributionChart}"
+                                            IsVisible="{Binding HasCollectionCharts}"
+                                            HeightRequest="200"
+                                            HorizontalOptions="Fill"
+                                            SemanticProperties.Description="Chart of creatures, spells, and lands in your collection" />
+
                         <Label Text="By Rarity" FontSize="14" FontAttributes="Bold" Margin="0,8,0,0" />
                         <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto" ColumnSpacing="4">
                             <VerticalStackLayout HorizontalOptions="Center">
@@ -75,6 +84,12 @@
                                 <Label Text="M" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                         </Grid>
+
+                        <charts:ChartView Chart="{Binding RarityDistributionChart}"
+                                            IsVisible="{Binding HasCollectionCharts}"
+                                            HeightRequest="220"
+                                            HorizontalOptions="Fill"
+                                            SemanticProperties.Description="Chart of card rarities in your collection" />
                     </VerticalStackLayout>
                 </uranium:ExpanderView>
             </Border>

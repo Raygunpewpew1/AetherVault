@@ -128,6 +128,33 @@ public partial class DeckDetailPage : ContentPage
     private async Task OnValidationDetailsAlertRequested(string body) =>
         await DisplayAlertAsync(UserMessages.ValidationDetailsTitle, body, "OK");
 
+    private void OnDeckGridOverflowRequested(DeckCardDisplayItem item, bool isMainDeck) =>
+        MainThread.BeginInvokeOnMainThread(() => _ = DeckGridOverflowMenuAsync(item, isMainDeck));
+
+    private async Task DeckGridOverflowMenuAsync(DeckCardDisplayItem item, bool isMainDeck)
+    {
+        const string cancel = "Cancel";
+        string move = isMainDeck ? UserMessages.DeckGridMoveToSideboard : UserMessages.DeckGridMoveToMain;
+        var pick = await DisplayActionSheetAsync(
+            UserMessages.DeckGridCardActionsTitle,
+            cancel,
+            null,
+            move,
+            UserMessages.DeckGridRemoveCard,
+            UserMessages.DeckGridViewDetails);
+        if (pick == move)
+        {
+            if (isMainDeck)
+                await _viewModel.MoveCardRowToSideboardCommand.ExecuteAsync(item);
+            else
+                await _viewModel.MoveCardRowToMainCommand.ExecuteAsync(item);
+        }
+        else if (pick == UserMessages.DeckGridRemoveCard)
+            await _viewModel.RemoveCardCommand.ExecuteAsync(item);
+        else if (pick == UserMessages.DeckGridViewDetails)
+            _viewModel.ShowCardQuickDetailCommand.Execute(item);
+    }
+
     private async void OnCommanderMenuRequested(object? sender, EventArgs e)
     {
         if (_viewModel.FirstCommander == null) return;
@@ -285,6 +312,7 @@ public partial class DeckDetailPage : ContentPage
         _viewModel.RequestShowQuickDetail += OnRequestShowQuickDetail;
         _viewModel.ValidationDetailsAlertRequested += OnValidationDetailsAlertRequested;
         _viewModel.AddCardsModalRequested += OnAddCardsModalRequested;
+        _viewModel.DeckGridOverflowRequested += OnDeckGridOverflowRequested;
         CommanderTabView.CommanderMenuRequested += OnCommanderMenuRequested;
         // Reload commander art when returning to the page (it was cleared in OnDisappearing).
         _ = TryLoadCommanderArtAsync();
@@ -299,6 +327,7 @@ public partial class DeckDetailPage : ContentPage
         _viewModel.RequestShowQuickDetail -= OnRequestShowQuickDetail;
         _viewModel.ValidationDetailsAlertRequested -= OnValidationDetailsAlertRequested;
         _viewModel.AddCardsModalRequested -= OnAddCardsModalRequested;
+        _viewModel.DeckGridOverflowRequested -= OnDeckGridOverflowRequested;
         _commanderArtImage?.Dispose();
         _commanderArtImage = null;
     }

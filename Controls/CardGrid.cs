@@ -41,6 +41,8 @@ public class CardGrid : ContentView
     // Drag state (managed separately from GridState to avoid pipeline overhead)
     private DragState? _dragState;
 
+    private ManaTrailState? _manaTrail;
+
     // Throttle redraws to ~60fps during scroll; never throttle when dragging
     private long _lastInvalidateTickCount;
     private const int InvalidateThrottleMs = 16;
@@ -303,6 +305,48 @@ public class CardGrid : ContentView
 
     public void ForceRedraw() => _canvas.InvalidateSurface();
 
+    /// <summary>
+    /// Plays a short mana-colored burst from the card toward the top of the viewport (content coordinates).
+    /// Uses full grid layout (not only visible <see cref="RenderList.Commands"/>), so it still runs if the card
+    /// is scrolled just out of the cull window. No-op if the UUID is not in the current <see cref="GridState.Cards"/>.
+    /// </summary>
+    public void PlayAddToDeckTrail(string cardUuid)
+    {
+        if (string.IsNullOrEmpty(cardUuid)) return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var cards = _lastState.Cards;
+            if (cards.IsDefaultOrEmpty) return;
+
+            int index = -1;
+            CardState cardState = default;
+            for (int i = 0; i < cards.Length; i++)
+            {
+                if (cards[i].Id.Value == cardUuid)
+                {
+                    index = i;
+                    cardState = cards[i];
+                    break;
+                }
+            }
+
+            if (index < 0) return;
+            if (!GridLayoutEngine.TryGetWorldRectForCardIndex(_lastState, index, out var rect)) return;
+
+            float vw = _lastState.Viewport.Width > 0 ? _lastState.Viewport.Width : (float)(Width > 0 ? Width : 360);
+            float scrollY = _lastState.Viewport.ScrollY;
+            var symbols = CardGridRenderer.ParseManaSymbolsForTrail(cardState.ManaCost);
+            float cx = rect.MidX;
+            float cy = rect.MidY;
+            float targetX = vw * 0.5f;
+            float targetY = scrollY + 52f;
+
+            _manaTrail = new ManaTrailState(symbols, cx, cy, targetX, targetY, Environment.TickCount64);
+            _canvas.InvalidateSurface();
+        });
+    }
+
     public void OnSleep() { }
 
     public void OnResume()
@@ -538,7 +582,14 @@ public class CardGrid : ContentView
 
     private void OnPaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
-        _renderer.Paint(e.Surface.Canvas, e.Info, _currentRenderList, _lastState.Viewport.ScrollY, (float)(Width > 0 ? Width : 360), _dragState);
+        _renderer.Paint(
+            e.Surface.Canvas,
+            e.Info,
+            _currentRenderList,
+            _lastState.Viewport.ScrollY,
+            (float)(Width > 0 ? Width : 360),
+            _dragState,
+            _manaTrail);
 
         if (!_isLoaded) return;
 
@@ -546,6 +597,19 @@ public class CardGrid : ContentView
         if (_dragState != null)
         {
             _canvas.InvalidateSurface();
+            return;
+        }
+
+        if (_manaTrail != null)
+        {
+            long elapsed = Environment.TickCount64 - _manaTrail.Value.StartTickMs;
+            if (elapsed >= 760)
+            {
+                _manaTrail = null;
+                _canvas.InvalidateSurface();
+            }
+            else
+                _canvas.InvalidateSurface();
             return;
         }
 

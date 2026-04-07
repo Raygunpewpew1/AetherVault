@@ -261,6 +261,11 @@ public static class EnumExtensions
         return DeckFormat.Standard;
     }
 
+    /// <summary>Formats that use a dedicated commander / oathbreaker / brawl zone in the deck editor.</summary>
+    public static bool UsesCommanderZone(this DeckFormat format) =>
+        format is DeckFormat.Commander or DeckFormat.Brawl or DeckFormat.PauperCommander
+            or DeckFormat.Oathbreaker or DeckFormat.StandardBrawl;
+
     // ── MtgColor ────────────────────────────────────────────────────
 
     private static readonly char[] ColorChars = ['W', 'U', 'B', 'R', 'G'];

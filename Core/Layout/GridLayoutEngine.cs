@@ -39,6 +39,51 @@ public static class GridLayoutEngine
         return CalculateGrid(state);
     }
 
+    /// <summary>
+    /// Layout rectangle in scroll/world space for any card index (not limited to the visible range).
+    /// Used for effects that must anchor to a card that may be off-screen in <see cref="RenderList.Commands"/>.
+    /// </summary>
+    public static bool TryGetWorldRectForCardIndex(GridState state, int index, out SKRect rect)
+    {
+        rect = default;
+        var cards = state.Cards;
+        if (index < 0 || index >= cards.Length) return false;
+
+        var viewport = state.Viewport;
+        var config = state.Config;
+        float width = viewport.Width > 0 ? viewport.Width : 360f;
+
+        switch (config.ViewMode)
+        {
+            case ViewMode.List:
+            {
+                float y = index * ListRowHeight;
+                rect = new SKRect(0f, y, width, y + ListRowHeight);
+                return true;
+            }
+            case ViewMode.TextOnly:
+            {
+                float y = index * TextRowHeight;
+                rect = new SKRect(0f, y, width, y + TextRowHeight);
+                return true;
+            }
+            default:
+            {
+                float availWidth = width - 20f;
+                int columns = Math.Max(1, (int)((availWidth - config.CardSpacing) / (config.MinCardWidth + config.CardSpacing)));
+                float cardWidth = (availWidth - config.CardSpacing * (columns + 1)) / columns;
+                float cardHeight = cardWidth * config.CardImageRatio + config.LabelHeight;
+                float rowHeight = cardHeight + config.CardSpacing;
+                int row = index / columns;
+                int col = index % columns;
+                float x = 10f + config.CardSpacing + col * (cardWidth + config.CardSpacing);
+                float y = config.CardSpacing + row * rowHeight;
+                rect = new SKRect(x, y, x + cardWidth, y + cardHeight);
+                return true;
+            }
+        }
+    }
+
     private static RenderList CalculateGrid(GridState state)
     {
         var config = state.Config;

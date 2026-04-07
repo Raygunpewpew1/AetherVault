@@ -1,0 +1,17 @@
+<Project>
+  <!-- Copy to AetherVault.Local.props (gitignored) to customize public footprint without editing C#.
+       Omit this file to use defaults from AetherVault.csproj (current GitHub releases layout). -->
+
+  <PropertyGroup>
+    <!-- Shown in assembly metadata / PackageProjectUrl; use a marketing site or org repo. -->
+    <!-- <AetherVaultRepositoryWebUrl>https://github.com/MyOrg/aethervault</AetherVaultRepositoryWebUrl> -->
+
+    <!-- Base for GitHub-style paths below. Defaults to $(AetherVaultRepositoryWebUrl)/releases. -->
+    <!-- <AetherVaultReleasesRoot>https://cdn.example.com/aethervault/releases</AetherVaultReleasesRoot> -->
+
+    <!-- If your CDN uses different paths than GitHub Releases, set full URLs instead: -->
+    <!-- <AetherVaultDatabaseDownloadUrl>https://cdn.example.com/MTG_App_DB.zip</AetherVaultDatabaseDownloadUrl> -->
+    <!-- <AetherVaultPricesBundleDownloadUrl>https://cdn.example.com/AetherVault_Prices.sqlite.zip</AetherVaultPricesBundleDownloadUrl> -->
+    <!-- <AetherVaultPricesBundleMetaUrl>https://cdn.example.com/prices_bundle_meta.txt</AetherVaultPricesBundleMetaUrl> -->
+  </PropertyGroup>
+</Project>

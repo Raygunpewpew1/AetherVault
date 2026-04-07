@@ -25,11 +25,13 @@ public partial class CollectionViewModel : BaseViewModel
     private bool _hasLoadedOnce;
     private int _lastLoadedCollectionVersion = -1;
 
-    private readonly Dictionary<string, CardPriceData> _collectionPriceCache = new(StringComparer.Ordinal);
-    private readonly object _collectionPriceCacheLock = new();
-    private readonly SemaphoreSlim _collectionPriceSnapshotGate = new(1, 1);
-    private int _priceSnapshotCollectionVersion = -1;
-    private int _collectionPriceInvalidationEpoch;
+    /// <summary>Full price payloads for collection price sort — same pivot as grid bulk load.</summary>
+    private readonly Dictionary<string, CardPriceData> _collectionSortPriceData = new(StringComparer.Ordinal);
+    private readonly object _sortPriceLock = new();
+    private readonly SemaphoreSlim _sortPriceLoadGate = new(1, 1);
+    private int _sortPricesCollectionVersion = -1;
+    private string _sortPricesVendorKey = "";
+    private int _sortPriceInvalidationEpoch;
 
     // ── Bindable properties ──
 
@@ -101,16 +103,17 @@ public partial class CollectionViewModel : BaseViewModel
 
     private void OnCardManagerPricesUpdated()
     {
-        InvalidateCollectionPriceSnapshot();
+        InvalidateSortUnitPriceCache();
     }
 
-    private void InvalidateCollectionPriceSnapshot()
+    private void InvalidateSortUnitPriceCache()
     {
-        Interlocked.Increment(ref _collectionPriceInvalidationEpoch);
-        lock (_collectionPriceCacheLock)
+        Interlocked.Increment(ref _sortPriceInvalidationEpoch);
+        lock (_sortPriceLock)
         {
-            _collectionPriceCache.Clear();
-            _priceSnapshotCollectionVersion = -1;
+            _collectionSortPriceData.Clear();
+            _sortPricesCollectionVersion = -1;
+            _sortPricesVendorKey = "";
         }
     }
 
@@ -209,12 +212,14 @@ public partial class CollectionViewModel : BaseViewModel
                 && PricePreferences.PricesDataEnabled
                 && PricePreferences.CollectionPriceDisplayEnabled;
 
-            Dictionary<string, CardPriceData> priceMap = [];
+            // Same CardPriceData + vendor priority as grid; sort key matches grid label (GetDisplayPrice uses non-finish preference).
+            Dictionary<string, CardPriceData> sortPriceData = [];
             if (usePriceSort && filteredForSort.Length > 0)
             {
-                await EnsureCollectionPriceSnapshotAsync(token).ConfigureAwait(false);
+                await EnsureCollectionSortPriceDataAsync(token).ConfigureAwait(false);
                 if (token.IsCancellationRequested) return;
-                priceMap = BuildPriceLookupForFilteredUuids(filteredForSort);
+                lock (_sortPriceLock)
+                    sortPriceData = new Dictionary<string, CardPriceData>(_collectionSortPriceData, StringComparer.Ordinal);
             }
 
             var (filtered, displayedTotal, displayedUnique) = await Task.Run(() =>
@@ -232,7 +237,7 @@ public partial class CollectionViewModel : BaseViewModel
                     CollectionSortMode.Rarity => result.OrderByDescending(i => i.Card.Rarity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Color => result.OrderBy(i => i.Card.ColorIdentity.Length).ThenBy(i => i.Card.ColorIdentity).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Price when usePriceSort => result.OrderByDescending(i => PriceDisplayHelper.GetNumericPrice(
-                        priceMap.GetValueOrDefault(i.CardUuid), i.IsFoil, i.IsEtched)).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                        sortPriceData.GetValueOrDefault(i.Card.Uuid), false, false)).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Price => result.OrderBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     _ => result // Manual: keep loaded order
                 };
@@ -281,45 +286,55 @@ public partial class CollectionViewModel : BaseViewModel
     }
 
     /// <summary>
-    /// Fills <see cref="_collectionPriceCache"/> once per <see cref="CardManager.CollectionVersion"/> using a single DB query
-    /// (faster than many parallel chunked bulk UUID lookups).
+    /// Loads <see cref="CardPriceData"/> for the whole collection once per version + vendor order (same as grid bulk pricing).
     /// </summary>
-    private async Task EnsureCollectionPriceSnapshotAsync(CancellationToken cancellationToken)
+    private async Task EnsureCollectionSortPriceDataAsync(CancellationToken cancellationToken)
     {
-        var version = _cardManager.CollectionVersion;
-        lock (_collectionPriceCacheLock)
+        static string VendorKeyString()
         {
-            if (_priceSnapshotCollectionVersion == version)
+            var p = PriceDisplayHelper.GetVendorPriority();
+            return p.Length == 0 ? "" : string.Join(',', p.Select(static v => v.ToString()));
+        }
+
+        var version = _cardManager.CollectionVersion;
+        var vendorKey = VendorKeyString();
+        lock (_sortPriceLock)
+        {
+            if (_sortPricesCollectionVersion == version && string.Equals(_sortPricesVendorKey, vendorKey, StringComparison.Ordinal))
                 return;
         }
 
-        await _collectionPriceSnapshotGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _sortPriceLoadGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             version = _cardManager.CollectionVersion;
-            lock (_collectionPriceCacheLock)
+            vendorKey = VendorKeyString();
+            lock (_sortPriceLock)
             {
-                if (_priceSnapshotCollectionVersion == version)
+                if (_sortPricesCollectionVersion == version && string.Equals(_sortPricesVendorKey, vendorKey, StringComparison.Ordinal))
                     return;
             }
 
             var snapshotCommitted = false;
             for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
             {
-                var epoch0 = Volatile.Read(ref _collectionPriceInvalidationEpoch);
+                var epoch0 = Volatile.Read(ref _sortPriceInvalidationEpoch);
                 var v0 = _cardManager.CollectionVersion;
+                var vk0 = VendorKeyString();
                 var map = await _cardManager.GetCollectionCardPricesAsync().ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
                 var v1 = _cardManager.CollectionVersion;
-                if (v0 != v1) continue;
-                if (epoch0 != Volatile.Read(ref _collectionPriceInvalidationEpoch)) continue;
+                var vk1 = VendorKeyString();
+                if (v0 != v1 || vk0 != vk1) continue;
+                if (epoch0 != Volatile.Read(ref _sortPriceInvalidationEpoch)) continue;
 
-                lock (_collectionPriceCacheLock)
+                lock (_sortPriceLock)
                 {
-                    _collectionPriceCache.Clear();
+                    _collectionSortPriceData.Clear();
                     foreach (var kv in map)
-                        _collectionPriceCache[kv.Key] = kv.Value;
-                    _priceSnapshotCollectionVersion = v1;
+                        _collectionSortPriceData[kv.Key] = kv.Value;
+                    _sortPricesCollectionVersion = v1;
+                    _sortPricesVendorKey = vk1;
                 }
 
                 snapshotCommitted = true;
@@ -328,32 +343,17 @@ public partial class CollectionViewModel : BaseViewModel
 
             if (!snapshotCommitted)
             {
-                lock (_collectionPriceCacheLock)
+                lock (_sortPriceLock)
                 {
-                    _collectionPriceCache.Clear();
-                    _priceSnapshotCollectionVersion = -1;
+                    _collectionSortPriceData.Clear();
+                    _sortPricesCollectionVersion = -1;
+                    _sortPricesVendorKey = "";
                 }
             }
         }
         finally
         {
-            _collectionPriceSnapshotGate.Release();
-        }
-    }
-
-    private Dictionary<string, CardPriceData> BuildPriceLookupForFilteredUuids(CollectionItem[] filtered)
-    {
-        var distinct = filtered.Select(i => i.CardUuid).Distinct().ToArray();
-        lock (_collectionPriceCacheLock)
-        {
-            var map = new Dictionary<string, CardPriceData>(distinct.Length, StringComparer.Ordinal);
-            foreach (var u in distinct)
-            {
-                if (_collectionPriceCache.TryGetValue(u, out var d))
-                    map[u] = d;
-            }
-
-            return map;
+            _sortPriceLoadGate.Release();
         }
     }
 
@@ -439,7 +439,7 @@ public partial class CollectionViewModel : BaseViewModel
 
         try
         {
-            InvalidateCollectionPriceSnapshot();
+            InvalidateSortUnitPriceCache();
 
             _allItems = await Task.Run(() => _cardManager.GetCollectionAsync());
             Logger.LogStuff($"[CollectionUI] LoadCollectionAsync: loaded _allItems.Count={_allItems.Length}", LogLevel.Debug);

@@ -1,110 +1,244 @@
 # AGENTS.md — AetherVault
 
-This file provides crucial guidance and operational instructions for AI assistants (Jules, Claude, etc.) working in this repository.
+Guidance for AI assistants (Cursor, Claude Code, Jules, Copilot, etc.) working in this repository.
 
-**Always read and adhere to these guidelines before suggesting or applying changes.**
+**Read and follow this file before suggesting or applying changes.**
 
 ---
 
-## Project Overview
+## Project overview
 
-**AetherVault** is a .NET MAUI Android application for browsing, searching, and managing Magic: The Gathering card collections. It queries a local SQLite copy of the [MTGJSON](https://mtgjson.com/) database, renders card images fetched from the Scryfall CDN, and persists user collections in a separate SQLite database.
+**AetherVault** is a .NET MAUI Android application for browsing, searching, and managing Magic: The Gathering card collections. It queries a local SQLite copy of the [MTGJSON](https://mtgjson.com/) database, renders card images from the Scryfall CDN, and persists user collections in a separate SQLite database.
 
-- **Target Platform**: Android
-- **Target Framework**: `net10.0-android`
+- **Target platform**: Android
+- **Target framework**: `net10.0-android`
 - **Application ID**: `com.aethervault.mobile`
-- **Architecture**: MVVM with Repository pattern and DI
+- **Architecture**: MVVM, repository pattern, DI
 
 ---
 
-## 🏗️ Architecture and Design Patterns
+## Repository structure (representative)
 
-### MVVM with CommunityToolkit.Mvvm
-Pages bind to ViewModels via MAUI data binding. ViewModels expose `ObservableProperty` and `RelayCommand` members. Pages have minimal code-behind.
-**Use CommunityToolkit.Mvvm source generators.**
-- Inherit from `ObservableObject` or `BaseViewModel`.
-- Use `[ObservableProperty]` for backing fields to generate properties.
-- Use `[RelayCommand]` on methods to generate `ICommand` properties.
-- Use `[NotifyPropertyChangedFor]` to notify dependent properties.
-- Mark ViewModel classes as `partial`.
-- **Status Messages**: `BaseViewModel` exposes `StatusMessage` and `StatusIsError` properties for consistent UI feedback across the app. Child ViewModels should utilize these rather than defining custom status text/color properties.
+The tree below is a high-level map; additional `Pages/`, `Views/`, `ViewModels/`, and services exist (e.g. decks, settings, import/export).
 
-### Database Strategy
-- **MTG master (`MTG_App_DB.zip`)**: Read-only SQLite copy of MTGJSON data. Downloaded automatically on first launch via `AppDataManager`.
-- **`cards` row format** (column order, sample row, **`availability`** often comma-separated — not always JSON): [`docs/MTGSQLiteCardsSchemaNotes.md`](docs/MTGSQLiteCardsSchemaNotes.md).
-- **Collection DB**: Read-write SQLite DB for user collections and decks.
-- **Cross-DB Queries**: To query across both (e.g., joining cards with `my_collection`), the collection database must be attached to the MTG connection (e.g., `ATTACH DATABASE '...' AS col`) and collection tables must be referenced with the `col.` prefix (e.g., `col.my_collection`).
-- **ORM**: The project uses Dapper. Prefer Dapper's extension methods (e.g., `ExecuteAsync`, `QuerySingleAsync`, `QueryAsync`) on `SqliteConnection` over manual `SqliteCommand` and `SqlDataReader` instantiation.
-- **Dapper Reader Types**: Dapper's `ExecuteReaderAsync` with SQLite returns a wrapped `System.Data.Common.DbDataReader`, not a provider-specific `SqliteDataReader`. Use `DbDataReader` for typecasts and method signatures (like in `CardMapper`) to prevent `InvalidOperationException` cast failures.
-- **Unions**: When using `UNION ALL` to combine results from the `cards` and `tokens` tables in the MTGJSON SQLite database, explicitly map the columns of the `tokens` table and pad missing fields with `NULL AS [fieldName]` to match the exact schema expected by `CardMapper`.
-  - To fetch both regular cards and tokens by UUID simultaneously, use `SQLQueries.BaseCardsAndTokens`, which performs a schema-aligned `UNION ALL` across tables.
-
-### Navigation and DI
-- **DI Container**: All services, repositories, and ViewModels are registered in `MauiProgram.cs`. Register repositories via their interfaces (`ICardRepository`, etc.) to support testing.
-- **Navigation Context**: `Application.Current.MainPage` is obsolete in modern multi-window MAUI apps. Use `Application.Current!.Windows[0].Page!` or Shell navigation.
-- **ViewModel Navigation**: To resolve transient modal pages from a ViewModel without a Service Locator anti-pattern, inject `IServiceProvider` directly into the ViewModel's constructor and use `_serviceProvider.GetService<TPage>()`.
-- **Search filters UI**: Advanced search filters live in **`Pages/SearchFiltersSheet`** (Community Toolkit popup, UraniumUI fields), bound to **`SearchFiltersViewModel`**, opened via **`ISearchFiltersOpener`** / **`SearchFiltersOpenerService`**, registered transient in **`MauiProgram.cs`**. There is no `SearchFiltersPage`—that name is obsolete.
-
----
-
-## 🖥️ UI & MAUI Guidelines
-
-### XAML and Controls
-- **Namespaces**: Data types used for XAML bindings are distributed across different namespaces (e.g., `CardRuling` in `AetherVault.Core`, `PriceEntry` in `AetherVault.Services`). XAML files must include the appropriate `clr-namespace` declarations (e.g., `xmlns:core` and `xmlns:services`).
-- **Collection Binding**: When building dynamic UI lists in XAML, use declarative `BindableLayout.ItemsSource` bound to ViewModel collections rather than manually constructing and appending views via imperative C# in the code-behind.
-- **Frame is Obsolete**: The `<Frame>` control is obsolete in .NET 9+. Replace with `<Border>`. Map properties: `BorderColor` -> `Stroke`, `CornerRadius="X"` -> `StrokeShape="RoundRectangle X"`.
-- **UraniumUI Borders**: To prevent visual artifacts (unintended shadows/solid backgrounds) in UraniumUI's `TextField` and `PickerField` controls, the global `Style` for `Entry` in `App.xaml` must have its `BackgroundColor` set to `Transparent`.
-- **Aligning Checkboxes**: When arranging UI elements with varying label lengths (like CheckBoxes) in multiple columns, use a `Grid` instead of a wrapping `FlexLayout` to maintain vertical and horizontal alignment.
-- **Bindings in DataTemplates**: In .NET MAUI XAML, to avoid `MAUIG2045` reflection fallback warnings when binding to a parent ViewModel's command from within a `DataTemplate` (which has its own `x:DataType`), use `Source={RelativeSource AncestorType={x:Type viewmodels:ParentViewModel}}` rather than `Source={x:Reference ...}`.
-- **Touch Conflicts**: Using a `TapGestureRecognizer` on `CollectionView` item templates that contain a `SwipeView` causes touch conflicts. Use `CollectionView.SelectionMode="Single"` and handle the `SelectionChanged` event instead.
-
-### SkiaSharp Render Loop
-- **Avoid Allocations**: To prevent GC pressure and frame drops in 60fps render loops (like `CardGridRenderer.cs`), avoid inline object allocations (e.g., `new SKPaint`). Cache these resources as class-level fields, initialize them in `EnsureResources()`, and clean them up in `Dispose()`.
-- **Guard Zero Dimensions**: `SKCanvasView` paint events (e.g., `OnPaintSurface`) can trigger with zero width/height before layout is complete. Always guard against `w <= 0 || h <= 0` and use `try-catch` blocks during rendering to prevent silent UI crashes/black screens.
-- **Touch Events**: To enable touch events on an `SKCanvasView`, the `EnableTouchEvents="True"` property must be set in XAML alongside the `Touch` event binding. In the event handler, verify `e.ActionType` (e.g., `SKTouchAction.Released`) and set `e.Handled = true`. With nullable reference types enabled, the sender parameter must be nullable (`object? sender`).
-
-### UI Thread Management
-- **MainThread Updates**: When updating `ObservableCollection` instances bound to the UI from background threads, wrap the updates in `MainThread.BeginInvokeOnMainThread` to prevent application crashes and black screens.
-- **Background Processing**: When performing heavy data processing or bulk database operations (e.g., parsing CSV files, importing collections), always wrap the work in `Task.Run()` to offload it to a background ThreadPool thread.
+```
+AetherVault/
+├── App.xaml / App.xaml.cs          # Root; global theme (dark Material)
+├── AppShell.xaml / AppShell.xaml.cs # Tab shell (Search / Collection / Stats, etc.)
+├── MauiProgram.cs                   # DI — services, repos, VMs, pages
+├── GlobalUsings.cs
+│
+├── Models/                          # Card, collection, deck entities
+├── Data/                            # DatabaseManager, repos, MTGSearchHelper, SQLQueries, CardMapper
+├── Services/                        # AppDataManager, CardManager, image cache/download, pricing, SVG caches,
+│   └── DeckBuilder/                 # DeckBuilderService, DeckValidator
+├── ViewModels/
+├── Pages/                           # Search, CardDetail, SearchFiltersSheet, Collection, Stats, Loading,
+│                                    #   CollectionAdd, decks, settings, etc.
+├── Controls/                        # CardGrid + Skia renderer, mana views, SwipeGestureContainer, …
+├── Core/                            # Enums, SearchOptions, layout engine, Scryfall helpers, …
+├── Constants/                       # MTGConstants (partial; release URLs generated at build — AetherVault.Local.props)
+├── docs/                            # e.g. MTGSQLiteCardsSchemaNotes.md
+├── Assets/SVGSets/                  # Embedded set symbol SVGs
+├── Platforms/Android/
+├── AetherVault.Tests/               # xUnit; linked source files, not a project reference
+├── .github/workflows/               # main.yml (weekly DB), prices-daily.yml (rolling prices)
+├── TODO.md
+└── AetherVault.sln
+```
 
 ---
 
-## 🚀 Performance & Optimization
+## Architecture and patterns
 
-- **DB Down-level Filtering**: To minimize memory overhead when handling large datasets, push filtering and primary sorting operations down to the SQLite database level rather than using in-memory C# LINQ.
-- **Span String Creation**: When building short, fixed-length strings (e.g., color identity symbols like 'WUBRG'), use `string.Create` with a `Span<char>` to perform a single allocation and populate characters directly.
-- **Caching Reflection**: To optimize the use of `Enum.GetValues<T>` in performance-critical code paths, cache the array in a `static readonly` field to avoid reflection overhead.
-- **Batch Data Loading**: To prevent N+1 performance issues when loading prices for visible grid items, use `CardManager.GetCardPricesBulkAsync` to query the SQLite database and `CardGrid.UpdateCardPricesBulk` to batch UI updates.
-- **Cancel Stale Operations**: In ViewModels handling rapid user input (like `CollectionViewModel`), manage background tasks with a `CancellationTokenSource`. Cancel and recreate the token on new input to prevent overlapping operations.
+### MVVM (CommunityToolkit.Mvvm)
+
+Pages bind to ViewModels; use `[ObservableProperty]`, `[RelayCommand]`, `[NotifyPropertyChangedFor]`; ViewModels are `partial` and inherit `ObservableObject` or **`BaseViewModel`**.
+
+- **Status UI**: `BaseViewModel` exposes `StatusMessage` and `StatusIsError`. Prefer these over ad hoc status properties in feature VMs.
+
+### Repository pattern
+
+- `ICardRepository` / `CardRepository` — read-only MTG master DB.
+- `ICollectionRepository` / `CollectionRepository` — user collection DB.
+- `IDeckRepository` / `DeckRepository` — decks in the collection DB.
+- **`CardManager`** coordinates cross-cutting work.
+
+Register repos via **interfaces** in `MauiProgram.cs` for testability.
+
+### Dependency injection (`MauiProgram.cs`)
+
+- **Singleton**: `DatabaseManager`, `CardManager`, image caches, repos, `CardGalleryContext`, etc.
+- **Transient**: Modal pages and their VMs (e.g. `CardDetailPage`, `LoadingPage`).
+
+### Fluent SQL
+
+Add search predicates only through **`MTGSearchHelper`** (parameterized). Never interpolate user input into SQL.
+
+### Custom rendering
+
+`CardGrid` / `CardGridRenderer` use **SkiaSharp**. Do not swap for `CollectionView` without benchmarking.
+
+### Swipe between cards
+
+`CardGalleryContext` holds the ordered UUID list; `SwipeGestureContainer` on `CardDetailPage` uses **AppoMobi.Maui.Gestures** for swipe navigation.
+
+### Database strategy
+
+| Database | Mode | Role |
+|----------|------|------|
+| MTG master (`MTG_App_DB.zip`) | Read-only | MTGJSON card data |
+| Collection DB | Read-write | Collection + decks |
+
+- **`cards` quirks** (`availability` comma-separated vs JSON, etc.): [`docs/MTGSQLiteCardsSchemaNotes.md`](docs/MTGSQLiteCardsSchemaNotes.md).
+- **Cross-DB**: `ATTACH` the collection DB on the MTG connection (`AS col`); use `col.my_collection` (and similar) in SQL.
+- **Dapper**: Prefer `ExecuteAsync` / `QueryAsync` on `SqliteConnection` over manual commands.
+- **`ExecuteReaderAsync`**: Returns `DbDataReader`, not `SqliteDataReader` — use `DbDataReader` in signatures/casts (see `CardMapper`).
+- **`UNION ALL` cards + tokens**: Align columns; pad with `NULL AS …`. Use **`SQLQueries.BaseCardsAndTokens`** for UUID lookups across both tables.
+
+### Navigation and DI details
+
+- Prefer **`Application.Current!.Windows[0].Page!`** or Shell — avoid `Application.Current.MainPage` for new code.
+- Resolving transient modals from a VM: inject **`IServiceProvider`**, use `GetService<TPage>()` (not a service locator elsewhere).
+- **Search filters**: `Pages/SearchFiltersSheet` + **`SearchFiltersViewModel`**, opened via **`ISearchFiltersOpener`** / **`SearchFiltersOpenerService`** (transient). There is no `SearchFiltersPage` (obsolete name).
+
+### Release download URLs
+
+`MtgConstants.DatabaseDownloadUrl`, `PricesBundleDownloadUrl`, and `PricesBundleMetaUrl` are **generated at build**. Override defaults with **`AetherVault.Local.props`** (gitignored); see **`AetherVault.Local.props.example`**.
 
 ---
 
-## 📊 Data Models and Specific Logic
+## Application startup flow
 
-- **Grid Sizing**: In `GridLayoutEngine`, the `lastRow` calculation incorporates `config.CardSpacing` to determine the end of the viewport's buffer zone. The `visibleEnd` index is calculated as `lastRow * columns - 1` without additional increments.
-- **Visible Range Updates**: When updating a `CardGrid`'s collection via `SetCollection`, asynchronously loaded data like prices may be lost. ViewModels must manually query `_grid.GetVisibleRange()` on the MainThread and trigger data reloading (like `LoadVisiblePrices`) after the collection updates.
-- **Card Loading**: When providing large datasets to `CardGrid`, use `SetCollectionAsync` rather than `SetCollection` to offload `CardState` mapping to a background thread.
-- **Tokens and Faces**: Cards are linked to their tokens via the `relatedCards` JSON array. `CardMapper` extracts this to populate `Card.RelatedCards`. In `CardDetailViewModel`, related cards are appended as additional 'faces' within `GetFullCardPackageAsync`, which the UI carousel handles when `Faces.Length > 1`.
-- **Deep JSON Paths**: When traversing deeply nested MTGJSON price data (e.g., `prices.Paper.TCGPlayer.RetailNormal.Price`), utilize null-conditional (`?.`) and null-coalescing (`??`) operators.
-- **File I/O**: Optimize file reads in C# when a file is expected to exist by directly calling `File.ReadAllText` inside a `try-catch` block (handling `IOException` and `UnauthorizedAccessException`) rather than using a preceding `File.Exists` check.
-
----
-
-## 🛠️ Project Specifics & Quirks
-
-- **AetherVault.Tests Linked Files**: The `AetherVault.Tests` project links source files from the main project (`Link="..."`) rather than using a direct project reference to avoid platform target incompatibilities. When writing unit tests for files not already included, manually add them to `AetherVault.Tests.csproj` as linked compile items.
-- **Running Tests**: The development sandbox is frequently offline or restricted from reaching `api.nuget.org`. Commands like `dotnet restore` or `dotnet test` may time out. Target the test project directly (`dotnet test AetherVault.Tests/AetherVault.Tests.csproj`) rather than building the entire solution to bypass Android SDK workload errors in headless environments.
-- **Formatting Preferences**: The user prefers file size or storage metrics to be displayed in Megabytes with one decimal place precision (e.g., '123.4 MB').
-- **Removed Features**: The 'Trade' feature (TradePage, TradeViewModel, TradeTab) was temporarily removed due to stability issues.
-- **Constants**: `Constants/MTGConstants.cs` is a centralized static class for application constants, serving as a port of the legacy `MTGConstants.pas` file.
-- **TaskCompletionSource Deadlocks**: When utilizing a `TaskCompletionSource<T>` to return a result from a modal page, instantiate it with `TaskCreationOptions.RunContinuationsAsynchronously` to prevent UI deadlocks. Call `_tcs.TrySetResult(default)` in the page's `OnDisappearing()` to prevent hanging if dismissed via hardware back button.
-- **Modal Page Leaks**: Always unsubscribe from events (e.g., `SearchCompleted`, `CardClicked`) in a modal page's `OnDisappearing()` method to prevent memory leaks.
-- **Grid Drag and Drop**: The `CardGrid` `IsDragEnabled` property toggles drag-and-drop. When disabled, the internal handler blocks the `Dragging` state, causing the gesture to resolve as a `LongPressed` event upon release, even if movement occurred.
-- **App Icons**: The application icon is configured using the `<MauiIcon>` element. `Resources/AppIcon/appicon.svg` serves as the base/background layer, while `Resources/AppIcon/appiconfg.svg` is used as the foreground layer with a transparent background.
-- **Collection Stats**: Collection statistics `AvgCMC` is calculated using only non-land cards to avoid skewing the average with land cards.
-- **CSV Handling**: The project utilizes the `CsvHelper` NuGet package for robust parsing and formatting of CSV files in the `AetherVault.Services.ImportExport` namespace.
-- **Modern C#**: Use C# 12+ collection expressions (e.g., `[.. collection]`) instead of `.ToList()` or `.ToArray()` when initializing collections with explicitly typed targets.
+```
+App → LoadingPage → LoadingViewModel.OnAppearing()
+  → CardManager.InitializeAsync()
+      → AppDataManager (download/validate MTG DB)
+      → DatabaseManager.ConnectAsync() (MTG RO + collection RW; create tables if needed)
+  → AppShell → Search / Collection / Stats (and other tabs/routes)
+```
 
 ---
 
-By adhering to these rules, you will minimize crashes, performance bottlenecks, and regressions in AetherVault.
+## Key enums (`Core/Enums.cs`)
+
+Use enums, not magic strings: `LegalityStatus`, `CardRarity`, `CardLayout`, `DeckFormat`, `MtgColor`, `CommanderArchetype`, etc.
+
+---
+
+## Image loading pipeline
+
+`FileImageCache.TryGet` → on miss, **`ImageDownloadService.FetchAsync`** (rate-limited, **120 ms** min interval, cancellable) → write cache. Cache cap **~500 MB**, **90-day** retention. **`SearchViewModel`** preloads **6** images ahead of the visible range.
+
+---
+
+## Search and pagination
+
+- **Debounce**: **750 ms** (`SearchViewModel`).
+- **Page size**: **50** cards.
+- All predicates via **`MTGSearchHelper`** + parameters.
+
+---
+
+## UI and MAUI guidelines
+
+- **XAML namespaces**: e.g. `CardRuling` (`AetherVault.Core`), `PriceEntry` (`AetherVault.Services`) — add correct `xmlns`.
+- **Dynamic lists**: `BindableLayout.ItemsSource` to VM collections, not imperative view construction in code-behind.
+- **`<Frame>`** is obsolete on .NET 9+ → use **`<Border>`** (`Stroke`, `StrokeShape`).
+- **UraniumUI** `TextField` / `PickerField`: global `Entry` **BackgroundColor** `Transparent` in `App.xaml` avoids stray fills/shadows.
+- **CheckBox columns**: prefer **`Grid`** over `FlexLayout` for alignment.
+- **DataTemplate → parent command**: `Source={RelativeSource AncestorType={x:Type viewmodels:…}}` to avoid MAUIG2045 / reflection binding.
+- **Deck list rows (`DeckMainTabView` / `DeckSideboardTabView`)**: use **`SelectionMode="Single"`** and **`SelectionChanged`** for tap-to-detail; **`SwipeView`** was removed (it stole width from names and fought ±). Move/remove: ⋯ on the thumbnail (same action sheet as grid).
+
+### SkiaSharp (`CardGridRenderer`)
+
+- Cache `SKPaint` (etc.) on the type; dispose in `Dispose()`.
+- Guard **zero** width/height in `OnPaintSurface`; try/catch render path to avoid black screens.
+- **`EnableTouchEvents="True"`** + `Touch` handler; `e.Handled = true`; nullable `object? sender`.
+
+### Threading
+
+- UI-bound **`ObservableCollection`** updates from background work → **`MainThread.BeginInvokeOnMainThread`**.
+- Heavy CPU / bulk DB → **`Task.Run`** where appropriate.
+
+---
+
+## Performance and data behavior
+
+- Filter/sort large sets in **SQLite**, not large in-memory LINQ.
+- Short fixed strings: prefer **`string.Create`** / `Span<char>` when it matters.
+- Cache **`Enum.GetValues<T>()`** in `static readonly` in hot paths.
+- Prices: **`CardManager.GetCardPricesBulkAsync`** + **`CardGrid.UpdateCardPricesBulk`** for visible rows.
+- Rapid filter/search: **`CancellationTokenSource`** — cancel/recreate on new input (`CollectionViewModel`).
+- **`GridLayoutEngine`**: `visibleEnd` = `lastRow * columns - 1` (spacing included in `lastRow` math).
+- **`CardGrid.SetCollection`**: may drop async-loaded prices — re-query **`GetVisibleRange()`** and reload prices on MainThread.
+- Large grid loads: **`SetCollectionAsync`** not `SetCollection`.
+- **Related tokens** → `Card.RelatedFaces` / carousel behavior in **`CardDetailViewModel.GetFullCardPackageAsync`**.
+- **Price JSON**: deep null-conditional access.
+- **File read**: prefer **`File.ReadAllText`** in try/catch over `File.Exists` + read.
+
+---
+
+## Testing
+
+- **xUnit** + Coverlet; **`AetherVault.Tests`** links sources via `<Compile Include="…" Link="…">` (no MAUI project reference).
+- Add tests for pure logic (`MTGSearchHelper`, `GridLayoutEngine`, deck builder, import/export, etc.).
+- Run: `dotnet test AetherVault.Tests/AetherVault.Tests.csproj` (avoids full solution / Android workload when not needed).
+
+---
+
+## CI/CD (GitHub Actions)
+
+- **`main.yml`**: Weekly MTGJSON SQLite → trim (e.g. drop heavy tables), **FTS5** + indexes, **VACUUM**, zip **`MTG_App_DB.zip`**, dated release, **latest**.
+- **`prices-daily.yml`**: Trimmed prices → rolling tag **`aethervault-prices-rolling`** (not latest).
+
+---
+
+## NuGet (verify versions in `AetherVault.csproj`)
+
+| Package | Purpose |
+|---------|---------|
+| Microsoft.Maui.Controls | MAUI |
+| CommunityToolkit.Maui / Mvvm | UI helpers, MVVM generators |
+| Microsoft.Data.Sqlite, Dapper | SQLite access |
+| SkiaSharp, Svg.Skia | Grid rendering, SVG |
+| UraniumUI.Material, UraniumUI.Icons.FontAwesome | Material UI |
+| AppoMobi.Maui.Gestures | Swipe |
+| CsvHelper | Import/export CSV |
+| Microcharts.Maui | Charts (e.g. Stats) |
+| Plugin.Maui.Audio | Bundled audio (e.g. easter egg) |
+
+UraniumUI (MIT) replaced Syncfusion for licensing reasons.
+
+---
+
+## Conventions and gotchas
+
+- **C#**: preview language, nullable enabled, implicit usings; XAML **SourceGen** where enabled.
+- **Naming**: `*ViewModel`, `*Page`, `*Service`/`*Manager`, `I*Repository`, SQL in **`SQLQueries`**, app strings in **`MtgConstants`** (where appropriate).
+- **New feature**: Model → `IRepository` + impl → SQL → `CardManager` if needed → VM → Page → register in **`MauiProgram`** / **`AppShell`**.
+- **DB**: always **`DatabaseManager`** semaphore; **never** write to the MTG master DB.
+- **Pricing**: `CardPriceManager` / related — confirm wiring for the flow you touch.
+- **`Card`**: map new columns in **`CardMapper`**.
+- **SVG**: **`SvgCacheEngine`** base for **`ManaSvgCache`** / **`SetSvgCache`** — don’t duplicate loading logic.
+- **Downloads**: **`AppDataManager`** owns MTG DB fetch/versioning.
+- **Modal pages**: `TaskCompletionSource` with **`RunContinuationsAsynchronously`**; **`TrySetResult`** in **`OnDisappearing`** (back button).
+- **Modal leaks**: unsubscribe shared events in **`OnDisappearing`**.
+- **`CardGrid.IsDragEnabled`**: when false, drag may end as **long-press**.
+- **Collection `AvgCMC`**: non-lands only.
+- **Trade** feature removed (stability).
+- **Formatting**: prefer storage sizes as **MB with one decimal** (e.g. `123.4 MB`).
+- **Collection expressions** (`[.. ]`) where they clarify typed collection init.
+
+---
+
+## Roadmap (see `TODO.md`)
+
+| Area | Status |
+|------|--------|
+| UraniumUI Material inputs | Done |
+| Deck building | In progress |
+
+---
+
+By following this document you reduce regressions, UI threading issues, and SQL/grid performance problems in AetherVault.

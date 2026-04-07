@@ -6,7 +6,11 @@ namespace AetherVault.Constants;
 /// Centralized constants for the AetherVault application.
 /// Port of MTGConstants.pas.
 /// </summary>
-public static class MtgConstants
+/// <remarks>
+/// Release download URLs (<see cref="DatabaseDownloadUrl"/>, price bundle URLs) are generated at build from MSBuild properties;
+/// override via <c>AetherVault.Local.props</c> (see <c>AetherVault.Local.props.example</c>) to use a different GitHub org/repo or CDN.
+/// </remarks>
+public static partial class MtgConstants
 {
     // ── Card Type Keywords ──────────────────────────────────────────
 
@@ -73,17 +77,6 @@ public static class MtgConstants
     // ── Database Configuration ──────────────────────────────────────
 
     public const string DbDriverSqlite = "SQLite";
-    public const string DatabaseDownloadUrl = "https://github.com/Raygunpewpew1/AetherVault/releases/latest/download/MTG_App_DB.zip";
-
-    /// <summary>
-    /// Trimmed AllPrices (paper, app vendors, retail) from daily CI on tag <c>aethervault-prices-rolling</c> (not latest).
-    /// </summary>
-    public const string PricesBundleDownloadUrl =
-        "https://github.com/Raygunpewpew1/AetherVault/releases/download/aethervault-prices-rolling/AetherVault_Prices.sqlite.zip";
-
-    /// <summary>MTGJSON meta date for the rolling bundle; updated when the daily workflow runs.</summary>
-    public const string PricesBundleMetaUrl =
-        "https://github.com/Raygunpewpew1/AetherVault/releases/download/aethervault-prices-rolling/prices_bundle_meta.txt";
 
     // ── MTGJSON Decks (catalog + individual deck download) ──────────────
 
