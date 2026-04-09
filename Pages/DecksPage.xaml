@@ -93,7 +93,9 @@
                                 StrokeThickness="1"
                                 BackgroundColor="{StaticResource Surface}">
                             <Grid>
-                                <Grid IsVisible="{Binding HasPreviewImage}">
+                                <!-- Base + art: gradient was so opaque that tiles read as solid black; keep a visible fallback under failed loads. -->
+                                <Grid IsVisible="{Binding HasPreviewImage}"
+                                      BackgroundColor="{StaticResource CardBackground}">
                                     <controls:CachedCardImage CardUuid="{Binding PreviewImageUuid}"
                                                                ImageSize="art_crop"
                                                                InputTransparent="True"
@@ -116,10 +118,12 @@
                                         VerticalOptions="Fill"
                                         HorizontalOptions="Fill">
                                     <Border.Background>
+                                        <!-- Vignette for legibility without hiding art (old stops were ~85–95% black over most of the tile). -->
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#33000000" Offset="0.0" />
-                                            <GradientStop Color="#D9000000" Offset="0.55" />
-                                            <GradientStop Color="#F2000000" Offset="1.0" />
+                                            <GradientStop Color="#22000000" Offset="0.0" />
+                                            <GradientStop Color="#45000000" Offset="0.42" />
+                                            <GradientStop Color="#8F000000" Offset="0.78" />
+                                            <GradientStop Color="#B8000000" Offset="1.0" />
                                         </LinearGradientBrush>
                                     </Border.Background>
                                 </Border>

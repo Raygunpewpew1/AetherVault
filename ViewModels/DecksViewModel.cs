@@ -1,4 +1,4 @@
-using AetherVault.Data;
+using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
@@ -13,7 +13,6 @@ namespace AetherVault.ViewModels;
 public partial class DecksViewModel : BaseViewModel
 {
     private readonly DeckBuilderService _deckService;
-    private readonly IDeckRepository _deckRepository;
     private readonly DeckImporter _deckImporter;
     private readonly DeckUrlImporter _deckUrlImporter;
     private readonly DeckExporter _deckExporter;
@@ -26,13 +25,11 @@ public partial class DecksViewModel : BaseViewModel
 
     public DecksViewModel(
         DeckBuilderService deckService,
-        IDeckRepository deckRepository,
         DeckImporter deckImporter,
         DeckUrlImporter deckUrlImporter,
         DeckExporter deckExporter)
     {
         _deckService = deckService;
-        _deckRepository = deckRepository;
         _deckImporter = deckImporter;
         _deckUrlImporter = deckUrlImporter;
         _deckExporter = deckExporter;
@@ -68,10 +65,6 @@ public partial class DecksViewModel : BaseViewModel
     private async Task RefreshDecksListAsync(bool updateStatusLineWithDeckCount)
     {
         var list = await _deckService.GetDecksAsync();
-        var counts = await _deckRepository.GetDeckCardCountsAsync(list.Select(d => d.Id));
-        foreach (var deck in list)
-            deck.CardCount = counts.GetValueOrDefault(deck.Id);
-
         var collection = new ObservableCollection<DeckEntity>(list);
         var isEmpty = collection.Count == 0;
         var countStatus = isEmpty ? UserMessages.StatusClear : FormatDeckCount(collection.Count);
@@ -295,6 +288,6 @@ public partial class DecksViewModel : BaseViewModel
     [RelayCommand]
     private async Task DeckTappedAsync(DeckEntity deck)
     {
-        await Shell.Current.GoToAsync($"deckdetail?deckId={deck.Id}");
+        await ShellDeckDetailNavigation.GoToAsync(deck.Id);
     }
 }

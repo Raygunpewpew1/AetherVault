@@ -116,7 +116,12 @@ public class DeckImportExportTests
             Task.FromResult(_decks.FirstOrDefault(d => d.Id == deckId) is { } d ? Clone(d) : null);
 
         public Task<List<DeckEntity>> GetAllDecksAsync() =>
-            Task.FromResult(_decks.Select(Clone).ToList());
+            Task.FromResult(_decks.Select(d =>
+            {
+                var c = Clone(d);
+                c.CardCount = _cards.Where(x => x.DeckId == d.Id).Sum(x => x.Quantity);
+                return c;
+            }).ToList());
 
         public Task AddCardToDeckAsync(DeckCardEntity card)
         {
@@ -168,12 +173,6 @@ public class DeckImportExportTests
 
         public Task<int> GetDeckCardCountAsync(int deckId) =>
             Task.FromResult(_cards.Where(c => c.DeckId == deckId).Sum(c => c.Quantity));
-
-        public Task<Dictionary<int, int>> GetDeckCardCountsAsync(IEnumerable<int> deckIds)
-        {
-            var result = deckIds.ToDictionary(id => id, id => _cards.Where(c => c.DeckId == id).Sum(c => c.Quantity));
-            return Task.FromResult(result);
-        }
 
         public Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
         {
@@ -253,6 +252,7 @@ public class DeckImportExportTests
             CommanderName = d.CommanderName,
             PartnerId = d.PartnerId,
             ColorIdentity = d.ColorIdentity,
+            CommanderArchetype = d.CommanderArchetype,
             CardCount = d.CardCount,
         };
 

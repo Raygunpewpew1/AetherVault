@@ -65,8 +65,13 @@
     <Compile Include="..\Services\Logger.cs" Link="Services\Logger.cs" />
     <Compile Include="..\Services\NetworkHelper.cs" Link="Services\NetworkHelper.cs" />
     <Compile Include="..\Services\AppDataManager.cs" Link="Services\AppDataManager.cs" />
+    <Compile Include="..\Models\DeckTypes.cs" Link="Models\DeckTypes.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckCohesionProfile.cs" Link="Services\DeckBuilder\DeckCohesionProfile.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckCohesionAnalyzer.cs" Link="Services\DeckBuilder\DeckCohesionAnalyzer.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckCardRoleClassifier.cs" Link="Services\DeckBuilder\DeckCardRoleClassifier.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckValidator.cs" Link="Services\DeckBuilder\DeckValidator.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckBuilderService.cs" Link="Services\DeckBuilder\DeckBuilderService.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckSuggestionService.cs" Link="Services\DeckBuilder\DeckSuggestionService.cs" />
     <Compile Include="..\Services\ImportExport\DeckCsvV1.cs" Link="Services\ImportExport\DeckCsvV1.cs" />
     <Compile Include="..\Services\ImportExport\DeckTxtFormat.cs" Link="Services\ImportExport\DeckTxtFormat.cs" />
     <Compile Include="..\Services\ImportExport\CardImportResolver.cs" Link="Services\ImportExport\CardImportResolver.cs" />

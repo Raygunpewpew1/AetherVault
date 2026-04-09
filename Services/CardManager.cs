@@ -1,6 +1,7 @@
 using AetherVault.Core;
 using AetherVault.Data;
 using AetherVault.Models;
+using AetherVault.Services.DeckBuilder;
 using SkiaSharp;
 
 namespace AetherVault.Services;
@@ -28,6 +29,12 @@ public class CardManager : IDisposable
     private static readonly TimeSpan TotalValueCacheTtl = TimeSpan.FromMinutes(15);
     private bool? _ftsAvailable;
     private int _collectionVersion;
+
+    /// <summary>Startup prefetch for collection price sort; cleared when collection or vendor context changes.</summary>
+    private readonly object _warmCollectionPricesLock = new();
+    private Dictionary<string, CardPriceData>? _warmCollectionPrices;
+    private int _warmCollectionPricesVersion = -1;
+    private string _warmCollectionPricesVendorKey = "";
 
     // ── Events ───────────────────────────────────────────────────────
 
@@ -284,6 +291,7 @@ public class CardManager : IDisposable
         {
             _priceManager?.Dispose();
             _priceManager = null;
+            ClearWarmCollectionPrices();
         }
         finally
         {
@@ -377,6 +385,41 @@ public class CardManager : IDisposable
         return await _cardRepository.SearchCardsAdvancedAsync(helper);
     }
 
+    /// <summary>
+    /// Advanced search with optional name substring; use for deck synergy presets (subtype/keyword) without a name query.
+    /// </summary>
+    public async Task<Card[]> SearchCardsWithOptionsAsync(
+        SearchOptions options,
+        string? nameContains,
+        bool inCollectionOnly,
+        int limit,
+        bool restrictToDeckLegalFormat,
+        DeckFormat deckFormat)
+    {
+        var opt = options.Clone();
+        if (restrictToDeckLegalFormat)
+        {
+            opt.UseLegalFormat = true;
+            opt.LegalFormat = deckFormat;
+        }
+
+        var helper = _cardRepository.CreateSearchHelper();
+        if (inCollectionOnly)
+            helper.SearchMyCollection();
+        else
+            helper.SearchCards();
+
+        SearchOptionsApplier.Apply(helper, opt);
+
+        if (!string.IsNullOrWhiteSpace(nameContains))
+            helper.WhereNameContains(nameContains.Trim());
+
+        helper.OrderBy("c.name");
+        if (limit > 0)
+            helper.Limit(limit);
+        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+    }
+
     public MtgSearchHelper CreateSearchHelper() => _cardRepository.CreateSearchHelper();
 
     /// <summary>Returns all sets (code + name) for filter dropdowns, ordered by name.</summary>
@@ -391,6 +434,31 @@ public class CardManager : IDisposable
     {
         return await _cardRepository.GetCountAdvancedAsync(searchHelper);
     }
+
+    /// <summary>Commander-style deck suggestions (on-device heuristics + EDHRec ordering seed).</summary>
+    public Task<Card[]> GetDeckSuggestionsAsync(
+        DeckEntity deck,
+        CommanderArchetype archetype,
+        Card? commanderCard,
+        IReadOnlyList<DeckCardEntity> deckEntities,
+        IReadOnlyDictionary<string, Card> cardMap,
+        DeckStats deckStats,
+        DeckCohesionProfile cohesionProfile,
+        bool collectionOnly,
+        int maxResults = 40,
+        CancellationToken cancellationToken = default) =>
+        DeckSuggestionService.GetSuggestionsAsync(
+            _cardRepository,
+            deck,
+            archetype,
+            commanderCard,
+            deckEntities,
+            cardMap,
+            deckStats,
+            cohesionProfile,
+            collectionOnly,
+            maxResults,
+            cancellationToken);
 
     // ── Card Detail Methods ──────────────────────────────────────────
 
@@ -489,10 +557,88 @@ public class CardManager : IDisposable
         return total;
     }
 
+    /// <summary>
+    /// Preloads collection total value and per-UUID price map during splash so Stats and price-sort avoid cold queries.
+    /// </summary>
+    public async Task WarmCollectionPriceCachesAsync()
+    {
+        if (!PricePreferences.PricesDataEnabled || !PricePreferences.CollectionPriceDisplayEnabled || _priceManager == null)
+            return;
+
+        var stats = await GetCollectionStatsAsync().ConfigureAwait(false);
+        if (stats.TotalCards == 0)
+        {
+            CommitWarmCollectionPrices(new Dictionary<string, CardPriceData>(StringComparer.Ordinal), CollectionVersion, VendorKeyForWarmCache());
+            await GetCollectionTotalValueAsync().ConfigureAwait(false);
+            return;
+        }
+
+        var versionStart = CollectionVersion;
+        var vendorKeyStart = VendorKeyForWarmCache();
+
+        var totalTask = GetCollectionTotalValueAsync();
+        var mapTask = GetCollectionCardPricesAsync();
+        await Task.WhenAll(totalTask, mapTask).ConfigureAwait(false);
+
+        if (CollectionVersion != versionStart || !string.Equals(VendorKeyForWarmCache(), vendorKeyStart, StringComparison.Ordinal))
+            return;
+
+        CommitWarmCollectionPrices(mapTask.Result, versionStart, vendorKeyStart);
+    }
+
+    /// <summary>
+    /// If startup prefetch matches the given collection version and vendor order, copies into <paramref name="target"/> (cleared first).
+    /// </summary>
+    public bool TryCopyWarmCollectionPricesIfCurrent(int version, string vendorKey, Dictionary<string, CardPriceData> target)
+    {
+        lock (_warmCollectionPricesLock)
+        {
+            if (_warmCollectionPrices is null
+                || _warmCollectionPricesVersion != version
+                || !string.Equals(_warmCollectionPricesVendorKey, vendorKey, StringComparison.Ordinal))
+                return false;
+
+            target.Clear();
+            foreach (var kv in _warmCollectionPrices)
+                target[kv.Key] = kv.Value;
+            return true;
+        }
+    }
+
+    private static string VendorKeyForWarmCache()
+    {
+        var p = PriceDisplayHelper.GetVendorPriority();
+        return p.Length == 0 ? "" : string.Join(',', p.Select(static v => v.ToString()));
+    }
+
+    private void CommitWarmCollectionPrices(
+        Dictionary<string, CardPriceData> map,
+        int version,
+        string vendorKey)
+    {
+        lock (_warmCollectionPricesLock)
+        {
+            _warmCollectionPrices = new Dictionary<string, CardPriceData>(map, StringComparer.Ordinal);
+            _warmCollectionPricesVersion = version;
+            _warmCollectionPricesVendorKey = vendorKey;
+        }
+    }
+
+    private void ClearWarmCollectionPrices()
+    {
+        lock (_warmCollectionPricesLock)
+        {
+            _warmCollectionPrices = null;
+            _warmCollectionPricesVersion = -1;
+            _warmCollectionPricesVendorKey = "";
+        }
+    }
+
     private void InvalidateTotalValueCache()
     {
         _totalValueCacheExpiry = DateTime.MinValue;
         _cachedTotalValueVendorKey = "";
+        ClearWarmCollectionPrices();
         BumpCollectionVersion();
     }
 

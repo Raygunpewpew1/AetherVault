@@ -92,6 +92,10 @@ public partial class DeckAddSearchResultRow : ObservableObject
 
     [ObservableProperty]
     public partial bool IsStaged { get; set; }
+
+    /// <summary>Overlap with current deck themes (main + commander).</summary>
+    [ObservableProperty]
+    public partial string SynergyHintText { get; set; } = "";
 }
 
 /// <summary>Card queued for batch add from the add-cards sheet.</summary>
@@ -157,6 +161,8 @@ public partial class DeckDetailViewModel(
     private readonly CardManager _cardManager = cardManager;
     private readonly IToastService _toast = toast;
     private Dictionary<string, Card> _cardMapCache = [];
+    private List<DeckCardEntity> _deckEntitiesCache = [];
+    private SearchOptions? _addCardSynergyPreset;
     private int _deckId;
     private CancellationTokenSource? _addCardSearchCts;
     private int _addCardSearchGeneration;
@@ -322,6 +328,27 @@ public partial class DeckDetailViewModel(
     public partial DeckStats Stats { get; set; } = new();
 
     [ObservableProperty]
+    public partial ObservableCollection<string> SynergySubtypeSummaryLines { get; set; } = [];
+
+    [ObservableProperty]
+    public partial ObservableCollection<string> SynergyKeywordSummaryLines { get; set; } = [];
+
+    [ObservableProperty]
+    public partial ObservableCollection<DeckSynergyChipItem> AddCardSynergyPresetChips { get; set; } = [];
+
+    /// <summary>Deck stats tab: show subtype theme block.</summary>
+    public bool HasSynergySubtypeSummary => SynergySubtypeSummaryLines.Count > 0;
+
+    /// <summary>Deck stats tab: show keyword theme block.</summary>
+    public bool HasSynergyKeywordSummary => SynergyKeywordSummaryLines.Count > 0;
+
+    /// <summary>Add-cards sheet: show theme chip row.</summary>
+    public bool HasSynergyPresetChips => AddCardSynergyPresetChips.Count > 0;
+
+    /// <summary>Active subtype/keyword filter on add-cards search.</summary>
+    public bool HasActiveAddCardSynergyPreset => _addCardSynergyPreset != null;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCommanderTab))]
     [NotifyPropertyChangedFor(nameof(IsMainTab))]
     [NotifyPropertyChangedFor(nameof(IsSideboardTab))]
@@ -407,6 +434,29 @@ public partial class DeckDetailViewModel(
     [ObservableProperty]
     public partial bool AddCardSearchOnlyCollection { get; set; }
 
+    /// <summary>True while commander strategy suggestions are loading.</summary>
+    [ObservableProperty]
+    public partial bool IsDeckSuggestionBusy { get; set; }
+
+    /// <summary>When true, empty search text does not clear the list (suggestion results are shown).</summary>
+    [ObservableProperty]
+    public partial bool AddCardResultsAreSuggestions { get; set; }
+
+    /// <summary>Picker labels in <see cref="CommanderArchetype"/> enum order.</summary>
+    public string[] CommanderArchetypePickerItems { get; } =
+        [.. Enum.GetValues<CommanderArchetype>().Select(static a => a.ToDisplayName())];
+
+    [ObservableProperty]
+    public partial int CommanderArchetypePickerIndex { get; set; }
+
+    /// <summary>Commander/Brawl/etc. decks with a commander set: show strategy picker and suggestions.</summary>
+    public bool ShowDeckSuggestionUi =>
+        Deck != null
+        && EnumExtensions.ParseDeckFormat(Deck.Format).IsCommanderLikeRules()
+        && !HasNoCommander;
+
+    private bool _archetypePickerSyncFromLoad;
+
     [ObservableProperty]
     public partial ObservableCollection<DeckAddSearchResultRow> AddCardSearchResultRows { get; set; } = [];
 
@@ -438,6 +488,18 @@ public partial class DeckDetailViewModel(
         StagedAddItems.Count == 0
             ? UserMessages.DeckAddStagingEmpty
             : UserMessages.DeckAddStagingSummary(StagedAddItems.Count, StagedAddItems.Sum(s => s.Quantity));
+
+    /// <summary>True when the staged list has rows (hides empty list chrome in add-cards sheet).</summary>
+    public bool HasStagedAddItems => StagedAddItems.Count > 0;
+
+    private void NotifyStagedAddPresentationChanged()
+    {
+        OnPropertyChanged(nameof(StagedAddSummaryText));
+        OnPropertyChanged(nameof(HasStagedAddItems));
+    }
+
+    partial void OnStagedAddItemsChanged(ObservableCollection<StagedDeckAddItem> oldValue, ObservableCollection<StagedDeckAddItem> newValue)
+        => NotifyStagedAddPresentationChanged();
 
     partial void OnAddCardsModalTargetSectionIndexChanged(int value)
     {
@@ -616,6 +678,7 @@ public partial class DeckDetailViewModel(
 
     partial void OnAddCardSearchTextChanged(string value)
     {
+        AddCardResultsAreSuggestions = false;
         _addCardSearchCts?.Cancel();
         _addCardSearchCts = new CancellationTokenSource();
         var token = _addCardSearchCts.Token;
@@ -628,8 +691,18 @@ public partial class DeckDetailViewModel(
 
     partial void OnAddCardSearchOnlyCollectionChanged(bool value)
     {
-        if (!string.IsNullOrWhiteSpace(AddCardSearchText))
+        AddCardResultsAreSuggestions = false;
+        if (!string.IsNullOrWhiteSpace(AddCardSearchText) || _addCardSynergyPreset != null)
             _ = ExecuteAddCardSearchAsync();
+        else
+            MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
+    }
+
+    partial void OnCommanderArchetypePickerIndexChanged(int value)
+    {
+        if (_archetypePickerSyncFromLoad || Deck == null) return;
+        if (value < 0 || value >= Enum.GetValues<CommanderArchetype>().Length) return;
+        _ = SaveDeckArchetypeAsync((CommanderArchetype)value);
     }
 
     partial void OnSelectedSectionIndexChanged(int value)
@@ -670,8 +743,11 @@ public partial class DeckDetailViewModel(
         IsAddCardSearchBusy = true;
         try
         {
-            if (string.IsNullOrEmpty(query))
+            bool useSynergy = _addCardSynergyPreset != null;
+            if (!useSynergy && string.IsNullOrEmpty(query))
             {
+                if (AddCardResultsAreSuggestions)
+                    return;
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     if (myGen != _addCardSearchGeneration) return;
@@ -680,16 +756,41 @@ public partial class DeckDetailViewModel(
                 return;
             }
 
-            var cards = AddCardSearchOnlyCollection
-                ? await _cardManager.SearchInCollectionAsync(query, 50)
-                : await _cardManager.SearchCardsAsync(query, 50);
+            Card[] cards;
+            if (useSynergy)
+            {
+                var fmt = Deck != null
+                    ? EnumExtensions.ParseDeckFormat(Deck.Format)
+                    : global::AetherVault.Core.DeckFormat.Standard;
+                string? namePart = string.IsNullOrEmpty(query) ? null : query;
+                cards = await _cardManager.SearchCardsWithOptionsAsync(
+                    _addCardSynergyPreset!,
+                    namePart,
+                    AddCardSearchOnlyCollection,
+                    50,
+                    restrictToDeckLegalFormat: true,
+                    fmt);
+            }
+            else
+            {
+                cards = AddCardSearchOnlyCollection
+                    ? await _cardManager.SearchInCollectionAsync(query, 50)
+                    : await _cardManager.SearchCardsAsync(query, 50);
+            }
+
             if (myGen != _addCardSearchGeneration) return;
 
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 var stagedUuids = new HashSet<string>(StagedAddItems.Select(s => s.Card.Uuid));
                 AddCardSearchResultRows = new ObservableCollection<DeckAddSearchResultRow>(
-                    cards.Select(c => new DeckAddSearchResultRow(c, stagedUuids.Contains(c.Uuid))));
+                    cards.Select(c =>
+                    {
+                        var row = new DeckAddSearchResultRow(c, stagedUuids.Contains(c.Uuid));
+                        row.SynergyHintText = DeckCohesionAnalyzer.FormatOverlapHint(
+                            c, _deckEntitiesCache, _cardMapCache) ?? "";
+                        return row;
+                    }));
             });
         }
         finally
@@ -697,6 +798,111 @@ public partial class DeckDetailViewModel(
             if (myGen == _addCardSearchGeneration)
                 MainThread.BeginInvokeOnMainThread(() => IsAddCardSearchBusy = false);
         }
+    }
+
+    private async Task SaveDeckArchetypeAsync(CommanderArchetype archetype)
+    {
+        if (Deck == null) return;
+        try
+        {
+            await _deckService.UpdateCommanderArchetypeAsync(Deck.Id, archetype);
+            Deck.CommanderArchetype = archetype.ToArchetypeDbValue();
+        }
+        catch (Exception ex)
+        {
+            StatusIsError = true;
+            StatusMessage = UserMessages.Error(ex.Message);
+        }
+    }
+
+    private IAsyncRelayCommand? _loadDeckSuggestionsCommand;
+
+    /// <summary>Loads ranked commander deck suggestions into the add-cards result list.</summary>
+    public IAsyncRelayCommand LoadDeckSuggestionsCommand =>
+        _loadDeckSuggestionsCommand ??= new AsyncRelayCommand(ExecuteLoadDeckSuggestionsAsync);
+
+    private async Task ExecuteLoadDeckSuggestionsAsync()
+    {
+        if (Deck == null || HasNoCommander || !EnumExtensions.ParseDeckFormat(Deck.Format).IsCommanderLikeRules())
+        {
+            _toast.Show(UserMessages.DeckAddSuggestionsNeedCommander, 4000);
+            return;
+        }
+
+        var commanderItem = FirstCommander;
+        if (commanderItem?.Card == null)
+        {
+            _toast.Show(UserMessages.DeckAddSuggestionsNeedCommander, 4000);
+            return;
+        }
+
+        int myGen = ++_addCardSearchGeneration;
+        IsDeckSuggestionBusy = true;
+        AddCardResultsAreSuggestions = false;
+        try
+        {
+            await _cardManager.EnsureInitializedAsync();
+            var archetype = (CommanderArchetype)CommanderArchetypePickerIndex;
+            var (stats, profile) = BuildCohesionSnapshot();
+            var cards = await _cardManager.GetDeckSuggestionsAsync(
+                Deck,
+                archetype,
+                commanderItem.Card,
+                _deckEntitiesCache,
+                _cardMapCache,
+                stats,
+                profile,
+                AddCardSearchOnlyCollection,
+                maxResults: 45);
+
+            if (myGen != _addCardSearchGeneration) return;
+
+            if (cards.Length == 0)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    AddCardResultsAreSuggestions = false;
+                    AddCardSearchResultRows = [];
+                    _toast.Show(UserMessages.DeckAddSuggestionsNone, 4000);
+                });
+                return;
+            }
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                AddCardResultsAreSuggestions = true;
+                var stagedUuids = new HashSet<string>(StagedAddItems.Select(s => s.Card.Uuid));
+                AddCardSearchResultRows = new ObservableCollection<DeckAddSearchResultRow>(
+                    cards.Select(c =>
+                    {
+                        var row = new DeckAddSearchResultRow(c, stagedUuids.Contains(c.Uuid));
+                        row.SynergyHintText = DeckCohesionAnalyzer.FormatOverlapHint(
+                            c, _deckEntitiesCache, _cardMapCache) ?? "";
+                        return row;
+                    }));
+            });
+        }
+        catch (Exception ex)
+        {
+            if (myGen == _addCardSearchGeneration)
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    AddCardResultsAreSuggestions = false;
+                    StatusIsError = true;
+                    StatusMessage = UserMessages.SearchFailed(ex.Message);
+                });
+        }
+        finally
+        {
+            if (myGen == _addCardSearchGeneration)
+                MainThread.BeginInvokeOnMainThread(() => IsDeckSuggestionBusy = false);
+        }
+    }
+
+    private (DeckStats stats, DeckCohesionProfile profile) BuildCohesionSnapshot()
+    {
+        var stats = ComputeStatsAndCohesion(_deckEntitiesCache, _cardMapCache, out var profile);
+        return (stats, profile);
     }
 
     /// <summary>
@@ -713,7 +919,32 @@ public partial class DeckDetailViewModel(
         AddCardSearchResultRows = [];
         StagedAddItems = [];
         IsAddCardSearchBusy = false;
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        AddCardResultsAreSuggestions = false;
+        _addCardSynergyPreset = null;
+        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        NotifyStagedAddPresentationChanged();
+    }
+
+    [RelayCommand]
+    private void ApplyAddCardSynergyPreset(DeckSynergyChipItem? chip)
+    {
+        if (chip == null) return;
+        AddCardResultsAreSuggestions = false;
+        _addCardSynergyPreset = chip.ToPresetSearchOptions();
+        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        _ = ExecuteAddCardSearchAsync();
+    }
+
+    [RelayCommand]
+    private void ClearAddCardSynergyPreset()
+    {
+        AddCardResultsAreSuggestions = false;
+        _addCardSynergyPreset = null;
+        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        if (string.IsNullOrWhiteSpace(AddCardSearchText))
+            MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
+        else
+            _ = ExecuteAddCardSearchAsync();
     }
 
     private static void ApplyOwnedQuantities(List<DeckCardDisplayItem> items, Dictionary<string, int> qtyOwned)
@@ -804,9 +1035,13 @@ public partial class DeckDetailViewModel(
 
         try
         {
+            // Lets the UI thread pump once before DB + large collection updates — reduces “frozen”
+            // deck editor when the Android debugger / Hot Reload slows the main thread.
+            await Task.Yield();
             var newDeck = await _deckService.GetDeckAsync(deckId);
             if (newDeck == null)
             {
+                _deckEntitiesCache = [];
                 StatusIsError = true;
                 StatusMessage = UserMessages.DeckNotFound;
                 return;
@@ -820,6 +1055,7 @@ public partial class DeckDetailViewModel(
             DeckFormat = EnumExtensions.ParseDeckFormat(newDeck.Format).ToDisplayName();
 
             var cardEntities = await _deckService.GetDeckCardsAsync(deckId);
+            _deckEntitiesCache = cardEntities;
             var uuids = cardEntities.Select(c => c.CardId).Distinct().ToArray();
 
             Dictionary<string, Card> cardMap = uuids.Length > 0
@@ -837,8 +1073,8 @@ public partial class DeckDetailViewModel(
             int mainDeckCount = main.Sum(i => i.Entity.Quantity);
             int sideboardCount = sideboard.Sum(i => i.Entity.Quantity);
             var totalCardCount = cardEntities.Sum(c => c.Quantity);
-            var stats = ComputeStats(cardEntities, cardMap);
-            var validation = await _deckService.ValidateDeckAsync(deckId);
+            var stats = ComputeStatsAndCohesion(cardEntities, cardMap, out var cohesionProfile);
+            var validation = await _deckService.ValidateDeckAsync(newDeck, cardEntities, cardMap);
             var statusMessage = GetValidationStatusMessage(validation, totalCardCount);
 
             _cardMapCache = cardMap;
@@ -856,8 +1092,13 @@ public partial class DeckDetailViewModel(
                 SideboardCount = sideboardCount;
                 TotalCardCount = totalCardCount;
                 Stats = stats;
+                UpdateSynergyCollections(cohesionProfile);
                 OnPropertyChanged(nameof(HasNoCommander));
                 OnPropertyChanged(nameof(HasMultipleCommanders));
+                _archetypePickerSyncFromLoad = true;
+                CommanderArchetypePickerIndex = (int)EnumExtensions.ParseCommanderArchetype(newDeck.CommanderArchetype);
+                _archetypePickerSyncFromLoad = false;
+                OnPropertyChanged(nameof(ShowDeckSuggestionUi));
                 RefreshDeckListFilter();
                 StatusIsError = validation.Level == ValidationLevel.Error;
                 StatusMessage = statusMessage;
@@ -875,6 +1116,12 @@ public partial class DeckDetailViewModel(
             IsBusy = false;
         }
     }
+
+    /// <summary>Snapshot for <see cref="DeckSynergyNavigationContext"/> when opening card detail from this deck.</summary>
+    public IReadOnlyList<DeckCardEntity> GetDeckEntitiesSnapshotForSynergy() => _deckEntitiesCache;
+
+    /// <summary>Card map snapshot paired with <see cref="GetDeckEntitiesSnapshotForSynergy"/>.</summary>
+    public IReadOnlyDictionary<string, Card> GetDeckCardMapSnapshotForSynergy() => _cardMapCache;
 
     /// <summary>Returns the ordered list of card UUIDs for the current tab (Commander, Main, or Sideboard) for swipe context.</summary>
     public IReadOnlyList<string> GetOrderedUuidsForCurrentSection()
@@ -1347,14 +1594,14 @@ public partial class DeckDetailViewModel(
             row.IsStaged = true;
         }
 
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        NotifyStagedAddPresentationChanged();
     }
 
     private void IncrementStagedAddQuantity(StagedDeckAddItem? item)
     {
         if (item == null) return;
         item.Quantity++;
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        NotifyStagedAddPresentationChanged();
     }
 
     private void DecrementStagedAddQuantity(StagedDeckAddItem? item)
@@ -1370,7 +1617,7 @@ public partial class DeckDetailViewModel(
             item.Quantity--;
         }
 
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        NotifyStagedAddPresentationChanged();
     }
 
     private void SyncSearchRowStagedState(string cardUuid, bool staged)
@@ -1401,7 +1648,7 @@ public partial class DeckDetailViewModel(
                     : $"{first.Name} set as commander.";
                 StagedAddItems.Clear();
                 AddCardSearchResultRows = [];
-                OnPropertyChanged(nameof(StagedAddSummaryText));
+                NotifyStagedAddPresentationChanged();
                 await ReloadAsync(preserveState: true);
             }
 
@@ -1433,7 +1680,7 @@ public partial class DeckDetailViewModel(
         StatusMessage = $"Added {total} card(s) to {section}.";
         StagedAddItems.Clear();
         AddCardSearchResultRows = [];
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        NotifyStagedAddPresentationChanged();
         await ReloadAsync(preserveState: true);
     }
 
@@ -1442,7 +1689,7 @@ public partial class DeckDetailViewModel(
         foreach (var row in AddCardSearchResultRows)
             row.IsStaged = false;
         StagedAddItems.Clear();
-        OnPropertyChanged(nameof(StagedAddSummaryText));
+        NotifyStagedAddPresentationChanged();
     }
 
     private void ApplyLocalPatchAfterQuantitySuccess(DeckCardDisplayItem item, int newQty, string section)
@@ -1522,10 +1769,12 @@ public partial class DeckDetailViewModel(
     private void FinalizePresentationMutation()
     {
         var entities = GatherEntitiesFromPresentation();
+        _deckEntitiesCache = entities;
         MainDeckCount = MainDeckGroups.Sum(g => g.Sum(i => i.Entity.Quantity));
         SideboardCount = SideboardCards.Sum(i => i.Entity.Quantity);
         TotalCardCount = entities.Sum(e => e.Quantity);
-        Stats = ComputeStats(entities, _cardMapCache);
+        Stats = ComputeStatsAndCohesion(entities, _cardMapCache, out var cohesionProfile);
+        UpdateSynergyCollections(cohesionProfile);
         OnPropertyChanged(nameof(DeckSummaryText));
         OnPropertyChanged(nameof(SideboardHeaderText));
         RefreshDeckListFilter();
@@ -1534,7 +1783,9 @@ public partial class DeckDetailViewModel(
 
     private async Task ApplyValidationUiAsync()
     {
-        var v = await _deckService.ValidateDeckAsync(_deckId);
+        var v = Deck == null
+            ? await _deckService.ValidateDeckAsync(_deckId)
+            : await _deckService.ValidateDeckAsync(Deck, _deckEntitiesCache, _cardMapCache);
         int total = TotalCardCount;
         MainThread.BeginInvokeOnMainThread(() =>
         {
@@ -1763,7 +2014,10 @@ public partial class DeckDetailViewModel(
         return "Other";
     }
 
-    private static DeckStats ComputeStats(List<DeckCardEntity> entities, Dictionary<string, Card> cardMap)
+    private static DeckStats ComputeStatsAndCohesion(
+        List<DeckCardEntity> entities,
+        Dictionary<string, Card> cardMap,
+        out DeckCohesionProfile cohesionProfile)
     {
         var stats = new DeckStats();
         double totalCmc = 0;
@@ -1798,6 +2052,46 @@ public partial class DeckDetailViewModel(
         }
 
         stats.AvgCmc = cmcCount > 0 ? Math.Round(totalCmc / cmcCount, 2) : 0;
+        cohesionProfile = DeckCohesionAnalyzer.BuildProfileAndRoles(entities, cardMap, stats);
         return stats;
+    }
+
+    private void UpdateSynergyCollections(DeckCohesionProfile profile)
+    {
+        var sub = new ObservableCollection<string>();
+        foreach (var (label, count) in DeckCohesionAnalyzer.TopSubtypes(profile, 10))
+            sub.Add($"{label} — {count}");
+        SynergySubtypeSummaryLines = sub;
+
+        var kw = new ObservableCollection<string>();
+        foreach (var (label, count) in DeckCohesionAnalyzer.TopKeywords(profile, 8))
+            kw.Add($"{label} — {count}");
+        SynergyKeywordSummaryLines = kw;
+
+        var chips = new ObservableCollection<DeckSynergyChipItem>();
+        foreach (var (label, count) in DeckCohesionAnalyzer.TopSubtypes(profile, 6))
+        {
+            chips.Add(new DeckSynergyChipItem
+            {
+                DisplayText = $"{label} ({count})",
+                SubtypeOrKeywordValue = label,
+                IsSubtype = true
+            });
+        }
+
+        foreach (var (label, count) in DeckCohesionAnalyzer.TopKeywords(profile, 4))
+        {
+            chips.Add(new DeckSynergyChipItem
+            {
+                DisplayText = $"{label} ({count})",
+                SubtypeOrKeywordValue = label,
+                IsSubtype = false
+            });
+        }
+
+        AddCardSynergyPresetChips = chips;
+        OnPropertyChanged(nameof(HasSynergySubtypeSummary));
+        OnPropertyChanged(nameof(HasSynergyKeywordSummary));
+        OnPropertyChanged(nameof(HasSynergyPresetChips));
     }
 }

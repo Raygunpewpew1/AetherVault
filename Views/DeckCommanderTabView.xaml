@@ -8,7 +8,7 @@
              xmlns:constants="clr-namespace:AetherVault.Constants"
              x:Class="AetherVault.Views.DeckCommanderTabView"
              x:DataType="vm:DeckDetailViewModel">
-    <ScrollView Padding="16,8"
+    <ScrollView Padding="16,8,16,64"
                 VerticalOptions="Fill"
                 HorizontalOptions="Fill">
         <VerticalStackLayout Spacing="12">

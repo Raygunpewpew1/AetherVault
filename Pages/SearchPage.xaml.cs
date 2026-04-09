@@ -14,17 +14,19 @@ public partial class SearchPage : ContentPage
 {
     private readonly SearchViewModel _viewModel;
     private readonly CardGalleryContext _galleryContext;
+    private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
     private readonly DeckBuilderService _deckService;
     private readonly IServiceProvider _serviceProvider;
     private readonly IEasterEggSoundService _easterEggSound;
     private int _easterEggTapCount;
     private IDispatcherTimer? _easterEggResetTimer;
 
-    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckBuilderService deckService, IServiceProvider serviceProvider, IEasterEggSoundService easterEggSound)
+    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckSynergyNavigationContext deckSynergyNavigationContext, DeckBuilderService deckService, IServiceProvider serviceProvider, IEasterEggSoundService easterEggSound)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _galleryContext = galleryContext;
+        _deckSynergyNavigationContext = deckSynergyNavigationContext;
         _deckService = deckService;
         _serviceProvider = serviceProvider;
         _easterEggSound = easterEggSound;
@@ -93,6 +95,7 @@ public partial class SearchPage : ContentPage
     /// <summary>Open card detail; set gallery context so swipe left/right shows adjacent search results.</summary>
     private async void OnCardClicked(string uuid)
     {
+        _deckSynergyNavigationContext.Clear();
         _galleryContext.SetContext(CardGrid.GetAllUuids(), uuid);
         await Shell.Current.GoToAsync($"carddetail?uuid={uuid}");
     }

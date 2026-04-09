@@ -34,12 +34,15 @@ public static class SqlQueries
             CommanderId TEXT,
             CommanderName TEXT DEFAULT '',
             PartnerId TEXT,
-            ColorIdentity TEXT
+            ColorIdentity TEXT,
+            CommanderArchetype TEXT DEFAULT 'Unknown'
         )
         """;
 
     public const string DecksTableInfo = "PRAGMA table_info(Decks)";
     public const string DecksAddCommanderName = "ALTER TABLE Decks ADD COLUMN CommanderName TEXT DEFAULT ''";
+    public const string DecksAddCommanderArchetype =
+        "ALTER TABLE Decks ADD COLUMN CommanderArchetype TEXT DEFAULT 'Unknown'";
 
     public const string CreateDeckCardsTable =
         """
@@ -524,16 +527,25 @@ public static class SqlQueries
     // ============================================================================
 
     public const string DeckInsert =
-        "INSERT INTO Decks (Name, Format, Description, CoverCardId, CommanderId, CommanderName, PartnerId, ColorIdentity) VALUES (@Name, @Format, @Description, @CoverCardId, @CommanderId, @CommanderName, @PartnerId, @ColorIdentity)";
+        "INSERT INTO Decks (Name, Format, Description, CoverCardId, CommanderId, CommanderName, PartnerId, ColorIdentity, CommanderArchetype) VALUES (@Name, @Format, @Description, @CoverCardId, @CommanderId, @CommanderName, @PartnerId, @ColorIdentity, @CommanderArchetype)";
 
     public const string DeckUpdate =
-        "UPDATE Decks SET Name = @Name, Description = @Description, CoverCardId = @CoverCardId, DateModified = CURRENT_TIMESTAMP, CommanderId = @CommanderId, CommanderName = @CommanderName, PartnerId = @PartnerId, ColorIdentity = @ColorIdentity WHERE Id = @Id";
+        "UPDATE Decks SET Name = @Name, Description = @Description, CoverCardId = @CoverCardId, DateModified = CURRENT_TIMESTAMP, CommanderId = @CommanderId, CommanderName = @CommanderName, PartnerId = @PartnerId, ColorIdentity = @ColorIdentity, CommanderArchetype = @CommanderArchetype WHERE Id = @Id";
 
     public const string DeckGetLastId = "SELECT last_insert_rowid() AS Id";
 
     public const string DeckGet = "SELECT * FROM Decks WHERE Id = @Id";
 
-    public const string DeckGetAll = "SELECT * FROM Decks ORDER BY DateModified DESC";
+    /// <summary>All deck rows with <see cref="AetherVault.Models.DeckEntity.CardCount"/> (sum of quantities; 0 if no cards).</summary>
+    public const string DeckGetAll =
+        """
+        SELECT d.*, CAST(IFNULL(t.Total, 0) AS INTEGER) AS CardCount
+        FROM Decks d
+        LEFT JOIN (
+            SELECT DeckId, SUM(Quantity) AS Total FROM DeckCards GROUP BY DeckId
+        ) AS t ON t.DeckId = d.Id
+        ORDER BY d.DateModified DESC
+        """;
 
     public const string DeckDelete = "DELETE FROM Decks WHERE Id = @Id";
 
@@ -556,10 +568,6 @@ public static class SqlQueries
 
     public const string DeckGetCardCount =
         "SELECT COALESCE(SUM(Quantity), 0) FROM DeckCards WHERE DeckId = @DeckId";
-
-    /// <summary>Returns DeckId and Total (sum of Quantity) for each deck. Use with Dapper IN @DeckIds.</summary>
-    public const string DeckGetCardCountsBatch =
-        "SELECT DeckId, CAST(COALESCE(SUM(Quantity), 0) AS INTEGER) AS Total FROM DeckCards WHERE DeckId IN @DeckIds GROUP BY DeckId";
 
     // ============================================================================
     // FTS5 (av_cards_fts) — built by CI; optional at runtime

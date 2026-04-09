@@ -148,4 +148,37 @@ public class SearchOptions
         FinishesFilter.Count > 0;
 
     public static SearchOptions Default() => new();
+
+    /// <summary>Shallow copy for building queries without mutating UI-held presets.</summary>
+    public SearchOptions Clone() => new()
+    {
+        NameFilter = NameFilter,
+        TextFilter = TextFilter,
+        KeywordsFilter = KeywordsFilter,
+        ArtistFilter = ArtistFilter,
+        TypeFilter = TypeFilter,
+        SubtypeFilter = SubtypeFilter,
+        SupertypeFilter = SupertypeFilter,
+        ColorFilter = ColorFilter,
+        ColorIdentityFilter = ColorIdentityFilter,
+        RarityFilter = [.. RarityFilter],
+        SetFilter = SetFilter,
+        CmcMin = CmcMin,
+        CmcMax = CmcMax,
+        CmcExact = CmcExact,
+        UseCmcRange = UseCmcRange,
+        UseCmcExact = UseCmcExact,
+        PowerFilter = PowerFilter,
+        ToughnessFilter = ToughnessFilter,
+        LegalFormat = LegalFormat,
+        UseLegalFormat = UseLegalFormat,
+        PrimarySideOnly = PrimarySideOnly,
+        NoVariations = NoVariations,
+        IncludeAllFaces = IncludeAllFaces,
+        IncludeTokens = IncludeTokens,
+        CommanderOnly = CommanderOnly,
+        AvailabilityFilter = [.. AvailabilityFilter],
+        LayoutFilter = [.. LayoutFilter],
+        FinishesFilter = [.. FinishesFilter],
+    };
 }

@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
@@ -32,6 +31,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 {
     private readonly CardManager _cardManager;
     private readonly CardGalleryContext _galleryContext;
+    private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
     private readonly ICardImageSaveService _cardImageSave;
     private readonly IToastService _toast;
 
@@ -127,6 +127,12 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     public bool ShowGalleryNavigation => _galleryContext.HasContext;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowDeckSynergyHint))]
+    public partial string DeckSynergyHintLine { get; set; } = "";
+
+    public bool ShowDeckSynergyHint => !string.IsNullOrEmpty(DeckSynergyHintLine);
+
     public Card CurrentFace => Faces.Length > 0 && CurrentFaceIndex >= 0 && CurrentFaceIndex < Faces.Length
         ? Faces[CurrentFaceIndex]
         : Card;
@@ -136,11 +142,13 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     public CardDetailViewModel(
         CardManager cardManager,
         CardGalleryContext galleryContext,
+        DeckSynergyNavigationContext deckSynergyNavigationContext,
         ICardImageSaveService cardImageSave,
         IToastService toast)
     {
         _cardManager = cardManager;
         _galleryContext = galleryContext;
+        _deckSynergyNavigationContext = deckSynergyNavigationContext;
         _cardImageSave = cardImageSave;
         _toast = toast;
         _cardManager.OnPricesUpdated += HandlePricesUpdated;
@@ -179,12 +187,6 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     public async Task LoadCardAsync(string uuid)
     {
-        #region agent log
-        AgentDebugLog("initial", "H3", "ViewModels/CardDetailViewModel.cs:LoadCardAsync:entry", "Card detail load entered", new
-        {
-            uuid
-        });
-        #endregion
         if (!await _cardManager.EnsureInitializedAsync()) return;
 
         IsBusy = true;
@@ -197,25 +199,9 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
             // Load full card with rulings
             var mainCard = await _cardManager.GetCardWithRulingsAsync(uuid);
             Card = mainCard;
-            #region agent log
-            AgentDebugLog("initial", "H3", "ViewModels/CardDetailViewModel.cs:LoadCardAsync:main-card", "Main card loaded", new
-            {
-                requestedUuid = uuid,
-                loadedUuid = mainCard.Uuid,
-                layout = mainCard.Layout.ToString(),
-                hasScryfall = !string.IsNullOrEmpty(mainCard.ScryfallId)
-            });
-            #endregion
 
             // Load faces
             var package = await _cardManager.GetFullCardPackageAsync(uuid);
-            #region agent log
-            AgentDebugLog("initial", "H4", "ViewModels/CardDetailViewModel.cs:LoadCardAsync:package", "Full card package loaded", new
-            {
-                requestedUuid = uuid,
-                packageLength = package.Length
-            });
-            #endregion
             if (package.Length > 0)
             {
                 // MELD CARD FILTER: Only show current card + meld result (not the other piece)
@@ -275,13 +261,6 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         catch (Exception ex)
         {
             Logger.LogStuff($"Card detail load error: {ex.Message}", LogLevel.Error);
-            #region agent log
-            AgentDebugLog("initial", "H3", "ViewModels/CardDetailViewModel.cs:LoadCardAsync:error", "Card detail load exception", new
-            {
-                uuid,
-                error = ex.Message
-            });
-            #endregion
         }
         finally
         {
@@ -291,7 +270,11 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     private void UpdateCardDetails()
     {
-        if (CurrentFace == null) return;
+        if (CurrentFace == null)
+        {
+            DeckSynergyHintLine = "";
+            return;
+        }
 
         // Rarity color
         RarityColor = CurrentFace.Rarity switch
@@ -345,6 +328,8 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
         // Legalities
         Legalities = GetLegalityList();
+
+        DeckSynergyHintLine = _deckSynergyNavigationContext.GetOverlapHint(CurrentFace) ?? "";
     }
 
     private void UpdateGalleryState()
@@ -354,7 +339,8 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         OnPropertyChanged(nameof(ShowGalleryNavigation));
     }
 
-    private async Task LoadCardImageAsync()
+    /// <param name="awaitRemoteDownload">When true (e.g. mid flip animation), wait for the CDN callback so the new face art is ready.</param>
+    private async Task LoadCardImageAsync(bool awaitRemoteDownload = false)
     {
         var currentFace = CurrentFace;
         if (string.IsNullOrEmpty(currentFace.ScryfallId))
@@ -369,19 +355,54 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         if (cached != null)
         {
             CardImage = cached;
+            CardImageLoadFailed = false;
             return;
         }
 
+        CardImageLoadFailed = false;
+        if (!awaitRemoteDownload)
+        {
+            _cardManager.DownloadCardImageAsync(currentFace.ScryfallId, (image, success) =>
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (success && image != null)
+                        CardImage = image;
+                    else
+                        CardImageLoadFailed = true;
+                });
+            }, MtgConstants.ImageSizeNormal, faceParam);
+            return;
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _cardManager.DownloadCardImageAsync(currentFace.ScryfallId, (image, success) =>
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (success && image != null)
-                    CardImage = image;
-                else
-                    CardImageLoadFailed = true;
+                try
+                {
+                    if (success && image != null)
+                        CardImage = image;
+                    else
+                        CardImageLoadFailed = true;
+                }
+                finally
+                {
+                    tcs.TrySetResult();
+                }
             });
         }, MtgConstants.ImageSizeNormal, faceParam);
+        await tcs.Task;
+    }
+
+    /// <summary>Advances to the next face and loads its image (awaiting download when needed). Used by card-detail flip animation.</summary>
+    public async Task AdvanceFaceAndLoadImageAsync()
+    {
+        if (Faces.Length <= 1) return;
+        CurrentFaceIndex = (CurrentFaceIndex + 1) % Faces.Length;
+        UpdateCardDetails();
+        await LoadCardImageAsync(awaitRemoteDownload: true);
     }
 
     private async Task LoadPriceAsync()
@@ -576,12 +597,9 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     }
 
     [RelayCommand]
-    private void FlipFace()
+    private async Task FlipFace()
     {
-        if (Faces.Length <= 1) return;
-        CurrentFaceIndex = (CurrentFaceIndex + 1) % Faces.Length;
-        _ = LoadCardImageAsync();
-        UpdateCardDetails();
+        await AdvanceFaceAndLoadImageAsync();
     }
 
     [RelayCommand]
@@ -672,18 +690,5 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
             await BackNavigationAsync.Invoke();
         else
             await Shell.Current.GoToAsync("..");
-    }
-
-    private static void AgentDebugLog(string runId, string hypothesisId, string location, string message, object data)
-    {
-        try
-        {
-            var dataJson = JsonSerializer.Serialize(data);
-            Logger.LogStuff($"DBG|session=068b48|run={runId}|h={hypothesisId}|loc={location}|msg={message}|data={dataJson}", LogLevel.Info);
-        }
-        catch
-        {
-            // Never fail app flow for debug logging.
-        }
     }
 }

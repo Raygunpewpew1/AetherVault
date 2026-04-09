@@ -561,6 +561,92 @@ public class DeckBuilderTests
         Assert.False(DeckFormat.Standard.UsesCommanderZone());
         Assert.False(DeckFormat.Modern.UsesCommanderZone());
     }
+
+    [Fact]
+    public async Task UpdateCommanderArchetypeAsync_Persists()
+    {
+        int deckId = await _service.CreateDeckAsync("Cmd", DeckFormat.Commander);
+        await _service.UpdateCommanderArchetypeAsync(deckId, CommanderArchetype.Spellslinger);
+        var deck = await _deckRepo.GetDeckAsync(deckId);
+        Assert.NotNull(deck);
+        Assert.Equal(CommanderArchetype.Spellslinger.ToArchetypeDbValue(), deck!.CommanderArchetype);
+    }
+
+    [Fact]
+    public async Task ValidateDeckAsync_WithPreloadedCardMap_SkipsPerRowGetCardDetails()
+    {
+        var commander = CreateCard("cmd-map", "Commander", DeckFormat.Commander, LegalityStatus.Legal);
+        commander.CardType = "Legendary Creature";
+        commander.Colors = "W";
+        _cardRepo.AddCard(commander);
+
+        var entities = new List<DeckCardEntity>();
+        for (int i = 0; i < 20; i++)
+        {
+            string id = $"map-{i}";
+            var c = CreateCard(id, $"Card {i}", DeckFormat.Commander, LegalityStatus.Legal);
+            c.Colors = "W";
+            _cardRepo.AddCard(c);
+            entities.Add(new DeckCardEntity { CardId = id, Section = "Main", Quantity = 1 });
+        }
+
+        var deck = new DeckEntity
+        {
+            Format = DeckFormat.Commander.ToDbField(),
+            CommanderId = commander.Uuid,
+            ColorIdentity = "W"
+        };
+
+        var uuids = entities.Select(e => e.CardId).Append(commander.Uuid).Distinct().ToArray();
+        var map = await _cardRepo.GetCardsByUuiDsAsync(uuids);
+
+        Assert.Equal(0, _cardRepo.GetCardDetailsAsyncCallCount);
+
+        await _service.ValidateDeckAsync(deck, entities, map);
+
+        Assert.Equal(0, _cardRepo.GetCardDetailsAsyncCallCount);
+    }
+
+    [Fact]
+    public async Task ValidateDeckAsync_WithPartialCardMap_FallsBackToGetCardDetailsForMissingUuids()
+    {
+        var commander = CreateCard("cmd-partial", "Commander", DeckFormat.Commander, LegalityStatus.Legal);
+        commander.CardType = "Legendary Creature";
+        commander.Colors = "W";
+        _cardRepo.AddCard(commander);
+
+        var present = CreateCard("present-1", "In Map", DeckFormat.Commander, LegalityStatus.Legal);
+        present.Colors = "W";
+        _cardRepo.AddCard(present);
+
+        var missing = CreateCard("missing-1", "Not In Map", DeckFormat.Commander, LegalityStatus.Legal);
+        missing.Colors = "W";
+        _cardRepo.AddCard(missing);
+
+        var entities = new List<DeckCardEntity>
+        {
+            new() { CardId = present.Uuid, Section = "Main", Quantity = 1 },
+            new() { CardId = missing.Uuid, Section = "Main", Quantity = 1 },
+        };
+
+        var deck = new DeckEntity
+        {
+            Format = DeckFormat.Commander.ToDbField(),
+            CommanderId = commander.Uuid,
+            ColorIdentity = "W"
+        };
+
+        var partialMap = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase)
+        {
+            [present.Uuid] = present,
+        };
+
+        int before = _cardRepo.GetCardDetailsAsyncCallCount;
+        await _service.ValidateDeckAsync(deck, entities, partialMap);
+        int after = _cardRepo.GetCardDetailsAsyncCallCount;
+
+        Assert.Equal(before + 1, after);
+    }
 }
 
 // ── Mocks ─────────────────────────────────────────────────────────────
@@ -603,7 +689,10 @@ public class MockDeckRepository : IDeckRepository
 
     public Task<List<DeckEntity>> GetAllDecksAsync()
     {
-        return Task.FromResult(_decks.ToList());
+        var list = _decks.ToList();
+        foreach (var d in list)
+            d.CardCount = _deckCards.Where(c => c.DeckId == d.Id).Sum(c => c.Quantity);
+        return Task.FromResult(list);
     }
 
     public Task AddCardToDeckAsync(DeckCardEntity card)
@@ -646,12 +735,6 @@ public class MockDeckRepository : IDeckRepository
     public Task<int> GetDeckCardCountAsync(int deckId)
     {
         return Task.FromResult(_deckCards.Where(c => c.DeckId == deckId).Sum(c => c.Quantity));
-    }
-
-    public Task<Dictionary<int, int>> GetDeckCardCountsAsync(IEnumerable<int> deckIds)
-    {
-        var result = deckIds.ToDictionary(id => id, id => _deckCards.Where(c => c.DeckId == id).Sum(c => c.Quantity));
-        return Task.FromResult(result);
     }
 
     public Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
@@ -715,6 +798,9 @@ public class MockCardRepository : ICardRepository
 {
     private readonly Dictionary<string, Card> _cards = new();
 
+    /// <summary>Increments on each <see cref="GetCardDetailsAsync"/> call (for perf-related tests).</summary>
+    public int GetCardDetailsAsyncCallCount { get; private set; }
+
     public void AddCard(Card card)
     {
         _cards[card.Uuid] = card;
@@ -722,6 +808,7 @@ public class MockCardRepository : ICardRepository
 
     public Task<Card> GetCardDetailsAsync(string uuid)
     {
+        GetCardDetailsAsyncCallCount++;
         return Task.FromResult(_cards.ContainsKey(uuid) ? _cards[uuid] : null!);
     }
 

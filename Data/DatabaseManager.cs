@@ -284,6 +284,20 @@ public sealed class DatabaseManager : IDisposable
             await ExecuteNonQueryAsync(conn, SqlQueries.DecksAddCommanderName);
         }
 
+        bool hasCommanderArchetype = false;
+        var deckColumns2 = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.DecksTableInfo);
+        foreach (var col in deckColumns2)
+        {
+            if (col.Name == "CommanderArchetype")
+                hasCommanderArchetype = true;
+        }
+
+        if (!hasCommanderArchetype)
+        {
+            Logger.LogStuff("Migrating decks table: adding CommanderArchetype column.", LogLevel.Info);
+            await ExecuteNonQueryAsync(conn, SqlQueries.DecksAddCommanderArchetype);
+        }
+
         Logger.LogStuff("Collection schema migration check completed.", LogLevel.Info);
     }
 

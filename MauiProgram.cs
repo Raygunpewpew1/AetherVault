@@ -78,6 +78,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<MtgJsonDeckListService>();
         builder.Services.AddSingleton<MtgJsonDeckImporter>();
         builder.Services.AddSingleton<CardGalleryContext>();
+        builder.Services.AddSingleton<DeckSynergyNavigationContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<ICardImageSaveService, CardImageSaveService>();
         builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();

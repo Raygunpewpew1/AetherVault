@@ -315,6 +315,21 @@ public partial class CollectionViewModel : BaseViewModel
                     return;
             }
 
+            var tempWarm = new Dictionary<string, CardPriceData>(StringComparer.Ordinal);
+            if (_cardManager.TryCopyWarmCollectionPricesIfCurrent(version, vendorKey, tempWarm))
+            {
+                lock (_sortPriceLock)
+                {
+                    _collectionSortPriceData.Clear();
+                    foreach (var kv in tempWarm)
+                        _collectionSortPriceData[kv.Key] = kv.Value;
+                    _sortPricesCollectionVersion = version;
+                    _sortPricesVendorKey = vendorKey;
+                }
+
+                return;
+            }
+
             var snapshotCommitted = false;
             for (var attempt = 0; attempt < 3 && !cancellationToken.IsCancellationRequested; attempt++)
             {

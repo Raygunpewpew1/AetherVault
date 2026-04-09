@@ -21,6 +21,9 @@ public class DeckEntity
     public string PartnerId { get; set; } = "";
     public string ColorIdentity { get; set; } = "";
 
+    /// <summary>Commander deck strategy for in-app suggestions; enum name in DB (e.g. <c>Midrange</c>).</summary>
+    public string CommanderArchetype { get; set; } = "Unknown";
+
     // Not persisted — populated at runtime
     public int CardCount { get; set; }
 

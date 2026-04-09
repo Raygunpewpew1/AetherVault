@@ -20,6 +20,7 @@ public partial class DeckDetailPage : ContentPage
     private readonly DeckImporter _deckImporter;
     private readonly ImageDownloadService _imageDownloadService;
     private readonly CardGalleryContext _galleryContext;
+    private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
 
     private SKImage? _commanderArtImage;
 
@@ -39,7 +40,8 @@ public partial class DeckDetailPage : ContentPage
         DeckExporter deckExporter,
         DeckImporter deckImporter,
         ImageDownloadService imageDownloadService,
-        CardGalleryContext galleryContext)
+        CardGalleryContext galleryContext,
+        DeckSynergyNavigationContext deckSynergyNavigationContext)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -49,6 +51,7 @@ public partial class DeckDetailPage : ContentPage
         _deckImporter = deckImporter;
         _imageDownloadService = imageDownloadService;
         _galleryContext = galleryContext;
+        _deckSynergyNavigationContext = deckSynergyNavigationContext;
         BindingContext = viewModel;
 
         _viewModel.PropertyChanged += (_, e) =>
@@ -174,6 +177,14 @@ public partial class DeckDetailPage : ContentPage
         if (uuids.Count == 0)
             uuids = [item.CardUuid];
         _galleryContext.SetContext(uuids, item.CardUuid);
+        if (_viewModel.Deck != null)
+        {
+            _deckSynergyNavigationContext.SetDeckContext(
+                _viewModel.Deck.Id,
+                _viewModel.GetDeckEntitiesSnapshotForSynergy(),
+                _viewModel.GetDeckCardMapSnapshotForSynergy());
+        }
+
         await Shell.Current.GoToAsync($"carddetail?uuid={Uri.EscapeDataString(item.CardUuid)}");
     }
 

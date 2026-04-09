@@ -1,4 +1,5 @@
 using AetherVault.Constants;
+using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.ViewModels;
 
@@ -31,7 +32,7 @@ public partial class DecksPage : ContentPage
         if (newId.HasValue)
         {
             await _viewModel.LoadDecksAsync();
-            await Shell.Current.GoToAsync($"deckdetail?deckId={newId.Value}");
+            await ShellDeckDetailNavigation.GoToAsync(newId.Value);
         }
     }
 

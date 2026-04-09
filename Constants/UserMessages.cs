@@ -50,6 +50,7 @@ public static class UserMessages
     public const string Initializing = "Initializing...";
     public const string LoadingDeck = "Loading deck...";
     public const string LoadingCollection = "Loading collection...";
+    public const string LoadingCollectionPrices = "Preparing collection prices...";
     public const string Searching = "Searching...";
     public const string ImportingCollection = "Importing collection...";
     public const string ImportingDecks = "Importing decks...";
@@ -143,6 +144,9 @@ public static class UserMessages
     public const string DeckGridLayoutHint =
         "Use +/− for quantity. Tap ⋯ on the card thumbnail for move, remove, or card details (list and grid).";
 
+    /// <summary>Deck editor — floating add affordance (opens add-cards flow).</summary>
+    public const string DeckDetailFabAddCards = "Add cards";
+
     /// <summary>Add-cards modal — staging summary when empty.</summary>
     public const string DeckAddStagingEmpty = "Nothing staged.";
 
@@ -166,6 +170,26 @@ public static class UserMessages
     public const string DeckAddRowHintStage = "Tap to stage or unstage.";
 
     public const string DeckAddRowHintCommander = "Tap to set commander.";
+
+    public const string DeckAddResultsEmpty = "No results yet. Type to search, or use Search by deck theme / Deck strategy (above, under the search bar). Theme chips only appear when your deck has matching subtypes or keywords.";
+
+    public const string DeckStatsSynergySubtypesTitle = "Top subtypes (main + commander)";
+
+    public const string DeckStatsSynergyKeywordsTitle = "Top keywords";
+
+    public const string DeckStatsSynergyRolesTitle = "Deck roles (heuristic)";
+
+    public const string DeckAddSynergyChipsTitle = "Search by deck theme";
+
+    public const string DeckAddClearThemeFilter = "Clear theme filter";
+
+    public const string DeckAddStrategyTitle = "Deck strategy (suggestions)";
+
+    public const string DeckAddLoadSuggestions = "Suggest cards";
+
+    public const string DeckAddSuggestionsNeedCommander = "Set a commander to load suggestions.";
+
+    public const string DeckAddSuggestionsNone = "No suggestions match right now. Try another strategy or add cards first.";
 
     public const string DeckGridCardActionsTitle = "Card";
 

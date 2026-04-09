@@ -364,8 +364,19 @@ public partial class LoadingViewModel : BaseViewModel
         var collectionVm = _serviceProvider.GetRequiredService<CollectionViewModel>();
         await collectionVm.LoadCollectionAsync();
 
-        // Start prices in background (non-critical; app continues to function without price data)
-        _ = InitializePricesSafeAsync();
+        if (PricePreferences.PricesDataEnabled && PricePreferences.CollectionPriceDisplayEnabled)
+        {
+            StatusMessage = UserMessages.LoadingCollectionPrices;
+            StatusIsError = false;
+            try
+            {
+                await _cardManager.WarmCollectionPriceCachesAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogStuff($"Collection price prefetch failed: {ex.Message}", LogLevel.Warning);
+            }
+        }
 
         // Switch to main app and create toast overlay (deferred from CreateWindow to avoid Android startup crash).
         // Awaited so that any exception in SwitchToShellWithToastOverlay propagates to the caller
@@ -376,22 +387,6 @@ public partial class LoadingViewModel : BaseViewModel
         // Check for DB updates in background after the shell is visible so the network request
         // does not block or delay startup.
         _ = CheckForUpdateAfterStartupAsync();
-    }
-
-    private async Task InitializePricesSafeAsync()
-    {
-        if (!PricePreferences.PricesDataEnabled)
-            return;
-
-        try
-        {
-            await _cardManager.InitializePricesAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogStuff($"Price subsystem init failed: {ex.Message}", LogLevel.Error);
-            // Non-fatal: the app continues to function without price data.
-        }
     }
 
     private void SwitchToShellWithToastOverlay()

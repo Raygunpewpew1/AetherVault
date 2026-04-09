@@ -7,6 +7,7 @@
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              x:Class="AetherVault.Views.DeckMainTabView"
              x:DataType="vm:DeckDetailViewModel">
+    <!-- FAB sits on this view's parent; use Footer spacer for scroll inset only—bottom Padding left a persistent empty band on Android. -->
     <Grid VerticalOptions="Fill"
           HorizontalOptions="Fill">
         <!-- Standard: grouped rows; ⋯ on art opens move/remove/details (no SwipeView — saves width for names). -->
@@ -109,7 +110,7 @@
                             </VerticalStackLayout>
                             <Grid Grid.Row="1"
                                   Grid.Column="1"
-                                  ColumnDefinitions="Auto,Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                                   ColumnSpacing="10"
                                   VerticalOptions="Center">
                                 <controls:ManaCostView Grid.Column="0"
@@ -117,7 +118,7 @@
                                                          ManaText="{Binding ManaCostText}"
                                                          SymbolSize="14"
                                                          VerticalOptions="Center" />
-                                <Border Grid.Column="1"
+                                <Border Grid.Column="2"
                                         BackgroundColor="{StaticResource Surface}"
                                         Padding="8,4"
                                         StrokeShape="RoundRectangle 8"
@@ -130,7 +131,7 @@
                                            FontAttributes="Bold"
                                            HorizontalOptions="Center" />
                                 </Border>
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="3"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource Surface}"
@@ -146,7 +147,7 @@
                                                          Color="{StaticResource TextPrimary}" />
                                     </Button.ImageSource>
                                 </Button>
-                                <Button Grid.Column="3"
+                                <Button Grid.Column="4"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource Accent}"
@@ -167,6 +168,10 @@
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <BoxView HeightRequest="72"
+                         Color="Transparent" />
+            </CollectionView.Footer>
         </CollectionView>
 
         <!-- Compact: denser grouped rows; ⋯ on art for actions -->
@@ -268,7 +273,7 @@
                             </VerticalStackLayout>
                             <Grid Grid.Row="1"
                                   Grid.Column="1"
-                                  ColumnDefinitions="Auto,Auto,Auto,Auto"
+                                  ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                                   ColumnSpacing="6"
                                   VerticalOptions="Center">
                                 <controls:ManaCostView Grid.Column="0"
@@ -276,7 +281,7 @@
                                                          ManaText="{Binding ManaCostText}"
                                                          SymbolSize="12"
                                                          VerticalOptions="Center" />
-                                <Border Grid.Column="1"
+                                <Border Grid.Column="2"
                                         BackgroundColor="{StaticResource Surface}"
                                         Padding="6,3"
                                         StrokeShape="RoundRectangle 6"
@@ -289,7 +294,7 @@
                                            FontAttributes="Bold"
                                            HorizontalOptions="Center" />
                                 </Border>
-                                <Button Grid.Column="2"
+                                <Button Grid.Column="3"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource Surface}"
@@ -305,7 +310,7 @@
                                                          Color="{StaticResource TextPrimary}" />
                                     </Button.ImageSource>
                                 </Button>
-                                <Button Grid.Column="3"
+                                <Button Grid.Column="4"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource Accent}"
@@ -326,6 +331,10 @@
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <BoxView HeightRequest="72"
+                         Color="Transparent" />
+            </CollectionView.Footer>
         </CollectionView>
 
         <!-- Grid: card art + ⋯ (same overflow as list) -->
@@ -444,6 +453,10 @@
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <BoxView HeightRequest="72"
+                         Color="Transparent" />
+            </CollectionView.Footer>
         </CollectionView>
     </Grid>
 </ContentView>

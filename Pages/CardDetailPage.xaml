@@ -38,11 +38,18 @@
                                      Padding="16"
                                      Spacing="8">
 
-                    <Border StrokeShape="RoundRectangle 12"
+                    <Border x:Name="CardArtChrome"
+                            StrokeShape="RoundRectangle 12"
                             StrokeThickness="0"
                             HeightRequest="380"
                             HorizontalOptions="Center"
                             WidthRequest="272">
+                        <Border x:Name="CardFlipHost"
+                                BackgroundColor="Transparent"
+                                AnchorX="0.5"
+                                AnchorY="0.5"
+                                HorizontalOptions="Fill"
+                                VerticalOptions="Fill">
                         <Grid>
                             <skia:SKCanvasView x:Name="CardImageView"
                                                PaintSurface="OnCardImagePaint"
@@ -70,6 +77,7 @@
                                        HorizontalOptions="Center" />
                             </VerticalStackLayout>
                         </Grid>
+                        </Border>
                     </Border>
 
                 <Label Text="{Binding CardPosition}"
@@ -77,6 +85,14 @@
                        HorizontalOptions="Center"
                        FontSize="11"
                        TextColor="{StaticResource TextSecondary}" />
+
+                <Label Text="{Binding DeckSynergyHintLine}"
+                       IsVisible="{Binding ShowDeckSynergyHint}"
+                       HorizontalOptions="Center"
+                       FontSize="11"
+                       TextColor="{StaticResource Accent}"
+                       LineBreakMode="WordWrap"
+                       Margin="8,0" />
 
                 <Label x:Name="SwipeHintLabel"
                        Text="Swipe left or right to browse cards"
@@ -86,7 +102,7 @@
                        TextColor="{StaticResource TextSecondary}" />
 
                 <Label x:Name="FlipHint"
-                       Text="Tap image to flip"
+                       Text="Tap art to flip · accent pulse = double-faced"
                        IsVisible="{Binding HasMultipleFaces}"
                        HorizontalOptions="Center"
                        FontSize="11"

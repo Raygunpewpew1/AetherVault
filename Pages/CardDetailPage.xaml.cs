@@ -1,6 +1,7 @@
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using AetherVault.ViewModels;
+using Microsoft.Maui.Controls;
 using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
@@ -14,6 +15,7 @@ public partial class CardDetailPage : ContentPage
     private readonly IServiceProvider _serviceProvider;
     private string _cardUuid = "";
     private bool _isSwipeAnimating;
+    private bool _flipAnimating;
 
     public string CardUuid
     {
@@ -62,8 +64,17 @@ public partial class CardDetailPage : ContentPage
 
         await _viewModel.LoadCardAsync(_cardUuid);
 
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            CardFlipHost.RotationY = 0;
+            CardFlipHost.Scale = 1;
+        });
+
         if (_viewModel.ShowGalleryNavigation)
             ShowSwipeHintIfNeededAsync();
+
+        if (_viewModel.HasMultipleFaces)
+            await PlayFlipAvailableHighlightAsync();
     }
 
     private async void ShowSwipeHintIfNeededAsync()
@@ -177,10 +188,8 @@ public partial class CardDetailPage : ContentPage
             _viewModel.RemoveFromCollectionCommand.Execute(null);
     }
 
-    private void OnFlipClicked(object? sender, EventArgs e)
-    {
-        _viewModel.FlipFaceCommand.Execute(null);
-    }
+    private async void OnFlipClicked(object? sender, EventArgs e)
+        => await RunFlipFaceAnimationAsync();
 
     private void OnSwipedLeft(object? sender, SwipedEventArgs e)
         => _ = HandleSwipeAsync(isNext: true);
@@ -247,16 +256,71 @@ public partial class CardDetailPage : ContentPage
         }
     }
 
-    private void CardImageView_Touch(object? sender, SKTouchEventArgs e)
+    private async void CardImageView_Touch(object? sender, SKTouchEventArgs e)
     {
-        if (e.ActionType == SKTouchAction.Released)
-
-        {
-            if (_viewModel.HasMultipleFaces)
-            {
-                _viewModel.FlipFaceCommand.Execute(null);
-            }
-        }
+        if (e.ActionType == SKTouchAction.Released && _viewModel.HasMultipleFaces && !_flipAnimating)
+            await RunFlipFaceAnimationAsync();
         e.Handled = true;
+    }
+
+    private static SolidColorBrush ResolveAccentBrush()
+    {
+        if (Application.Current?.Resources.TryGetValue("Accent", out var o) == true && o is Color c)
+            return new SolidColorBrush(c);
+        return new SolidColorBrush(Color.FromArgb("#6CB4E4"));
+    }
+
+    private async Task PlayFlipAvailableHighlightAsync()
+    {
+        if (!_viewModel.HasMultipleFaces) return;
+
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+        {
+            if (!IsLoaded) return;
+
+            var accent = ResolveAccentBrush();
+            var savedStroke = CardArtChrome.Stroke;
+            var savedThick = CardArtChrome.StrokeThickness;
+
+            CardArtChrome.Stroke = accent;
+            CardArtChrome.StrokeThickness = 3;
+
+            await CardFlipHost.ScaleToAsync(1.04, 110);
+            await CardFlipHost.ScaleToAsync(1, 220, Easing.SpringOut);
+
+            CardArtChrome.Stroke = savedStroke;
+            CardArtChrome.StrokeThickness = savedThick;
+        });
+    }
+
+    private static Task AnimateRotationYAsync(VisualElement view, double from, double to, uint durationMs, Easing easing)
+    {
+        view.AbortAnimation("CardDetailFlipY");
+        view.RotationY = from;
+        var tcs = new TaskCompletionSource();
+        new Animation(v => view.RotationY = v, from, to).Commit(view, "CardDetailFlipY", 16, durationMs, easing, (_, _) => tcs.TrySetResult());
+        return tcs.Task;
+    }
+
+    private async Task RunFlipFaceAnimationAsync()
+    {
+        if (!_viewModel.HasMultipleFaces || _flipAnimating) return;
+
+        _flipAnimating = true;
+        try
+        {
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                const uint halfMs = 220;
+                await AnimateRotationYAsync(CardFlipHost, CardFlipHost.RotationY, 90, halfMs, Easing.CubicIn);
+                await _viewModel.AdvanceFaceAndLoadImageAsync();
+                CardImageView.InvalidateSurface();
+                await AnimateRotationYAsync(CardFlipHost, 90, 0, halfMs, Easing.CubicOut);
+            });
+        }
+        finally
+        {
+            _flipAnimating = false;
+        }
     }
 }

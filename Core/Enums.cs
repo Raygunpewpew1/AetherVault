@@ -266,6 +266,11 @@ public static class EnumExtensions
         format is DeckFormat.Commander or DeckFormat.Brawl or DeckFormat.PauperCommander
             or DeckFormat.Oathbreaker or DeckFormat.StandardBrawl;
 
+    /// <summary>Singleton-copy deck rules (commander identity, etc.), including Duel Commander.</summary>
+    public static bool IsCommanderLikeRules(this DeckFormat format) =>
+        format is DeckFormat.Commander or DeckFormat.Brawl or DeckFormat.PauperCommander
+            or DeckFormat.Oathbreaker or DeckFormat.StandardBrawl or DeckFormat.Duel;
+
     // ── MtgColor ────────────────────────────────────────────────────
 
     private static readonly char[] ColorChars = ['W', 'U', 'B', 'R', 'G'];
@@ -296,6 +301,17 @@ public static class EnumExtensions
 
     public static string ToDisplayName(this CommanderArchetype archetype) =>
         ArchetypeNames[(int)archetype];
+
+    /// <summary>Persisted in <c>Decks.CommanderArchetype</c> as the enum member name (e.g. <c>GroupHug</c>).</summary>
+    public static string ToArchetypeDbValue(this CommanderArchetype archetype) => archetype.ToString();
+
+    public static CommanderArchetype ParseCommanderArchetype(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return CommanderArchetype.Unknown;
+        return Enum.TryParse(value.Trim(), ignoreCase: true, out CommanderArchetype a)
+            ? a
+            : CommanderArchetype.Unknown;
+    }
 }
 
 /// <summary>Converts color filter codes (W, U, B, R, G, C) to human-readable names for display.</summary>

@@ -37,9 +37,21 @@ public class DeckBuilderService
             Format = format.ToDbField(),
             Description = description,
             DateCreated = DateTime.Now,
-            DateModified = DateTime.Now
+            DateModified = DateTime.Now,
+            CommanderArchetype = CommanderArchetype.Unknown.ToArchetypeDbValue()
         };
         return await _repository.CreateDeckAsync(deck);
+    }
+
+    /// <summary>Persists commander deck strategy for suggestion ranking.</summary>
+    public async Task UpdateCommanderArchetypeAsync(int deckId, CommanderArchetype archetype)
+    {
+        var deck = await _repository.GetDeckAsync(deckId);
+        if (deck == null) return;
+
+        deck.CommanderArchetype = archetype.ToArchetypeDbValue();
+        deck.DateModified = DateTime.Now;
+        await _repository.UpdateDeckAsync(deck);
     }
 
     public async Task<ValidationResult> AddCardAsync(int deckId, string cardUuid, int quantityToAdd, string section = "Main", bool skipLegalityCheck = false)
@@ -349,11 +361,29 @@ public class DeckBuilderService
             return ValidationResult.Error("Deck not found.");
 
         var cards = await _repository.GetDeckCardsAsync(deckId);
+        return await ValidateDeckAsync(deck, cards);
+    }
 
-        var sizeResult = _validator.ValidateDeckSize(deck, cards);
-        var colorResult = await _validator.ValidateDeckColorIdentityAsync(deck, cards);
+    /// <summary>
+    /// Validates using already-loaded deck metadata and card rows (avoids redundant collection DB reads).
+    /// Pass <paramref name="cardsByUuid"/> when cards are already bulk-loaded to avoid per-row MTG lookups for color checks.
+    /// </summary>
+    public async Task<ValidationResult> ValidateDeckAsync(
+        DeckEntity deck,
+        IReadOnlyList<DeckCardEntity> cards,
+        IReadOnlyDictionary<string, Card>? cardsByUuid = null)
+    {
+        ArgumentNullException.ThrowIfNull(deck);
+        var cardList = cards as List<DeckCardEntity> ?? [.. cards];
 
-        // Combine messages, preferring warnings over silent success, and errors over warnings.
+        var sizeResult = _validator.ValidateDeckSize(deck, cardList);
+        var colorResult = await _validator.ValidateDeckColorIdentityAsync(deck, cardList, cardsByUuid);
+
+        return CombineValidationResults(sizeResult, colorResult);
+    }
+
+    private static ValidationResult CombineValidationResults(ValidationResult sizeResult, ValidationResult colorResult)
+    {
         var messages = new List<string>();
         var level = ValidationLevel.Success;
 

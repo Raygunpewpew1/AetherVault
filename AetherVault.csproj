@@ -16,7 +16,8 @@
 		<Nullable>enable</Nullable>
 		<LangVersion>preview</LangVersion>
 		<EnablePreviewFeatures>true</EnablePreviewFeatures>
-		<MauiXamlInflator>SourceGen</MauiXamlInflator>
+		<!-- Do not set MauiXamlInflator in Debug: SDK default is runtime inflation (XAML Hot Reload). Explicit Runtime triggers MAUI1001. Release: SourceGen for faster inflation (not the default XamlC). -->
+		<MauiXamlInflator Condition="'$(Configuration)' == 'Release'">SourceGen</MauiXamlInflator>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
 		<UseNativeAOTRuntime>false</UseNativeAOTRuntime>
 		

@@ -252,8 +252,13 @@ public class DeckValidator
     /// <summary>
     /// Validates that all cards currently in a commander-style deck obey the commander's color identity.
     /// Returns a soft warning listing offending cards; does not block changes.
+    /// When <paramref name="cardsByUuid"/> is provided (e.g. from <see cref="ICardRepository.GetCardsByUuiDsAsync"/>),
+    /// avoids one DB fetch per deck row.
     /// </summary>
-    public async Task<ValidationResult> ValidateDeckColorIdentityAsync(DeckEntity deck, List<DeckCardEntity> currentCards)
+    public async Task<ValidationResult> ValidateDeckColorIdentityAsync(
+        DeckEntity deck,
+        List<DeckCardEntity> currentCards,
+        IReadOnlyDictionary<string, Card>? cardsByUuid = null)
     {
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
         if (!IsCommanderFormat(format))
@@ -269,8 +274,12 @@ public class DeckValidator
         }
         else
         {
-            var commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
-            if (commander == null)
+            Card? commander = null;
+            if (cardsByUuid != null && cardsByUuid.TryGetValue(deck.CommanderId, out var fromMap))
+                commander = fromMap;
+            else
+                commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
+            if (commander == null || string.IsNullOrEmpty(commander.Uuid))
                 return ValidationResult.Warning("Commander not found, skipping color identity check.");
             commanderIdentity = commander.GetColorIdentity();
         }
@@ -285,8 +294,12 @@ public class DeckValidator
             if (entity.Quantity <= 0)
                 continue;
 
-            var card = await _cardRepository.GetCardDetailsAsync(entity.CardId);
-            if (card == null)
+            Card? card = null;
+            if (cardsByUuid != null && cardsByUuid.TryGetValue(entity.CardId, out var fromMap))
+                card = fromMap;
+            else
+                card = await _cardRepository.GetCardDetailsAsync(entity.CardId);
+            if (card == null || string.IsNullOrEmpty(card.Uuid))
                 continue;
 
             var cardIdentity = card.GetColorIdentity();

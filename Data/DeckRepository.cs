@@ -1,9 +1,6 @@
 using AetherVault.Models;
-using AetherVault.Services;
 using Dapper;
 using Microsoft.Data.Sqlite;
-using System.Text.Json;
-
 namespace AetherVault.Data;
 
 /// <summary>
@@ -37,7 +34,8 @@ public class DeckRepository : IDeckRepository
                     CommanderId = deck.CommanderId ?? "",
                     CommanderName = deck.CommanderName ?? "",
                     PartnerId = deck.PartnerId ?? "",
-                    ColorIdentity = deck.ColorIdentity ?? ""
+                    ColorIdentity = deck.ColorIdentity ?? "",
+                    CommanderArchetype = string.IsNullOrEmpty(deck.CommanderArchetype) ? "Unknown" : deck.CommanderArchetype
                 },
                 transaction);
 
@@ -67,6 +65,7 @@ public class DeckRepository : IDeckRepository
                     CommanderName = deck.CommanderName ?? "",
                     PartnerId = deck.PartnerId ?? "",
                     ColorIdentity = deck.ColorIdentity ?? "",
+                    CommanderArchetype = string.IsNullOrEmpty(deck.CommanderArchetype) ? "Unknown" : deck.CommanderArchetype,
                     deck.Id
                 });
         }
@@ -118,22 +117,8 @@ public class DeckRepository : IDeckRepository
         await _databaseManager.ConnectionLock.WaitAsync();
         try
         {
-            #region agent log
-            AgentDebugLog("initial", "H2", "Data/DeckRepository.cs:GetAllDecksAsync:before-query", "Fetching all decks", new
-            {
-                isConnected = _databaseManager.IsConnected,
-                connState = _databaseManager.CollectionConnection.State.ToString()
-            });
-            #endregion
             var result = await _databaseManager.CollectionConnection.QueryAsync<DeckEntity>(SqlQueries.DeckGetAll);
-            var list = result.ToList();
-            #region agent log
-            AgentDebugLog("initial", "H2", "Data/DeckRepository.cs:GetAllDecksAsync:after-query", "Fetched all decks", new
-            {
-                count = list.Count
-            });
-            #endregion
-            return list;
+            return result.ToList();
         }
         finally
         {
@@ -225,29 +210,6 @@ public class DeckRepository : IDeckRepository
         {
             var conn = _databaseManager.CollectionConnection;
             return await conn.ExecuteScalarAsync<int>(SqlQueries.DeckGetCardCount, new { DeckId = deckId });
-        }
-        finally
-        {
-            _databaseManager.ConnectionLock.Release();
-        }
-    }
-
-    public async Task<Dictionary<int, int>> GetDeckCardCountsAsync(IEnumerable<int> deckIds)
-    {
-        var deckIdsList = deckIds.ToList();
-        if (deckIdsList.Count == 0) return new Dictionary<int, int>();
-
-        if (!_databaseManager.IsConnected) return deckIdsList.ToDictionary(id => id, _ => 0);
-
-        await _databaseManager.ConnectionLock.WaitAsync();
-        try
-        {
-            var conn = _databaseManager.CollectionConnection;
-            var rows = await conn.QueryAsync<(int DeckId, int Total)>(SqlQueries.DeckGetCardCountsBatch, new { DeckIds = deckIdsList });
-            var dict = deckIdsList.ToDictionary(id => id, _ => 0);
-            foreach (var row in rows)
-                dict[row.DeckId] = row.Total;
-            return dict;
         }
         finally
         {
@@ -370,20 +332,22 @@ public class DeckRepository : IDeckRepository
             CommanderId = reader.IsDBNull(reader.GetOrdinal("CommanderId")) ? "" : reader.GetString(reader.GetOrdinal("CommanderId")),
             CommanderName = reader.IsDBNull(reader.GetOrdinal("CommanderName")) ? "" : reader.GetString(reader.GetOrdinal("CommanderName")),
             PartnerId = reader.IsDBNull(reader.GetOrdinal("PartnerId")) ? "" : reader.GetString(reader.GetOrdinal("PartnerId")),
-            ColorIdentity = reader.IsDBNull(reader.GetOrdinal("ColorIdentity")) ? "" : reader.GetString(reader.GetOrdinal("ColorIdentity"))
+            ColorIdentity = reader.IsDBNull(reader.GetOrdinal("ColorIdentity")) ? "" : reader.GetString(reader.GetOrdinal("ColorIdentity")),
+            CommanderArchetype = SafeCol(reader, "CommanderArchetype", "Unknown")
         };
     }
 
-    private static void AgentDebugLog(string runId, string hypothesisId, string location, string message, object data)
+    private static string SafeCol(SqliteDataReader reader, string colName, string defaultValue)
     {
         try
         {
-            var dataJson = JsonSerializer.Serialize(data);
-            Logger.LogStuff($"DBG|session=068b48|run={runId}|h={hypothesisId}|loc={location}|msg={message}|data={dataJson}", LogLevel.Info);
+            int ord = reader.GetOrdinal(colName);
+            return reader.IsDBNull(ord) ? defaultValue : reader.GetString(ord);
         }
-        catch
+        catch (Exception)
         {
-            // Never fail app flow for debug logging.
+            return defaultValue;
         }
     }
+
 }

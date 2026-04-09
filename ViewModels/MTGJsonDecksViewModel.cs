@@ -1,3 +1,4 @@
+using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -289,7 +290,7 @@ public partial class MtgJsonDecksViewModel : BaseViewModel
             if (result.MissingUuids.Count > 0)
                 Logger.LogStuff($"MTGJSON import: {result.MissingUuids.Count} UUIDs not in local DB.", LogLevel.Warning);
 
-            await Shell.Current.GoToAsync($"deckdetail?deckId={result.DeckId}");
+            await ShellDeckDetailNavigation.GoToAsync(result.DeckId);
         }
         catch (Exception ex)
         {

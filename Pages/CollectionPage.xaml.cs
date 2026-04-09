@@ -11,15 +11,17 @@ public partial class CollectionPage : ContentPage
 {
     private readonly CollectionViewModel _viewModel;
     private readonly CardGalleryContext _galleryContext;
+    private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
     private readonly IServiceProvider _serviceProvider;
     /// <summary>When true, OnAppearing skips LoadCollectionAsync so we don't reload when coming back from card detail.</summary>
     private bool _skipNextReload;
 
-    public CollectionPage(CollectionViewModel viewModel, CardGalleryContext galleryContext, IServiceProvider serviceProvider)
+    public CollectionPage(CollectionViewModel viewModel, CardGalleryContext galleryContext, DeckSynergyNavigationContext deckSynergyNavigationContext, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _viewModel = viewModel;
         _galleryContext = galleryContext;
+        _deckSynergyNavigationContext = deckSynergyNavigationContext;
         _serviceProvider = serviceProvider;
         BindingContext = _viewModel;
 
@@ -105,6 +107,7 @@ public partial class CollectionPage : ContentPage
 
     private async void OnCardClicked(string uuid)
     {
+        _deckSynergyNavigationContext.Clear();
         _galleryContext.SetContext(CollectionGrid.GetAllUuids(), uuid);
         _skipNextReload = true; // Avoid full reload when returning from detail
         await Shell.Current.GoToAsync($"carddetail?uuid={uuid}");

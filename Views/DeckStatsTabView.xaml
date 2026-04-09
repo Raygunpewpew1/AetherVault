@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:constants="clr-namespace:AetherVault.Constants"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Views.DeckStatsTabView"
@@ -78,6 +79,84 @@
                         <VerticalStackLayout HorizontalOptions="Center">
                             <Label Text="{Binding Stats.Planeswalkers}" FontSize="22" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
                             <Label Text="Planeswalkers" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                </Grid>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6"
+                                 IsVisible="{Binding HasSynergySubtypeSummary}">
+                <Label Text="{x:Static constants:UserMessages.DeckStatsSynergySubtypesTitle}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextSecondary}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SynergySubtypeSummaryLines}"
+                                     Spacing="4">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Label Text="{Binding .}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextPrimary}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6"
+                                 IsVisible="{Binding HasSynergyKeywordSummary}">
+                <Label Text="{x:Static constants:UserMessages.DeckStatsSynergyKeywordsTitle}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextSecondary}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding SynergyKeywordSummaryLines}"
+                                     Spacing="4">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Label Text="{Binding .}"
+                                   FontSize="12"
+                                   TextColor="{StaticResource TextPrimary}" />
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="8">
+                <Label Text="{x:Static constants:UserMessages.DeckStatsSynergyRolesTitle}"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextSecondary}" />
+                <Grid ColumnDefinitions="*,*,*"
+                      RowDefinitions="Auto,Auto"
+                      RowSpacing="8"
+                      ColumnSpacing="8">
+                    <Border Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="0">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="{Binding Stats.RampCount}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
+                            <Label Text="Ramp" FontSize="10" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="1">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="{Binding Stats.CardDrawCount}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
+                            <Label Text="Draw" FontSize="10" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Grid.Row="0" Grid.Column="2">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="{Binding Stats.RemovalCount}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
+                            <Label Text="Removal" FontSize="10" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Grid.Row="1" Grid.Column="0">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="{Binding Stats.BoardWipesCount}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
+                            <Label Text="Wipes" FontSize="10" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}" Grid.Row="1" Grid.Column="1">
+                        <VerticalStackLayout HorizontalOptions="Center">
+                            <Label Text="{Binding Stats.CounterspellsCount}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" TextColor="{StaticResource TextPrimary}" />
+                            <Label Text="Counters" FontSize="10" TextColor="{StaticResource TextSecondary}" HorizontalOptions="Center" />
                         </VerticalStackLayout>
                     </Border>
                 </Grid>

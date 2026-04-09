@@ -269,23 +269,37 @@
                                     HorizontalOptions="Fill"
                                     IsVisible="{Binding IsStatsTab}" />
 
-            <Button Clicked="OnAddCardsClicked"
-                    HorizontalOptions="End"
+            <!-- Icon FAB: fixed 52×52, no stroke (avoids dark ring on some platforms), light shadow only. -->
+            <Border HorizontalOptions="End"
                     VerticalOptions="End"
-                    Margin="0,0,20,20"
-                    WidthRequest="56"
-                    HeightRequest="56"
-                    CornerRadius="28"
-                    BackgroundColor="{StaticResource Accent}"
-                    TextColor="Black"
-                    FontSize="28"
-                    Padding="0"
-                    LineBreakMode="NoWrap"
+                    Margin="0,0,16,16"
+                    WidthRequest="52"
+                    HeightRequest="52"
                     ZIndex="100"
-                    IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertedBool}}"
-                    SemanticProperties.Hint="Search and add cards to this deck"
-                    Text="+"
-                    FontAttributes="Bold" />
+                    StrokeShape="RoundRectangle 26"
+                    Stroke="Transparent"
+                    StrokeThickness="0"
+                    BackgroundColor="{StaticResource Accent}"
+                    Shadow="{Shadow Brush=Black, Offset='0,2', Radius=8, Opacity=0.22}"
+                    IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertedBool}}">
+                <Button Clicked="OnAddCardsClicked"
+                        BackgroundColor="Transparent"
+                        Padding="0"
+                        WidthRequest="52"
+                        HeightRequest="52"
+                        CornerRadius="26"
+                        BorderWidth="0"
+                        BorderColor="Transparent"
+                        SemanticProperties.Description="{x:Static constants:UserMessages.DeckDetailFabAddCards}"
+                        SemanticProperties.Hint="Search and add cards to this deck">
+                    <Button.ImageSource>
+                        <FontImageSource FontFamily="FASolid"
+                                         Glyph="{x:Static fa:Solid.Plus}"
+                                         Size="22"
+                                         Color="Black" />
+                    </Button.ImageSource>
+                </Button>
+            </Border>
         </Grid>
 
         <!-- Row 5: Deck summary bar + status -->
