@@ -598,7 +598,7 @@ public class DeckBuilderTests
         };
 
         var uuids = entities.Select(e => e.CardId).Append(commander.Uuid).Distinct().ToArray();
-        var map = await _cardRepo.GetCardsByUuiDsAsync(uuids);
+        var map = await _cardRepo.GetCardsAsync(uuids);
 
         Assert.Equal(0, _cardRepo.GetCardDetailsAsyncCallCount);
 
@@ -737,7 +737,7 @@ public class MockDeckRepository : IDeckRepository
         return Task.FromResult(_deckCards.Where(c => c.DeckId == deckId).Sum(c => c.Quantity));
     }
 
-    public Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
+    public Task ApplyMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
     {
         foreach (var m in mutations)
         {
@@ -816,13 +816,13 @@ public class MockCardRepository : ICardRepository
     public Task<Card> GetCardByUuidAsync(string uuid) => GetCardDetailsAsync(uuid);
     public Task<Card> GetCardWithLegalitiesAsync(string uuid) => GetCardDetailsAsync(uuid);
     public Task<Card> GetCardWithRulingsAsync(string uuid) => GetCardDetailsAsync(uuid);
-    public Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode) => throw new NotImplementedException();
+    public Task<Card> GetCardByFaceAndSetAsync(string faceName, string setCode) => throw new NotImplementedException();
     public Task<string> GetScryfallIdAsync(string cardUUID) => throw new NotImplementedException();
     public Task<CardRuling[]> GetCardRulingsAsync(string uuid) => throw new NotImplementedException();
     public Task<string[]> GetOtherFaceIdsAsync(string uuid) => throw new NotImplementedException();
-    public Task<Card[]> GetCardWithOtherFacesAsync(string uuid) => throw new NotImplementedException();
+    public Task<Card[]> GetOtherFacesAsync(string uuid) => throw new NotImplementedException();
     public Task<Card[]> GetFullCardPackageAsync(string uuid) => throw new NotImplementedException();
-    public Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids)
+    public Task<Dictionary<string, Card>> GetCardsAsync(string[] uuids)
     {
         var dict = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
         foreach (var id in uuids)
@@ -843,7 +843,7 @@ public class MockCardRepository : ICardRepository
         return Task.FromResult(result);
     }
 
-    public Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper)
+    public Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper)
     {
         // Minimal interpretation of the helper's parameters for unit tests.
         // This intentionally does NOT try to execute SQL; it just honors the key filters used by DeckBuilderService.
@@ -873,7 +873,7 @@ public class MockCardRepository : ICardRepository
         return Task.FromResult(query.Take(1).ToArray());
     }
 
-    public Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
+    public Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
     public MtgSearchHelper CreateSearchHelper() => new();
     public Task<IReadOnlyList<ImportLookupRow>> GetImportLookupRowsAsync() => Task.FromResult<IReadOnlyList<ImportLookupRow>>([]);
     public Task<IReadOnlyList<SetInfo>> GetAllSetsAsync() => Task.FromResult<IReadOnlyList<SetInfo>>([]);

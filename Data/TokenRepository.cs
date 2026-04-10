@@ -27,7 +27,7 @@ public class TokenRepository : ITokenRepository
         }
     }
 
-    public async Task<TokenIdentifierEntity?> GetTokenIdentifierByUuidAsync(string uuid)
+    public async Task<TokenIdentifierEntity?> GetTokenIdentifierAsync(string uuid)
     {
         await _lock.WaitAsync();
         try

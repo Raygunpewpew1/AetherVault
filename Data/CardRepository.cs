@@ -40,7 +40,7 @@ public class CardRepository : ICardRepository
 
         if (card.Layout is CardLayout.Adventure or CardLayout.Split)
         {
-            var otherFaces = await GetCardWithOtherFacesAsync(uuid);
+            var otherFaces = await GetOtherFacesAsync(uuid);
             if (otherFaces.Length > 1)
                 card.Text = otherFaces[0].Text + Environment.NewLine + "---" + Environment.NewLine + otherFaces[1].Text;
         }
@@ -56,7 +56,7 @@ public class CardRepository : ICardRepository
         return card;
     }
 
-    public async Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode)
+    public async Task<Card> GetCardByFaceAndSetAsync(string faceName, string setCode)
     {
         return await WithMtgReaderAsync(
             SqlQueries.SelectFullCard + " WHERE c.faceName = @fname AND c.setCode = @set LIMIT 1",
@@ -157,11 +157,11 @@ public class CardRepository : ICardRepository
         }
     }
 
-    public async Task<Card[]> GetCardWithOtherFacesAsync(string uuid)
+    public async Task<Card[]> GetOtherFacesAsync(string uuid)
     {
         var otherIds = await GetOtherFaceIdsAsync(uuid);
         var allIds = new[] { uuid }.Concat(otherIds).ToArray();
-        var dict = await GetCardsByUuiDsAsync(allIds);
+        var dict = await GetCardsAsync(allIds);
         return SortCardsBySide([.. dict.Values]);
     }
 
@@ -185,7 +185,7 @@ public class CardRepository : ICardRepository
             var otherIds = CardMapper.ParseOtherFaceIds(mainCard.OtherFaceIds);
             if (otherIds.Length > 0)
             {
-                var dict = await GetCardsByUuiDsAsync(otherIds);
+                var dict = await GetCardsAsync(otherIds);
                 cards.AddRange(dict.Values);
             }
         }
@@ -193,7 +193,7 @@ public class CardRepository : ICardRepository
         // Include tokens/related cards
         if (mainCard.RelatedCards != null && mainCard.RelatedCards.Length > 0)
         {
-            var dict = await GetCardsByUuiDsAsync(mainCard.RelatedCards);
+            var dict = await GetCardsAsync(mainCard.RelatedCards);
             foreach (var kvp in dict)
             {
                 // Ensure we don't duplicate (e.g. if a related card was already included)
@@ -207,7 +207,7 @@ public class CardRepository : ICardRepository
         return SortCardsBySide([.. cards]);
     }
 
-    public async Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids)
+    public async Task<Dictionary<string, Card>> GetCardsAsync(string[] uuids)
     {
         var result = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
         if (uuids.Length == 0) return result;
@@ -264,10 +264,10 @@ public class CardRepository : ICardRepository
             .WherePrimarySideOnly()
             .OrderBy("c.name")
             .Limit(limit);
-        return await SearchCardsAdvancedAsync(helper);
+        return await SearchAdvancedAsync(helper);
     }
 
-    public async Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper)
+    public async Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper)
     {
         var cards = new List<Card>();
         var (sql, parameters) = searchHelper.Build();
@@ -291,7 +291,7 @@ public class CardRepository : ICardRepository
         return [.. cards];
     }
 
-    public async Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper)
+    public async Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper)
     {
         var (sql, parameters) = searchHelper.BuildCount();
 

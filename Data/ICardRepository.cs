@@ -13,7 +13,7 @@ public interface ICardRepository
     Task<Card> GetCardDetailsAsync(string uuid);
     Task<Card> GetCardWithLegalitiesAsync(string uuid);
     Task<Card> GetCardWithRulingsAsync(string uuid);
-    Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode);
+    Task<Card> GetCardByFaceAndSetAsync(string faceName, string setCode);
     Task<Card?> GetCardByNameAndSetAsync(string name, string setCode);
     Task<Card?> GetCardByScryfallIdAsync(string scryfallId);
 
@@ -21,14 +21,14 @@ public interface ICardRepository
     Task<CardRuling[]> GetCardRulingsAsync(string uuid);
 
     Task<string[]> GetOtherFaceIdsAsync(string uuid);
-    Task<Card[]> GetCardWithOtherFacesAsync(string uuid);
+    Task<Card[]> GetOtherFacesAsync(string uuid);
     Task<Card[]> GetFullCardPackageAsync(string uuid);
-    Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids);
+    Task<Dictionary<string, Card>> GetCardsAsync(string[] uuids);
     Task<IReadOnlyList<ImportLookupRow>> GetImportLookupRowsAsync();
 
     Task<Card[]> SearchCardsAsync(string searchText, int limit = 100);
-    Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper);
-    Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper);
+    Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper);
+    Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper);
     MtgSearchHelper CreateSearchHelper();
 
     /// <summary>Returns all sets (code + name) for filter dropdowns, ordered by name.</summary>

@@ -141,6 +141,24 @@ public static class UserMessages
     public const string DeckDetailMoreExportCsv = "Export this deck";
     public const string DeckDetailMoreLayout = "Deck layout…";
 
+    public const string DeckDetailMoreBuyCards = "Buy cards…";
+
+    public const string DeckBuySheetTitle = "Buy cards";
+    public const string DeckBuyCopyMassEntry = "Copy list for TCGPlayer Mass Entry";
+    public const string DeckBuyOpenTcgMassEntry = "Open TCGPlayer Mass Entry";
+    public const string DeckBuyCopiedTitle = "Copied";
+    public const string DeckBuyCopiedBody = "Paste the clipboard into TCGPlayer Mass Entry (Magic).";
+
+    /// <summary>Deck detail / deck list — custom tile art on the Decks tab.</summary>
+    public const string DeckDetailMoreHubPicture = "Deck hub picture…";
+
+    public const string DeckHubPictureSheetTitle = "Deck hub picture";
+    public const string DeckHubPictureChooseCard = "Choose card…";
+    public const string DeckHubPictureClear = "Clear custom picture";
+    public const string DeckHubPicturePickerTitle = "Choose deck picture";
+    public const string DeckHubPictureNothingToClear = "No custom deck picture is set.";
+    public const string DeckHubPictureButtonSemanticHint = "Deck tile picture — search for a card or clear custom art";
+
     public const string DeckGridLayoutHint =
         "Use +/− for quantity. Tap ⋯ on the card thumbnail for move, remove, or card details (list and grid).";
 

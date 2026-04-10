@@ -15,11 +15,11 @@ public interface ICollectionRepository
     Task UpdateQuantityAsync(string cardUuid, int quantity, bool isFoil = false, bool isEtched = false);
     Task<CollectionItem[]> GetCollectionAsync();
     /// <summary>Lightweight list of (uuid, quantity, isFoil, isEtched) for pricing total. No Card load.</summary>
-    Task<IReadOnlyList<(string Uuid, int Quantity, bool IsFoil, bool IsEtched)>> GetCollectionEntriesForPricingAsync();
+    Task<IReadOnlyList<(string Uuid, int Quantity, bool IsFoil, bool IsEtched)>> GetPricingEntriesAsync();
     Task<CollectionStats> GetCollectionStatsAsync();
     Task<bool> IsInCollectionAsync(string cardUuid);
     Task<int> GetQuantityAsync(string cardUuid);
     /// <summary>Returns owned quantity per UUID (0 for cards not in collection).</summary>
-    Task<Dictionary<string, int>> GetQuantitiesByUuidsAsync(IEnumerable<string> cardUuids);
+    Task<Dictionary<string, int>> GetQuantitiesAsync(IEnumerable<string> cardUuids);
     Task ReorderAsync(IList<string> orderedUuids);
 }

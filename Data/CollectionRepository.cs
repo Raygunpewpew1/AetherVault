@@ -222,7 +222,7 @@ public class CollectionRepository : ICollectionRepository
         return card;
     }
 
-    public async Task<IReadOnlyList<(string Uuid, int Quantity, bool IsFoil, bool IsEtched)>> GetCollectionEntriesForPricingAsync()
+    public async Task<IReadOnlyList<(string Uuid, int Quantity, bool IsFoil, bool IsEtched)>> GetPricingEntriesAsync()
     {
         await _lock.WaitAsync();
         try
@@ -373,7 +373,7 @@ public class CollectionRepository : ICollectionRepository
         }
     }
 
-    public async Task<Dictionary<string, int>> GetQuantitiesByUuidsAsync(IEnumerable<string> cardUuids)
+    public async Task<Dictionary<string, int>> GetQuantitiesAsync(IEnumerable<string> cardUuids)
     {
         var distinct = cardUuids.Where(static u => !string.IsNullOrEmpty(u)).Distinct(StringComparer.Ordinal).ToArray();
         var map = new Dictionary<string, int>(StringComparer.Ordinal);

@@ -19,5 +19,5 @@ public interface IDeckRepository
     /// <summary>
     /// Applies multiple card row changes in a single transaction. Caller coordinates validation.
     /// </summary>
-    Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations);
+    Task ApplyMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations);
 }

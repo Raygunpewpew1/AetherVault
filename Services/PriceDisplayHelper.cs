@@ -90,6 +90,38 @@ public static class PriceDisplayHelper
         return price;
     }
 
+    /// <summary>Preferred retail unit price for deck rows (non-foil); used for line totals and deck sum.</summary>
+    public static bool TryGetPreferredUnitPrice(
+        CardPriceData? data,
+        bool isFoil,
+        bool isEtched,
+        out double unitPrice,
+        out PriceCurrency currency)
+    {
+        unitPrice = 0;
+        currency = PriceCurrency.Usd;
+        if (data == null) return false;
+        var (price, _, _, cur) = GetNumericPriceAndFinish(data, isFoil, isEtched, vendorPriorityOverride: null);
+        if (price <= 0) return false;
+        unitPrice = price;
+        currency = cur;
+        return true;
+    }
+
+    public static string GetDeckUnitPriceDisplay(CardPriceData? data)
+    {
+        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur)) return "";
+        return cur == PriceCurrency.Eur ? $"€{unit:F2}" : $"${unit:F2}";
+    }
+
+    public static string GetDeckLinePriceDisplay(CardPriceData? data, int quantity)
+    {
+        if (quantity <= 0) return "";
+        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur)) return "";
+        double line = unit * quantity;
+        return cur == PriceCurrency.Eur ? $"€{line:F2}" : $"${line:F2}";
+    }
+
     private static (double price, bool usedFoil, bool usedEtched, PriceCurrency currency) GetNumericPriceAndFinish(
         CardPriceData data, bool preferFoil, bool preferEtched, PriceVendor[]? vendorPriorityOverride)
     {

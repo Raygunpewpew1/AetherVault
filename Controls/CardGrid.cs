@@ -320,13 +320,11 @@ public class CardGrid : ContentView
             if (cards.IsDefaultOrEmpty) return;
 
             int index = -1;
-            CardState cardState = default;
             for (int i = 0; i < cards.Length; i++)
             {
                 if (cards[i].Id.Value == cardUuid)
                 {
                     index = i;
-                    cardState = cards[i];
                     break;
                 }
             }
@@ -336,6 +334,7 @@ public class CardGrid : ContentView
 
             float vw = _lastState.Viewport.Width > 0 ? _lastState.Viewport.Width : (float)(Width > 0 ? Width : 360);
             float scrollY = _lastState.Viewport.ScrollY;
+            var cardState = cards[index];
             var symbols = CardGridRenderer.ParseManaSymbolsForTrail(cardState.ManaCost);
             float cx = rect.MidX;
             float cy = rect.MidY;

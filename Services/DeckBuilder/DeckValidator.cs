@@ -252,7 +252,7 @@ public class DeckValidator
     /// <summary>
     /// Validates that all cards currently in a commander-style deck obey the commander's color identity.
     /// Returns a soft warning listing offending cards; does not block changes.
-    /// When <paramref name="cardsByUuid"/> is provided (e.g. from <see cref="ICardRepository.GetCardsByUuiDsAsync"/>),
+    /// When <paramref name="cardsByUuid"/> is provided (e.g. from <see cref="ICardRepository.GetCardsAsync"/>),
     /// avoids one DB fetch per deck row.
     /// </summary>
     public async Task<ValidationResult> ValidateDeckColorIdentityAsync(

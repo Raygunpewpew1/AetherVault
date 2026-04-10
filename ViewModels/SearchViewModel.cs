@@ -218,7 +218,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
                 var countHelper = _cardManager.CreateSearchHelper();
                 countHelper.SearchCards(CurrentOptions.IncludeTokens);
                 SearchOptionsApplier.Apply(countHelper, CurrentOptions);
-                TotalResults = await _cardManager.GetCountAdvancedAsync(countHelper);
+                TotalResults = await _cardManager.CountAdvancedAsync(countHelper);
                 HasMorePages = TotalResults > results.Length;
             }
 

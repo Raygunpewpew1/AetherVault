@@ -285,6 +285,61 @@ public partial class DecksViewModel : BaseViewModel
         await LoadDecksAsync();
     }
 
+    /// <summary>Sets hub tile art from the card search picker (Decks tab).</summary>
+    public async Task ApplyDeckHubCoverFromPickerAsync(DeckEntity deck, Card card)
+    {
+        try
+        {
+            var r = await _deckService.SetDeckCoverAsync(deck.Id, card.Uuid);
+            if (!r.IsSuccess)
+            {
+                StatusIsError = true;
+                StatusMessage = r.Message;
+                return;
+            }
+
+            StatusIsError = false;
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: false);
+        }
+        catch (Exception ex)
+        {
+            StatusIsError = true;
+            StatusMessage = UserMessages.LoadFailed(ex.Message);
+            Logger.LogStuff($"Set deck cover failed: {ex.Message}", LogLevel.Error);
+        }
+    }
+
+    /// <summary>Removes custom hub art so commander or placeholder is used again.</summary>
+    public async Task ClearDeckHubCoverAsync(DeckEntity deck)
+    {
+        if (string.IsNullOrEmpty(deck.CoverCardId))
+        {
+            StatusIsError = false;
+            StatusMessage = UserMessages.DeckHubPictureNothingToClear;
+            return;
+        }
+
+        try
+        {
+            var r = await _deckService.SetDeckCoverAsync(deck.Id, null);
+            if (!r.IsSuccess)
+            {
+                StatusIsError = true;
+                StatusMessage = r.Message;
+                return;
+            }
+
+            StatusIsError = false;
+            await RefreshDecksListAsync(updateStatusLineWithDeckCount: false);
+        }
+        catch (Exception ex)
+        {
+            StatusIsError = true;
+            StatusMessage = UserMessages.LoadFailed(ex.Message);
+            Logger.LogStuff($"Clear deck cover failed: {ex.Message}", LogLevel.Error);
+        }
+    }
+
     [RelayCommand]
     private async Task DeckTappedAsync(DeckEntity deck)
     {

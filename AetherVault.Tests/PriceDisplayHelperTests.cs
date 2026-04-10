@@ -30,6 +30,14 @@ public class PriceDisplayHelperTests
     }
 
     [Fact]
+    public void GetDeckLinePriceDisplay_MultipliesQuantity()
+    {
+        var data = TcgNormalAndFoil(2.5, 0);
+        Assert.Equal("$7.50", PriceDisplayHelper.GetDeckLinePriceDisplay(data, 3));
+        Assert.Equal("$2.50", PriceDisplayHelper.GetDeckUnitPriceDisplay(data));
+    }
+
+    [Fact]
     public void CollectionPriceSort_OrderByDescendingNumericThenName_MatchesExpected()
     {
         var cheap = TcgNormalAndFoil(1, 0);

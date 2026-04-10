@@ -218,7 +218,7 @@ public class DeckBuilderService
         var entities = await _repository.GetDeckCardsAsync(deckId);
         var uuids = entities.Select(e => e.CardId).Distinct().ToArray();
         Dictionary<string, Card> cardMap = uuids.Length > 0
-            ? await _cardRepository.GetCardsByUuiDsAsync(uuids)
+            ? await _cardRepository.GetCardsAsync(uuids)
             : [];
 
         int currentLands = 0;
@@ -291,7 +291,7 @@ public class DeckBuilderService
                     .OrderBy("c.name")
                     .Limit(1);
 
-                var exactBasics = await _cardRepository.SearchCardsAdvancedAsync(helper);
+                var exactBasics = await _cardRepository.SearchAdvancedAsync(helper);
                 var landCard = exactBasics.FirstOrDefault();
 
                 if (landCard == null)
@@ -327,9 +327,54 @@ public class DeckBuilderService
         return added;
     }
 
+    /// <summary>
+    /// Custom hub art (<see cref="DeckEntity.CoverCardId"/>) overrides commander when set so the user’s chosen picture wins.
+    /// </summary>
+    private async Task HydrateDeckPreviewImageIdAsync(DeckEntity deck)
+    {
+        var key = !string.IsNullOrEmpty(deck.CoverCardId)
+            ? deck.CoverCardId
+            : deck.CommanderId;
+        if (string.IsNullOrEmpty(key))
+        {
+            deck.PreviewImageId = "";
+            return;
+        }
+
+        var card = await _cardRepository.GetCardDetailsAsync(key);
+        deck.PreviewImageId = card?.ImageId ?? key;
+    }
+
     public async Task<List<DeckEntity>> GetDecksAsync()
     {
-        return await _repository.GetAllDecksAsync();
+        var list = await _repository.GetAllDecksAsync();
+        foreach (var deck in list)
+            await HydrateDeckPreviewImageIdAsync(deck);
+        return list;
+    }
+
+    /// <summary>
+    /// Sets the printing used for the deck tile on the Decks hub (art_crop). Pass null/empty to clear and fall back to commander or placeholder.
+    /// </summary>
+    public async Task<ValidationResult> SetDeckCoverAsync(int deckId, string? coverCardUuid)
+    {
+        var deck = await _repository.GetDeckAsync(deckId);
+        if (deck == null) return ValidationResult.Error("Deck not found.");
+
+        if (string.IsNullOrWhiteSpace(coverCardUuid))
+        {
+            deck.CoverCardId = "";
+        }
+        else
+        {
+            var card = await _cardRepository.GetCardDetailsAsync(coverCardUuid.Trim());
+            if (card == null) return ValidationResult.Error("Card not found.");
+            deck.CoverCardId = card.Uuid;
+        }
+
+        deck.DateModified = DateTime.Now;
+        await _repository.UpdateDeckAsync(deck);
+        return ValidationResult.Success();
     }
 
     public async Task<DeckEntity?> GetDeckAsync(int id)
@@ -445,7 +490,7 @@ public class DeckBuilderService
 
         var plan = BuildPersistencePlan(beforeSnapshot, working);
         if (plan.Count > 0)
-            await _repository.ApplyDeckCardMutationsAsync(deckId, plan);
+            await _repository.ApplyMutationsAsync(deckId, plan);
 
         deck.DateModified = DateTime.Now;
         await _repository.UpdateDeckAsync(deck);

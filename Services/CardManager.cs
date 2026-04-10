@@ -346,7 +346,7 @@ public class CardManager : IDisposable
             .WherePrimarySideOnly()
             .OrderBy("c.name")
             .Limit(limit);
-        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+        return await _cardRepository.SearchAdvancedAsync(helper);
     }
 
     public async Task<Card[]> SearchByTypeAsync(string cardType, int limit = 25)
@@ -357,7 +357,7 @@ public class CardManager : IDisposable
             .WherePrimarySideOnly()
             .OrderBy("c.name")
             .Limit(limit);
-        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+        return await _cardRepository.SearchAdvancedAsync(helper);
     }
 
     public async Task<Card[]> SearchByColorsAsync(string colors, int limit = 25)
@@ -368,7 +368,7 @@ public class CardManager : IDisposable
             .WherePrimarySideOnly()
             .OrderBy("c.name")
             .Limit(limit);
-        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+        return await _cardRepository.SearchAdvancedAsync(helper);
     }
 
     /// <param name="nameFilter">Optional name filter (contains).</param>
@@ -382,7 +382,7 @@ public class CardManager : IDisposable
         helper.OrderBy("c.name");
         if (limit > 0)
             helper.Limit(limit);
-        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+        return await _cardRepository.SearchAdvancedAsync(helper);
     }
 
     /// <summary>
@@ -417,7 +417,7 @@ public class CardManager : IDisposable
         helper.OrderBy("c.name");
         if (limit > 0)
             helper.Limit(limit);
-        return await _cardRepository.SearchCardsAdvancedAsync(helper);
+        return await _cardRepository.SearchAdvancedAsync(helper);
     }
 
     public MtgSearchHelper CreateSearchHelper() => _cardRepository.CreateSearchHelper();
@@ -427,12 +427,12 @@ public class CardManager : IDisposable
 
     public async Task<Card[]> ExecuteSearchAsync(MtgSearchHelper searchHelper)
     {
-        return await _cardRepository.SearchCardsAdvancedAsync(searchHelper);
+        return await _cardRepository.SearchAdvancedAsync(searchHelper);
     }
 
-    public async Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper)
+    public async Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper)
     {
-        return await _cardRepository.GetCountAdvancedAsync(searchHelper);
+        return await _cardRepository.CountAdvancedAsync(searchHelper);
     }
 
     /// <summary>Commander-style deck suggestions (on-device heuristics + EDHRec ordering seed).</summary>

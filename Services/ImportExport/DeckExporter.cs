@@ -69,7 +69,7 @@ public class DeckExporter
         }
 
         Dictionary<string, Card> cardMap = allUuids.Count > 0
-            ? await _cardRepo.GetCardsByUuiDsAsync(allUuids.ToArray())
+            ? await _cardRepo.GetCardsAsync(allUuids.ToArray())
             : [];
 
         var config = new CsvConfiguration(CultureInfo.InvariantCulture)

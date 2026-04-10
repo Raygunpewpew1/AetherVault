@@ -24,6 +24,11 @@ public class CachedCardImage : ContentView
         nameof(ImageSize), typeof(string), typeof(CachedCardImage), "small",
         propertyChanged: OnImageSizeOrCardUuidChanged);
 
+    /// <summary>AspectFill crops to fill the view (default for thumbnails). AspectFit shows the full card (e.g. deck grid tiles).</summary>
+    public static readonly BindableProperty ImageAspectProperty = BindableProperty.Create(
+        nameof(ImageAspect), typeof(Aspect), typeof(CachedCardImage), Aspect.AspectFill,
+        propertyChanged: OnImageAspectChanged);
+
     public string? CardUuid
     {
         get => (string?)GetValue(CardUuidProperty);
@@ -36,16 +41,31 @@ public class CachedCardImage : ContentView
         set => SetValue(ImageSizeProperty, value);
     }
 
+    public Aspect ImageAspect
+    {
+        get => (Aspect)GetValue(ImageAspectProperty);
+        set => SetValue(ImageAspectProperty, value);
+    }
+
     public CachedCardImage()
     {
         _image = new Image
         {
-            Aspect = Aspect.AspectFill,
             HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill
+            VerticalOptions = LayoutOptions.Fill,
+            // Android often paints a solid fill when Source is null; keep hidden until bytes are ready
+            // so the parent shows its fallback (e.g. deck hub tile CardBackground).
+            IsVisible = false
         };
         Content = _image;
+        _image.Aspect = ImageAspect;
         Loaded += OnLoaded;
+    }
+
+    private static void OnImageAspectChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        if (bindable is CachedCardImage control)
+            control._image.Aspect = control.ImageAspect;
     }
 
     private void OnLoaded(object? sender, EventArgs e)
@@ -86,18 +106,21 @@ public class CachedCardImage : ContentView
             _lastUuid = null;
             _cachedBytes = null;
             _image.Source = null;
+            _image.IsVisible = false;
             return;
         }
 
         if (uuid == _lastUuid && _lastSize == imageSize && _cachedBytes != null)
         {
             _image.Source = ImageSource.FromStream(() => new MemoryStream(_cachedBytes));
+            _image.IsVisible = true;
             return;
         }
 
         _lastUuid = uuid;
         _lastSize = imageSize;
         _image.Source = null;
+        _image.IsVisible = false;
 
         var downloadService = GetImageService(this);
         if (downloadService == null)
@@ -132,8 +155,9 @@ public class CachedCardImage : ContentView
 
                     MainThread.BeginInvokeOnMainThread(() =>
                     {
-                        if (uuid == _lastUuid)
-                            _image.Source = source;
+                        if (uuid != _lastUuid) return;
+                        _image.Source = source;
+                        _image.IsVisible = true;
                     });
                 }
             }

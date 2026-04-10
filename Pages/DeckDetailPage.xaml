@@ -30,12 +30,14 @@
                      Priority="2" />
     </ContentPage.ToolbarItems>
 
-    <Grid x:Name="DeckDetailRoot" RowDefinitions="100,Auto,Auto,Auto,*,Auto">
+    <!-- Row 0 Auto: commander banner only on Commander tab — frees vertical space on Main/Sideboard/Stats. -->
+    <Grid x:Name="DeckDetailRoot" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
 
-        <!-- Row 0: Commander Art Header (gradient, shows commander name) -->
+        <!-- Row 0: Commander art header (Commander tab only; avoids cropping pressure on grid/list below). -->
         <skia:SKCanvasView Grid.Row="0"
                            x:Name="CommanderArtCanvas"
                            HeightRequest="100"
+                           IsVisible="{Binding IsCommanderTab}"
                            PaintSurface="OnCommanderArtPaint" />
 
         <!-- Row 1: Section Tab Bar (icons + labels for easier tapping) -->
@@ -164,6 +166,11 @@
                 StrokeThickness="0"
                 IsVisible="{Binding IsStatsTab, Converter={StaticResource InvertedBool}}">
             <VerticalStackLayout Spacing="4">
+                <Label Text="{Binding DeckPriceSummaryDisplay}"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource Accent}"
+                       IsVisible="{Binding ShowDeckPrices}" />
                 <Grid ColumnDefinitions="*,Auto"
                       ColumnSpacing="8"
                       RowDefinitions="Auto">
@@ -242,11 +249,6 @@
                         </Button>
                     </HorizontalStackLayout>
                 </Grid>
-                <Label Text="{x:Static constants:UserMessages.DeckGridLayoutHint}"
-                       FontSize="11"
-                       TextColor="{StaticResource TextSecondary}"
-                       LineBreakMode="WordWrap"
-                       IsVisible="{Binding IsDeckEditorLayoutGrid}" />
             </VerticalStackLayout>
         </Border>
 

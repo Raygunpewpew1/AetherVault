@@ -36,6 +36,43 @@ public partial class DecksPage : ContentPage
         }
     }
 
+    private async void OnDeckHubPictureButtonClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button btn && btn.BindingContext is DeckEntity deck)
+            await OnDeckHubPictureSheetAsync(deck);
+    }
+
+    private async Task OnDeckHubPictureSheetAsync(DeckEntity deck)
+    {
+        if (_viewModel.IsBusy) return;
+
+        var choose = UserMessages.DeckHubPictureChooseCard;
+        var clear = UserMessages.DeckHubPictureClear;
+        const string cancel = "Cancel";
+        string pick = await DisplayActionSheetAsync(
+            UserMessages.DeckHubPictureSheetTitle,
+            cancel,
+            null,
+            choose,
+            clear);
+
+        if (pick == clear)
+        {
+            await _viewModel.ClearDeckHubCoverAsync(deck);
+            return;
+        }
+
+        if (pick != choose) return;
+
+        var picker = _serviceProvider.GetRequiredService<CardSearchPickerPage>();
+        picker.Title = UserMessages.DeckHubPicturePickerTitle;
+        await Navigation.PushModalAsync(picker);
+        var card = await picker.WaitForResultAsync();
+        if (card == null) return;
+
+        await _viewModel.ApplyDeckHubCoverFromPickerAsync(deck, card);
+    }
+
     private async void OnRenameDeckButtonClicked(object? sender, EventArgs e)
     {
         if (sender is Button btn && btn.BindingContext is DeckEntity deck)

@@ -81,7 +81,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 {
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereScryfallId(cacheKey).Limit(1);
-                    var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                    var matches = await _cardRepo.SearchAdvancedAsync(helper);
                     cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _scryfallFallbackCache[cacheKey] = cachedUuid;
                 }
@@ -99,7 +99,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 {
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereSet(set!).WhereNumber(number!).Limit(1);
-                    var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                    var matches = await _cardRepo.SearchAdvancedAsync(helper);
                     cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _setNumberFallbackCache[setNumberKey] = cachedUuid;
                 }
@@ -118,7 +118,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 {
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereNameEquals(name!).WherePrimarySideOnly().Limit(100);
-                    var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                    var matches = await _cardRepo.SearchAdvancedAsync(helper);
 
                     Card? chosen = null;
                     for (int i = 0; i < matches.Length; i++)
@@ -149,7 +149,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 {
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereNameEquals(name!).WherePrimarySideOnly().Limit(1);
-                    var matches = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                    var matches = await _cardRepo.SearchAdvancedAsync(helper);
                     cachedUuid = matches.Length > 0 ? matches[0].Uuid : null;
                     _nameExactFallbackCache[normalizedName] = cachedUuid;
                 }
@@ -163,7 +163,7 @@ internal sealed class CardImportResolver(ICardRepository cardRepo)
                 {
                     var helper = _cardRepo.CreateSearchHelper();
                     helper.SearchCards(includeTokens: true).WhereNameContains(name!).WherePrimarySideOnly().Limit(50);
-                    var candidates = await _cardRepo.SearchCardsAdvancedAsync(helper);
+                    var candidates = await _cardRepo.SearchAdvancedAsync(helper);
 
                     Card? chosen = null;
                     for (int i = 0; i < candidates.Length; i++)

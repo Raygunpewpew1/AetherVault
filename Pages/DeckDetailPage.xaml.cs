@@ -1,7 +1,10 @@
 using AetherVault.Constants;
 using AetherVault.Core;
+using AetherVault.Models;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.ApplicationModel.DataTransfer;
 using AetherVault.Services.ImportExport;
 using AetherVault.ViewModels;
 using SkiaSharp;
@@ -68,6 +71,9 @@ public partial class DeckDetailPage : ContentPage
         };
     }
 
+    private void OnDeckPricePreferencesChanged(object? sender, EventArgs e) =>
+        MainThread.BeginInvokeOnMainThread(() => _viewModel.OnPriceDisplayPreferencesChanged());
+
     private async void OnDeckDetailMoreClicked(object? sender, EventArgs e)
     {
         const string cancel = "Cancel";
@@ -75,16 +81,95 @@ public partial class DeckDetailPage : ContentPage
             UserMessages.DeckDetailMoreMenuTitle,
             cancel,
             null,
+            UserMessages.DeckDetailMoreHubPicture,
+            UserMessages.DeckDetailMoreBuyCards,
             UserMessages.DeckDetailMoreImportCsv,
             UserMessages.DeckDetailMoreExportCsv,
             UserMessages.DeckDetailMoreLayout);
 
-        if (pick == UserMessages.DeckDetailMoreImportCsv)
+        if (pick == UserMessages.DeckDetailMoreHubPicture)
+            await OpenDeckHubPictureFlowAsync();
+        else if (pick == UserMessages.DeckDetailMoreBuyCards)
+            await OpenDeckBuyCardsFlowAsync();
+        else if (pick == UserMessages.DeckDetailMoreImportCsv)
             await ImportDeckCsvAsync();
         else if (pick == UserMessages.DeckDetailMoreExportCsv)
             await ExportDeckAsync();
         else if (pick == UserMessages.DeckDetailMoreLayout)
             await PickDeckLayoutAsync();
+    }
+
+    private async Task OpenDeckBuyCardsFlowAsync()
+    {
+        const string cancel = "Cancel";
+        string pick = await DisplayActionSheetAsync(
+            UserMessages.DeckBuySheetTitle,
+            cancel,
+            null,
+            UserMessages.DeckBuyCopyMassEntry,
+            UserMessages.DeckBuyOpenTcgMassEntry);
+
+        if (pick == UserMessages.DeckBuyCopyMassEntry)
+        {
+            string text = _viewModel.BuildDeckBuyListForMassEntry();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                await DisplayAlertAsync(UserMessages.DeckBuySheetTitle, "Deck is empty.", "OK");
+                return;
+            }
+
+            await Clipboard.Default.SetTextAsync(text);
+            await DisplayAlertAsync(UserMessages.DeckBuyCopiedTitle, UserMessages.DeckBuyCopiedBody, "OK");
+        }
+        else if (pick == UserMessages.DeckBuyOpenTcgMassEntry)
+        {
+            var uri = new Uri("https://www.tcgplayer.com/massentry?productline=Magic");
+            await Launcher.Default.OpenAsync(uri);
+        }
+    }
+
+    private async Task OpenDeckHubPictureFlowAsync()
+    {
+        if (_viewModel.Deck == null) return;
+
+        var choose = UserMessages.DeckHubPictureChooseCard;
+        var clear = UserMessages.DeckHubPictureClear;
+        const string cancel = "Cancel";
+        string pick = await DisplayActionSheetAsync(
+            UserMessages.DeckHubPictureSheetTitle,
+            cancel,
+            null,
+            choose,
+            clear);
+
+        if (pick == clear)
+        {
+            if (string.IsNullOrEmpty(_viewModel.Deck.CoverCardId))
+            {
+                await DisplayAlertAsync(
+                    UserMessages.DeckHubPictureSheetTitle,
+                    UserMessages.DeckHubPictureNothingToClear,
+                    "OK");
+                return;
+            }
+
+            var cleared = await _viewModel.ClearDeckHubCoverAsync();
+            if (cleared.IsError)
+                await DisplayAlertAsync(UserMessages.DeckHubPictureSheetTitle, cleared.Message, "OK");
+            return;
+        }
+
+        if (pick != choose) return;
+
+        var picker = _serviceProvider.GetRequiredService<CardSearchPickerPage>();
+        picker.Title = UserMessages.DeckHubPicturePickerTitle;
+        await Navigation.PushModalAsync(picker);
+        var card = await picker.WaitForResultAsync();
+        if (card == null) return;
+
+        var setResult = await _viewModel.SetDeckHubCoverFromCardAsync(card);
+        if (setResult.IsError)
+            await DisplayAlertAsync(UserMessages.DeckHubPictureSheetTitle, setResult.Message, "OK");
     }
 
     private async Task PickDeckLayoutAsync()
@@ -325,6 +410,7 @@ public partial class DeckDetailPage : ContentPage
         _viewModel.AddCardsModalRequested += OnAddCardsModalRequested;
         _viewModel.DeckGridOverflowRequested += OnDeckGridOverflowRequested;
         CommanderTabView.CommanderMenuRequested += OnCommanderMenuRequested;
+        PricePreferences.PriceDisplayPreferencesChanged += OnDeckPricePreferencesChanged;
         // Reload commander art when returning to the page (it was cleared in OnDisappearing).
         _ = TryLoadCommanderArtAsync();
         try { CommanderArtCanvas?.InvalidateSurface(); } catch { /* ignore if view detached */ }
@@ -334,6 +420,7 @@ public partial class DeckDetailPage : ContentPage
     {
         base.OnDisappearing();
         CommanderTabView.CommanderMenuRequested -= OnCommanderMenuRequested;
+        PricePreferences.PriceDisplayPreferencesChanged -= OnDeckPricePreferencesChanged;
         _viewModel.ReloadCompleted -= RunDeferredLayoutPass;
         _viewModel.RequestShowQuickDetail -= OnRequestShowQuickDetail;
         _viewModel.ValidationDetailsAlertRequested -= OnValidationDetailsAlertRequested;

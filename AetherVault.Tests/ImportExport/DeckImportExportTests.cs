@@ -174,7 +174,7 @@ public class DeckImportExportTests
         public Task<int> GetDeckCardCountAsync(int deckId) =>
             Task.FromResult(_cards.Where(c => c.DeckId == deckId).Sum(c => c.Quantity));
 
-        public Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
+        public Task ApplyMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
         {
             foreach (var m in mutations)
             {
@@ -289,16 +289,16 @@ public class DeckImportExportTests
         public Task<Card> GetCardDetailsAsync(string uuid) => Task.FromResult(Get(uuid));
         public Task<Card> GetCardWithLegalitiesAsync(string uuid) => Task.FromResult(Get(uuid));
         public Task<Card> GetCardWithRulingsAsync(string uuid) => Task.FromResult(Get(uuid));
-        public Task<Card> GetCardByFaceNameAndSetAsync(string faceName, string setCode) => throw new NotImplementedException();
+        public Task<Card> GetCardByFaceAndSetAsync(string faceName, string setCode) => throw new NotImplementedException();
 
         public Task<string> GetScryfallIdAsync(string cardUUID) => Task.FromResult(Get(cardUUID).ScryfallId);
         public Task<CardRuling[]> GetCardRulingsAsync(string uuid) => Task.FromResult(Array.Empty<CardRuling>());
 
         public Task<string[]> GetOtherFaceIdsAsync(string uuid) => Task.FromResult(Array.Empty<string>());
-        public Task<Card[]> GetCardWithOtherFacesAsync(string uuid) => Task.FromResult(new[] { Get(uuid) });
+        public Task<Card[]> GetOtherFacesAsync(string uuid) => Task.FromResult(new[] { Get(uuid) });
         public Task<Card[]> GetFullCardPackageAsync(string uuid) => Task.FromResult(new[] { Get(uuid) });
 
-        public Task<Dictionary<string, Card>> GetCardsByUuiDsAsync(string[] uuids)
+        public Task<Dictionary<string, Card>> GetCardsAsync(string[] uuids)
         {
             var result = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
             foreach (var u in uuids)
@@ -313,8 +313,8 @@ public class DeckImportExportTests
             Task.FromResult<IReadOnlyList<ImportLookupRow>>([]);
 
         public Task<Card[]> SearchCardsAsync(string searchText, int limit = 100) => throw new NotImplementedException();
-        public Task<Card[]> SearchCardsAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
-        public Task<int> GetCountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
+        public Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
+        public Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
         public MtgSearchHelper CreateSearchHelper() => throw new NotImplementedException();
         public Task<IReadOnlyList<SetInfo>> GetAllSetsAsync() => Task.FromResult<IReadOnlyList<SetInfo>>([]);
         public Task<bool> HasFtsAsync() => Task.FromResult(false);

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Text;
 using AetherVault.Constants;
 using AetherVault.Core;
 using AetherVault.Data;
@@ -48,6 +49,17 @@ public partial class DeckCardDisplayItem : ObservableObject
     /// <summary>Quantity badge binding; use <see cref="SetDeckQuantity"/> so the UI updates without a full reload.</summary>
     public string DeckQtyLabel => Entity.Quantity.ToString();
 
+    [ObservableProperty]
+    public partial CardPriceData? PriceData { get; set; }
+
+    /// <summary>Unit price from bundled DB (vendor order in Settings). Empty when prices off or missing.</summary>
+    public string DeckUnitPriceDisplay =>
+        !PricePreferences.PricesDataEnabled ? "" : PriceDisplayHelper.GetDeckUnitPriceDisplay(PriceData);
+
+    /// <summary>Line total (unit × in-deck qty) for deck lists and grid.</summary>
+    public string DeckLinePriceDisplay =>
+        !PricePreferences.PricesDataEnabled ? "" : PriceDisplayHelper.GetDeckLinePriceDisplay(PriceData, Entity.Quantity);
+
     /// <summary>Short collection hint for list rows.</summary>
     public string OwnedShortText => OwnedQuantity <= 0 ? "—" : $"Own {OwnedQuantity}";
 
@@ -60,6 +72,17 @@ public partial class DeckCardDisplayItem : ObservableObject
         OnPropertyChanged(nameof(IsOverCollection));
     }
 
+    partial void OnPriceDataChanged(CardPriceData? value)
+    {
+        OnPropertyChanged(nameof(DeckUnitPriceDisplay));
+        OnPropertyChanged(nameof(DeckLinePriceDisplay));
+    }
+
+    partial void OnEntityChanged(DeckCardEntity value)
+    {
+        OnPropertyChanged(nameof(DeckLinePriceDisplay));
+    }
+
     /// <summary>Updates in-deck quantity and notifies quantity-related bindings.</summary>
     public void SetDeckQuantity(int quantity)
     {
@@ -67,6 +90,7 @@ public partial class DeckCardDisplayItem : ObservableObject
         OnPropertyChanged(nameof(InDeckSummary));
         OnPropertyChanged(nameof(DeckQtyLabel));
         OnPropertyChanged(nameof(IsOverCollection));
+        OnPropertyChanged(nameof(DeckLinePriceDisplay));
     }
 
     /// <summary>List row fill: solid for 1 or 3+ colors, horizontal WUBRG gradient for exactly two colors.</summary>
@@ -77,6 +101,12 @@ public partial class DeckCardDisplayItem : ObservableObject
     public partial bool IsSelected { get; set; }
 
     partial void OnCardChanged(Card value) => OnPropertyChanged(nameof(StripBackground));
+
+    public void NotifyDeckPriceBindingsChanged()
+    {
+        OnPropertyChanged(nameof(DeckUnitPriceDisplay));
+        OnPropertyChanged(nameof(DeckLinePriceDisplay));
+    }
 }
 
 /// <summary>Search result row in the add-cards sheet (staging + commander quick-add).</summary>
@@ -414,6 +444,12 @@ public partial class DeckDetailViewModel(
 
     /// <summary>e.g. "Sideboard (15)" for the sideboard section header.</summary>
     public string SideboardHeaderText => $"Sideboard ({SideboardCount})";
+
+    [ObservableProperty]
+    public partial string DeckPriceSummaryDisplay { get; set; } = "";
+
+    /// <summary>Bundled price DB + per-row display (Settings → price data).</summary>
+    public bool ShowDeckPrices => PricePreferences.PricesDataEnabled;
 
     [ObservableProperty]
     public partial string DeckFormat { get; set; } = "";
@@ -1001,6 +1037,34 @@ public partial class DeckDetailViewModel(
 
     public async Task ReloadAsync(bool preserveState = false) => await LoadAsync(_deckId, preserveState);
 
+    /// <summary>Sets <see cref="DeckEntity.CoverCardId"/> for the Decks hub tile; clears nothing else.</summary>
+    public async Task<ValidationResult> SetDeckHubCoverFromCardAsync(Card card)
+    {
+        if (Deck == null) return ValidationResult.Error("Deck not found.");
+        var result = await _deckService.SetDeckCoverAsync(Deck.Id, card.Uuid);
+        if (result.IsSuccess) await RefreshDeckCoverFromDbAsync();
+        return result;
+    }
+
+    /// <summary>Clears custom hub art; commander (if any) is shown again on the Decks tab.</summary>
+    public async Task<ValidationResult> ClearDeckHubCoverAsync()
+    {
+        if (Deck == null) return ValidationResult.Error("Deck not found.");
+        var result = await _deckService.SetDeckCoverAsync(Deck.Id, null);
+        if (result.IsSuccess) await RefreshDeckCoverFromDbAsync();
+        return result;
+    }
+
+    private async Task RefreshDeckCoverFromDbAsync()
+    {
+        if (Deck == null) return;
+        var d = await _deckService.GetDeckAsync(Deck.Id);
+        if (d == null) return;
+        Deck.CoverCardId = d.CoverCardId;
+        Deck.DateModified = d.DateModified;
+        OnPropertyChanged(nameof(Deck));
+    }
+
     public async Task LoadAsync(int deckId, bool preserveState = false)
     {
         EnsureDeckDetailStatusBindings();
@@ -1044,6 +1108,7 @@ public partial class DeckDetailViewModel(
                 _deckEntitiesCache = [];
                 StatusIsError = true;
                 StatusMessage = UserMessages.DeckNotFound;
+                DeckPriceSummaryDisplay = "";
                 return;
             }
 
@@ -1059,12 +1124,12 @@ public partial class DeckDetailViewModel(
             var uuids = cardEntities.Select(c => c.CardId).Distinct().ToArray();
 
             Dictionary<string, Card> cardMap = uuids.Length > 0
-                ? await _cardRepository.GetCardsByUuiDsAsync(uuids)
+                ? await _cardRepository.GetCardsAsync(uuids)
                 : [];
 
             var (commander, main, sideboard) = MapEntitiesToSectionLists(cardEntities, cardMap);
 
-            var qtyOwned = await _collectionRepository.GetQuantitiesByUuidsAsync(uuids);
+            var qtyOwned = await _collectionRepository.GetQuantitiesAsync(uuids);
             ApplyOwnedQuantities(commander, qtyOwned);
             ApplyOwnedQuantities(main, qtyOwned);
             ApplyOwnedQuantities(sideboard, qtyOwned);
@@ -1079,8 +1144,22 @@ public partial class DeckDetailViewModel(
 
             _cardMapCache = cardMap;
 
+            Dictionary<string, CardPriceData> priceMap = [];
+            if (PricePreferences.PricesDataEnabled && uuids.Length > 0)
+            {
+                try
+                {
+                    priceMap = await _cardManager.GetCardPricesBulkAsync(uuids);
+                }
+                catch
+                {
+                    // Keep empty; rows show no unit price until retry.
+                }
+            }
+
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                ApplyDeckPricesToSectionLists(commander, main, sideboard, priceMap);
                 CommanderCards = new ObservableCollection<DeckCardDisplayItem>(commander);
                 FirstCommander = commander.Count > 0 ? commander[0] : null;
                 AdditionalCommanderCards = commander.Count > 1
@@ -1100,6 +1179,7 @@ public partial class DeckDetailViewModel(
                 _archetypePickerSyncFromLoad = false;
                 OnPropertyChanged(nameof(ShowDeckSuggestionUi));
                 RefreshDeckListFilter();
+                RecalculateDeckPriceTotals();
                 StatusIsError = validation.Level == ValidationLevel.Error;
                 StatusMessage = statusMessage;
                 SetValidationDetailLines(validation);
@@ -1191,6 +1271,168 @@ public partial class DeckDetailViewModel(
             foreach (var item in g)
                 MainDeckGridItems.Add(item);
         }
+    }
+
+    private static void ApplyDeckPricesToSectionLists(
+        List<DeckCardDisplayItem> commander,
+        List<DeckCardDisplayItem> main,
+        List<DeckCardDisplayItem> sideboard,
+        Dictionary<string, CardPriceData> priceMap)
+    {
+        static void Apply(List<DeckCardDisplayItem> list, Dictionary<string, CardPriceData> map)
+        {
+            foreach (var item in list)
+            {
+                if (map.TryGetValue(item.CardUuid, out var p))
+                    item.PriceData = p;
+            }
+        }
+
+        Apply(commander, priceMap);
+        Apply(main, priceMap);
+        Apply(sideboard, priceMap);
+    }
+
+    /// <summary>Commander + main + sideboard rows (authoritative lists, not filtered).</summary>
+    private IEnumerable<DeckCardDisplayItem> EnumerateAllDeckRowsForPricing()
+    {
+        foreach (var c in CommanderCards)
+            yield return c;
+        foreach (var g in MainDeckGroups)
+        {
+            foreach (var i in g)
+                yield return i;
+        }
+
+        foreach (var s in SideboardCards)
+            yield return s;
+    }
+
+    private void RecalculateDeckPriceTotals()
+    {
+        if (!PricePreferences.PricesDataEnabled)
+        {
+            DeckPriceSummaryDisplay = "";
+            return;
+        }
+
+        double usd = 0;
+        double eur = 0;
+        foreach (var item in EnumerateAllDeckRowsForPricing())
+        {
+            if (item.PriceData == null) continue;
+            if (!PriceDisplayHelper.TryGetPreferredUnitPrice(item.PriceData, false, false, out var unit, out var cur)) continue;
+            int q = item.Entity.Quantity;
+            if (cur == PriceCurrency.Eur) eur += unit * q;
+            else usd += unit * q;
+        }
+
+        DeckPriceSummaryDisplay = FormatDeckDualCurrencyTotal(usd, eur);
+    }
+
+    private static string FormatDeckDualCurrencyTotal(double usd, double eur)
+    {
+        if (usd <= 0 && eur <= 0) return "Deck total: —";
+        if (eur <= 0) return $"Deck total: ${usd:F2}";
+        if (usd <= 0) return $"Deck total: €{eur:F2}";
+        return $"Deck total: ${usd:F2} · €{eur:F2}";
+    }
+
+    public void OnPriceDisplayPreferencesChanged()
+    {
+        OnPropertyChanged(nameof(ShowDeckPrices));
+        foreach (var item in EnumerateAllDeckRowsForPricing())
+            item.NotifyDeckPriceBindingsChanged();
+
+        if (!PricePreferences.PricesDataEnabled)
+        {
+            foreach (var item in EnumerateAllDeckRowsForPricing())
+                item.PriceData = null;
+            DeckPriceSummaryDisplay = "";
+            return;
+        }
+
+        _ = ReloadDeckPricesAsync();
+    }
+
+    private async Task ReloadDeckPricesAsync()
+    {
+        var uuids = EnumerateAllDeckRowsForPricing().Select(i => i.CardUuid).Distinct().ToArray();
+        if (uuids.Length == 0)
+        {
+            MainThread.BeginInvokeOnMainThread(RecalculateDeckPriceTotals);
+            return;
+        }
+
+        try
+        {
+            var map = await _cardManager.GetCardPricesBulkAsync(uuids);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                foreach (var item in EnumerateAllDeckRowsForPricing())
+                {
+                    if (map.TryGetValue(item.CardUuid, out var p))
+                        item.PriceData = p;
+                }
+
+                RecalculateDeckPriceTotals();
+            });
+        }
+        catch
+        {
+            MainThread.BeginInvokeOnMainThread(RecalculateDeckPriceTotals);
+        }
+    }
+
+    private async Task HydrateMissingDeckPricesAsync()
+    {
+        if (!PricePreferences.PricesDataEnabled) return;
+        var need = EnumerateAllDeckRowsForPricing()
+            .Where(i => i.PriceData == null)
+            .Select(i => i.CardUuid)
+            .Distinct()
+            .ToArray();
+        if (need.Length == 0) return;
+
+        try
+        {
+            var map = await _cardManager.GetCardPricesBulkAsync(need);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                foreach (var item in EnumerateAllDeckRowsForPricing())
+                {
+                    if (item.PriceData == null && map.TryGetValue(item.CardUuid, out var p))
+                        item.PriceData = p;
+                }
+
+                RecalculateDeckPriceTotals();
+            });
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    /// <summary>Plaintext lines for TCGPlayer Mass Entry (name, set code, collector number).</summary>
+    public string BuildDeckBuyListForMassEntry()
+    {
+        var sb = new StringBuilder();
+        foreach (var item in EnumerateAllDeckRowsForPricing()
+                     .OrderBy(i => i.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            if (item.Card == null) continue;
+            sb.Append(item.Entity.Quantity).Append(' ').Append(item.DisplayName);
+            string set = (item.Card.SetCode ?? "").ToUpperInvariant();
+            if (!string.IsNullOrEmpty(set))
+                sb.Append(" (").Append(set).Append(')');
+            string num = item.Card.Number ?? "";
+            if (!string.IsNullOrEmpty(num))
+                sb.Append(' ').Append(num);
+            sb.AppendLine();
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     private static (List<DeckCardDisplayItem> commander, List<DeckCardDisplayItem> main, List<DeckCardDisplayItem> sideboard)
@@ -1778,6 +2020,8 @@ public partial class DeckDetailViewModel(
         OnPropertyChanged(nameof(DeckSummaryText));
         OnPropertyChanged(nameof(SideboardHeaderText));
         RefreshDeckListFilter();
+        RecalculateDeckPriceTotals();
+        _ = HydrateMissingDeckPricesAsync();
         _ = ApplyValidationUiAsync();
     }
 

@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:controls="clr-namespace:AetherVault.Controls"
+             xmlns:constants="clr-namespace:AetherVault.Constants"
              x:Class="AetherVault.Pages.DecksPage"
              Title="Decks"
              BackgroundColor="{StaticResource Background}"
@@ -96,7 +97,7 @@
                                 <!-- Base + art: gradient was so opaque that tiles read as solid black; keep a visible fallback under failed loads. -->
                                 <Grid IsVisible="{Binding HasPreviewImage}"
                                       BackgroundColor="{StaticResource CardBackground}">
-                                    <controls:CachedCardImage CardUuid="{Binding PreviewImageUuid}"
+                                    <controls:CachedCardImage CardUuid="{Binding PreviewImageId}"
                                                                ImageSize="art_crop"
                                                                InputTransparent="True"
                                                                HorizontalOptions="Fill"
@@ -145,6 +146,21 @@
                                         <HorizontalStackLayout Grid.Column="1"
                                                                Spacing="2"
                                                                VerticalOptions="Start">
+                                            <Button Clicked="OnDeckHubPictureButtonClicked"
+                                                    BackgroundColor="#99000000"
+                                                    Padding="6"
+                                                    HeightRequest="36"
+                                                    WidthRequest="36"
+                                                    CornerRadius="18"
+                                                    CommandParameter="{Binding .}"
+                                                    SemanticProperties.Hint="{x:Static constants:UserMessages.DeckHubPictureButtonSemanticHint}">
+                                                <Button.ImageSource>
+                                                    <FontImageSource FontFamily="FASolid"
+                                                                     Glyph="{x:Static fa:Solid.Image}"
+                                                                     Size="14"
+                                                                     Color="White" />
+                                                </Button.ImageSource>
+                                            </Button>
                                             <Button Clicked="OnRenameDeckButtonClicked"
                                                     BackgroundColor="#99000000"
                                                     Padding="6"

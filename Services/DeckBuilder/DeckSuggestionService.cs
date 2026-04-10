@@ -65,7 +65,7 @@ public static class DeckSuggestionService
         helper.OrderBy("(CASE WHEN IFNULL(c.edhrecRank,0) <= 0 THEN 999999 ELSE c.edhrecRank END)");
         helper.Limit(CandidateSqlLimit);
 
-        var candidates = await cardRepository.SearchCardsAdvancedAsync(helper);
+        var candidates = await cardRepository.SearchAdvancedAsync(helper);
         cancellationToken.ThrowIfCancellationRequested();
 
         int maxCopies = format.IsCommanderLikeRules() ? 1 : 4;

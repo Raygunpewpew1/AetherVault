@@ -11,6 +11,8 @@ public class DeckEntity
     public string Name { get; set; } = "";
     public string Format { get; set; } = DeckFormat.Standard.ToDbField();
     public string Description { get; set; } = "";
+
+    /// <summary>Optional printing UUID for the Decks-tab tile art; overrides commander when set (see <see cref="Services.DeckBuilder.DeckBuilderService.SetDeckCoverAsync"/>).</summary>
     public string CoverCardId { get; set; } = "";
     public DateTime DateCreated { get; set; }
     public DateTime DateModified { get; set; }
@@ -31,12 +33,14 @@ public class DeckEntity
     public string CommanderDisplay => HasCommander ? $"☆ {CommanderName}" : "";
     public string FormatDisplay => EnumExtensions.ParseDeckFormat(Format).ToDisplayName();
 
-    /// <summary>UUID for hub thumbnail: commander printing, else cover card.</summary>
-    public string PreviewImageUuid =>
-        !string.IsNullOrEmpty(CommanderId) ? CommanderId :
-        !string.IsNullOrEmpty(CoverCardId) ? CoverCardId : "";
+    /// <summary>
+    /// Scryfall CDN key for the deck hub tile (same convention as <see cref="Card.ImageId"/>).
+    /// Not stored in SQLite — set by <see cref="Services.DeckBuilder.DeckBuilderService.GetDecksAsync"/>.
+    /// </summary>
+    public string PreviewImageId { get; set; } = "";
 
-    public bool HasPreviewImage => !string.IsNullOrEmpty(PreviewImageUuid);
+    public bool HasPreviewImage =>
+        !string.IsNullOrEmpty(CommanderId) || !string.IsNullOrEmpty(CoverCardId);
 
     /// <summary>Braced mana symbols for <c>ManaCostView</c> (e.g. <c>{W}{U}</c>).</summary>
     public string ColorIdentityManaText

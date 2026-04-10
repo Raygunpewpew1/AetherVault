@@ -123,7 +123,7 @@ public class MtgJsonDeckImporter
 
         var uuids = allCards.Select(x => x.Card.Uuid).Where(u => !string.IsNullOrWhiteSpace(u)).Distinct().ToArray();
         progress?.Report($"Resolving {uuids.Length} cards...");
-        var cardMap = await _cardRepo.GetCardsByUuiDsAsync(uuids);
+        var cardMap = await _cardRepo.GetCardsAsync(uuids);
         var missing = uuids.Where(u => !cardMap.ContainsKey(u)).ToList();
         result.MissingUuids = missing;
 
@@ -161,7 +161,7 @@ public class MtgJsonDeckImporter
         }
 
         Card? firstCommanderCard = null;
-        if ((commanderCards?.Count ?? 0) > 0)
+        if (commanderCards is { Count: > 0 })
             firstCommanderCard = await ResolveCardAsync(commanderCards[0]);
         if (firstCommanderCard != null && !string.IsNullOrEmpty(firstCommanderCard.Uuid))
         {

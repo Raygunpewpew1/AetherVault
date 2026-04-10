@@ -107,6 +107,10 @@
                                         </Label.Triggers>
                                     </Label>
                                 </HorizontalStackLayout>
+                                <Label Text="{Binding DeckLinePriceDisplay}"
+                                       FontSize="11"
+                                       TextColor="{StaticResource Accent}"
+                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowDeckPrices}" />
                             </VerticalStackLayout>
                             <Grid Grid.Row="1"
                                   Grid.Column="1"
@@ -270,6 +274,10 @@
                                         </Label.Triggers>
                                     </Label>
                                 </HorizontalStackLayout>
+                                <Label Text="{Binding DeckLinePriceDisplay}"
+                                       FontSize="10"
+                                       TextColor="{StaticResource Accent}"
+                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowDeckPrices}" />
                             </VerticalStackLayout>
                             <Grid Grid.Row="1"
                                   Grid.Column="1"
@@ -346,15 +354,16 @@
                         HorizontalOptions="Fill"
                         IsVisible="{Binding IsDeckEditorLayoutGrid}">
             <CollectionView.ItemsLayout>
+                <!-- 2 columns: wider tiles so names wrap instead of 1–2 chopped words in a 3-up grid. -->
                 <GridItemsLayout Orientation="Vertical"
-                                 Span="3"
-                                 HorizontalItemSpacing="6"
-                                 VerticalItemSpacing="10" />
+                                 Span="2"
+                                 HorizontalItemSpacing="8"
+                                 VerticalItemSpacing="12" />
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:DeckCardDisplayItem">
-                    <Border Margin="4,2"
-                            Padding="4"
+                    <Border Margin="3,2"
+                            Padding="6"
                             BackgroundColor="{StaticResource Surface}"
                             StrokeShape="RoundRectangle 8"
                             Stroke="Transparent"
@@ -365,31 +374,33 @@
                                 <Setter Property="StrokeThickness" Value="2" />
                             </DataTrigger>
                         </Border.Triggers>
-                        <Grid RowDefinitions="Auto,Auto"
+                        <Grid RowDefinitions="Auto,Auto,Auto"
                               RowSpacing="6">
                             <Grid Grid.Row="0"
-                                  HeightRequest="152"
-                                  HorizontalOptions="Fill">
+                                  HeightRequest="200"
+                                  HorizontalOptions="Fill"
+                                  BackgroundColor="{StaticResource CardBackground}">
                                 <controls:CachedCardImage CardUuid="{Binding ImageId}"
                                                            ImageSize="normal"
+                                                           ImageAspect="AspectFit"
                                                            InputTransparent="True"
                                                            HorizontalOptions="Fill"
                                                            VerticalOptions="Fill" />
                                 <Button HorizontalOptions="Start"
                                         VerticalOptions="Start"
-                                        Margin="4"
-                                        WidthRequest="32"
-                                        HeightRequest="32"
+                                        Margin="3"
+                                        WidthRequest="28"
+                                        HeightRequest="28"
                                         Padding="0"
-                                        CornerRadius="16"
+                                        CornerRadius="14"
                                         BackgroundColor="#99000000"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.RequestMainDeckGridMenuCommand}"
                                         CommandParameter="{Binding .}"
-                                        SemanticProperties.Hint="More actions">
+                                        SemanticProperties.Hint="Move, remove, or card details">
                                     <Button.ImageSource>
                                         <FontImageSource FontFamily="FASolid"
                                                          Glyph="{x:Static fa:Solid.EllipsisVertical}"
-                                                         Size="14"
+                                                         Size="12"
                                                          Color="White" />
                                     </Button.ImageSource>
                                 </Button>
@@ -399,52 +410,69 @@
                                         Padding="6,3"
                                         BackgroundColor="#CC000000"
                                         StrokeShape="RoundRectangle 6"
-                                        StrokeThickness="0">
+                                        StrokeThickness="0"
+                                        InputTransparent="True">
                                     <Label Text="{Binding DeckQtyLabel}"
                                            TextColor="White"
                                            FontSize="12"
-                                           FontAttributes="Bold" />
+                                           FontAttributes="Bold"
+                                           InputTransparent="True" />
                                 </Border>
                             </Grid>
-                            <Grid Grid.Row="1"
-                                  ColumnDefinitions="*,Auto,Auto"
-                                  ColumnSpacing="4">
-                                <Label Grid.Column="0"
-                                       Text="{Binding DisplayName}"
+                            <!-- Full-width text; InputTransparent so tap selects row → card details (same as list). -->
+                            <VerticalStackLayout Grid.Row="1"
+                                                 Spacing="2"
+                                                 InputTransparent="True">
+                                <Label Text="{Binding DisplayName}"
+                                       FontSize="12"
+                                       MaxLines="4"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{StaticResource TextPrimary}" />
+                                <Label Text="{Binding DeckLinePriceDisplay}"
                                        FontSize="11"
-                                       MaxLines="2"
-                                       LineBreakMode="TailTruncation"
-                                       TextColor="{StaticResource TextPrimary}"
-                                       VerticalOptions="Center" />
-                                <Button Grid.Column="1"
+                                       TextColor="{StaticResource Accent}"
+                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowDeckPrices}" />
+                            </VerticalStackLayout>
+                            <Grid Grid.Row="2"
+                                  ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="8"
+                                  VerticalOptions="Center">
+                                <Button Grid.Column="0"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource CardBackground}"
                                         TextColor="{StaticResource TextPrimary}"
-                                        WidthRequest="32"
-                                        HeightRequest="32"
+                                        WidthRequest="40"
+                                        HeightRequest="40"
                                         Padding="0"
-                                        CornerRadius="6">
+                                        CornerRadius="8">
                                     <Button.ImageSource>
                                         <FontImageSource FontFamily="FASolid"
                                                          Glyph="{x:Static fa:Solid.Minus}"
-                                                         Size="11"
+                                                         Size="14"
                                                          Color="{StaticResource TextPrimary}" />
                                     </Button.ImageSource>
                                 </Button>
+                                <Label Grid.Column="1"
+                                       Text="{Binding DeckQtyLabel}"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
                                 <Button Grid.Column="2"
                                         Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                         CommandParameter="{Binding .}"
                                         BackgroundColor="{StaticResource Accent}"
                                         TextColor="Black"
-                                        WidthRequest="32"
-                                        HeightRequest="32"
+                                        WidthRequest="40"
+                                        HeightRequest="40"
                                         Padding="0"
-                                        CornerRadius="6">
+                                        CornerRadius="8">
                                     <Button.ImageSource>
                                         <FontImageSource FontFamily="FASolid"
                                                          Glyph="{x:Static fa:Solid.Plus}"
-                                                         Size="11"
+                                                         Size="14"
                                                          Color="Black" />
                                     </Button.ImageSource>
                                 </Button>

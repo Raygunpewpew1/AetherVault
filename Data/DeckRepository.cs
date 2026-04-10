@@ -217,7 +217,7 @@ public class DeckRepository : IDeckRepository
         }
     }
 
-    public async Task ApplyDeckCardMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
+    public async Task ApplyMutationsAsync(int deckId, IReadOnlyList<DeckCardPersistenceMutation> mutations)
     {
         if (mutations == null || mutations.Count == 0)
             return;

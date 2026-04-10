@@ -166,6 +166,10 @@
                                                 </DataTrigger>
                                             </Label.Triggers>
                                         </Label>
+                                        <Label Text="{Binding DeckLinePriceDisplay}"
+                                               FontSize="11"
+                                               TextColor="{StaticResource Accent}"
+                                               IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.ShowDeckPrices}" />
                                     </VerticalStackLayout>
                                     <Button Grid.Column="3"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.RemoveCardCommand}"
