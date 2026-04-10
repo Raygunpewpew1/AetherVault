@@ -122,3 +122,11 @@ Pages/       MAUI XAML pages
 Controls/    custom controls and card grid renderer
 Core/        shared models, enums, utilities
 ```
+
+---
+
+## License
+
+**Source code in this repo:** [MIT](LICENSE).
+
+**Card data, images, and Wizards’ IP:** not ours — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for MTGJSON, Scryfall, and a plain-language Wizards disclaimer.
