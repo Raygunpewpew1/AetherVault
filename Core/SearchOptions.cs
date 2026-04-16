@@ -9,6 +9,8 @@ public class SearchOptions
 {
     // Text filters
     public string NameFilter { get; set; } = "";
+    /// <summary>Exact English card names (OR). Used for curated cycles (e.g. shock lands). Ignored when empty.</summary>
+    public List<string> NameEqualsAny { get; set; } = [];
     public string TextFilter { get; set; } = "";
     /// <summary>MTGJSON <c>keywords</c> array (comma-separated; all terms must match).</summary>
     public string KeywordsFilter { get; set; } = "";
@@ -46,6 +48,9 @@ public class SearchOptions
     /// <summary>When true, only cards that can be a commander (Legendary Creature or "can be your commander").</summary>
     public bool CommanderOnly { get; set; }
 
+    /// <summary>When true, only cards flagged as Commander game changers (<c>isGameChanger</c> in MTGJSON).</summary>
+    public bool GameChangerOnly { get; set; }
+
     /// <summary>
     /// MTGJSON <c>availability</c> tokens to require (lowercase: paper, mtgo, arena).
     /// When non-empty, a row matches if it lists <b>any</b> of these platforms.
@@ -61,6 +66,7 @@ public class SearchOptions
     public void Clear()
     {
         NameFilter = "";
+        NameEqualsAny = [];
         TextFilter = "";
         KeywordsFilter = "";
         ArtistFilter = "";
@@ -85,6 +91,7 @@ public class SearchOptions
         IncludeAllFaces = false;
         IncludeTokens = false;
         CommanderOnly = false;
+        GameChangerOnly = false;
         AvailabilityFilter = [];
         LayoutFilter = [];
         FinishesFilter = [];
@@ -96,6 +103,7 @@ public class SearchOptions
         {
             int count = 0;
             if (!string.IsNullOrWhiteSpace(NameFilter)) count++;
+            if (NameEqualsAny.Count > 0) count++;
             if (!string.IsNullOrWhiteSpace(TextFilter)) count++;
             if (!string.IsNullOrWhiteSpace(KeywordsFilter)) count++;
             if (!string.IsNullOrWhiteSpace(TypeFilter) && !TypeFilter.Equals("Any", StringComparison.OrdinalIgnoreCase)) count++;
@@ -114,6 +122,7 @@ public class SearchOptions
             if (NoVariations) count++;
             if (!PrimarySideOnly || IncludeAllFaces) count++;
             if (CommanderOnly) count++;
+            if (GameChangerOnly) count++;
             if (AvailabilityFilter.Count > 0) count++;
             if (LayoutFilter.Count > 0) count++;
             if (FinishesFilter.Count > 0) count++;
@@ -123,6 +132,7 @@ public class SearchOptions
 
     public bool HasActiveFilters =>
         !string.IsNullOrEmpty(NameFilter) ||
+        NameEqualsAny.Count > 0 ||
         !string.IsNullOrEmpty(TextFilter) ||
         !string.IsNullOrWhiteSpace(KeywordsFilter) ||
         !string.IsNullOrEmpty(ArtistFilter) ||
@@ -143,6 +153,7 @@ public class SearchOptions
         !PrimarySideOnly ||
         IncludeAllFaces ||
         CommanderOnly ||
+        GameChangerOnly ||
         AvailabilityFilter.Count > 0 ||
         LayoutFilter.Count > 0 ||
         FinishesFilter.Count > 0;
@@ -153,6 +164,7 @@ public class SearchOptions
     public SearchOptions Clone() => new()
     {
         NameFilter = NameFilter,
+        NameEqualsAny = [.. NameEqualsAny],
         TextFilter = TextFilter,
         KeywordsFilter = KeywordsFilter,
         ArtistFilter = ArtistFilter,
@@ -177,6 +189,7 @@ public class SearchOptions
         IncludeAllFaces = IncludeAllFaces,
         IncludeTokens = IncludeTokens,
         CommanderOnly = CommanderOnly,
+        GameChangerOnly = GameChangerOnly,
         AvailabilityFilter = [.. AvailabilityFilter],
         LayoutFilter = [.. LayoutFilter],
         FinishesFilter = [.. FinishesFilter],

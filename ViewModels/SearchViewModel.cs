@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using AetherVault.Controls;
 using AetherVault.Core;
 using AetherVault.Core.Layout;
@@ -39,6 +40,12 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
     [ObservableProperty]
     public partial bool IsEmpty { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasRecentSearches { get; set; }
+
+    /// <summary>Most-recent plain name searches (no extra filters); tap to re-run.</summary>
+    public ObservableCollection<string> RecentSearches { get; } = [];
 
     public SearchOptions CurrentOptions { get; set; } = new();
 
@@ -99,6 +106,8 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
                 }
             });
         };
+
+        RefreshRecentSearches();
     }
 
     /// <summary>Called by SearchPage when the card grid is created.</summary>
@@ -133,6 +142,19 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     [RelayCommand]
     private async Task SearchAsync()
     {
+        await PerformSearchAsync();
+    }
+
+    /// <summary>Re-runs a saved plain-text search (cancels pending debounced search).</summary>
+    [RelayCommand]
+    private async Task ApplyRecentSearchAsync(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+            return;
+
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts = null;
+        SearchText = query.Trim();
         await PerformSearchAsync();
     }
 
@@ -227,6 +249,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             _cardManager.ImageService.CancelPendingDownloads();
 
             StatusMessage = UserMessages.FoundCards(TotalResults);
+            RecordRecentPlainSearchIfApplicable();
             SearchCompleted?.Invoke();
         }
         catch (Exception ex)
@@ -470,5 +493,26 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
         if (options.CommanderOnly)
             parts.Add("Can be commander only");
+    }
+
+    private void RecordRecentPlainSearchIfApplicable()
+    {
+        if (HasNonTextFilters)
+            return;
+
+        var name = (CurrentOptions.NameFilter ?? "").Trim();
+        if (name.Length == 0)
+            return;
+
+        SearchRecentQueriesStore.Push(name);
+        RefreshRecentSearches();
+    }
+
+    private void RefreshRecentSearches()
+    {
+        RecentSearches.Clear();
+        foreach (var q in SearchRecentQueriesStore.Load())
+            RecentSearches.Add(q);
+        HasRecentSearches = RecentSearches.Count > 0;
     }
 }

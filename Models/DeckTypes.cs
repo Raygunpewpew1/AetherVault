@@ -49,6 +49,8 @@ public class DeckStats
     public int BoardWipesCount { get; set; }
     public int CounterspellsCount { get; set; }
     public int[] ManaCurve { get; set; } = new int[11]; // CMC 0-10+
+    /// <summary>W, U, B, R, G, other — pip counts from <see cref="Card.ManaCost"/> on non-lands (main + sideboard).</summary>
+    public int[] ManaPipCounts { get; set; } = new int[ManaCostPipAnalyzer.SlotCount];
     public ColorIdentity ColorIdentity { get; set; }
 
     public int GetManaCurvePeak()

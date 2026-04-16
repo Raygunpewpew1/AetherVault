@@ -120,6 +120,25 @@ public struct ColorIdentity : IEquatable<ColorIdentity>
         return result;
     }
 
+    /// <summary>Union of all colors present in any of <paramref name="parts"/>.</summary>
+    public static ColorIdentity UnionAll(IEnumerable<ColorIdentity> parts)
+    {
+        var result = new ColorIdentity();
+        foreach (var part in parts)
+        {
+            if (part._colors == null) continue;
+            foreach (MtgColor c in AllMtgColors)
+            {
+                if (part.Colors.Contains(c))
+                    result.Colors.Add(c);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Union of <paramref name="a"/> and <paramref name="b"/>.</summary>
+    public static ColorIdentity Union(ColorIdentity a, ColorIdentity b) => UnionAll([a, b]);
+
     public static ColorIdentity Empty => new();
 
     public static ColorIdentity AllColors

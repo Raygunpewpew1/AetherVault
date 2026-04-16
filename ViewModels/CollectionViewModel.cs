@@ -14,9 +14,10 @@ namespace AetherVault.ViewModels;
 /// ViewModel for the Collection tab. Loads the user's saved cards, supports sort/filter, import/export, and add/remove.
 /// Binds to the same style of CardGrid as Search; data comes from CollectionRepository (user DB), not the MTG card DB.
 /// </summary>
-public partial class CollectionViewModel : BaseViewModel
+public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
 {
     private readonly CardManager _cardManager;
+    private readonly ISearchFiltersOpener _filtersOpener;
     private readonly IGridPriceLoadService _gridPriceLoadService;
     private readonly CollectionImporter _importer;
     private readonly CollectionExporter _exporter;
@@ -50,10 +51,56 @@ public partial class CollectionViewModel : BaseViewModel
     public partial CollectionSortMode SortMode { get; set; } = CollectionSortMode.Manual;
 
     [ObservableProperty]
-    public partial string FilterText { get; set; } = "";
+    public partial string SearchText { get; set; } = "";
 
-    /// <summary>Labels for the sort-mode picker (Manual, Name, CMC, etc.).</summary>
-    public List<string> SortModeOptions { get; } = ["Manual", "Name", "CMC", "Rarity", "Color", "Price"];
+    public SearchOptions CurrentOptions { get; set; } = new();
+
+    /// <summary>When true, only rows marked foil in the collection DB.</summary>
+    [ObservableProperty]
+    public partial bool CollectionFilterFoilOnly { get; set; }
+
+    /// <summary>When true, only rows marked etched in the collection DB.</summary>
+    [ObservableProperty]
+    public partial bool CollectionFilterEtchedOnly { get; set; }
+
+    /// <summary>
+    /// Picker index for "minimum copies on this collection row": 0 = Any, 1 = 2+, 2 = 3+, … (threshold = index + 1 when index &gt; 0).
+    /// Uses a picker instead of a stepper so two-way binding is reliable and we skip useless "≥1" (matches almost every row).
+    /// </summary>
+    [ObservableProperty]
+    public partial int CollectionFilterMinQtyPickerIndex { get; set; }
+
+    /// <summary>Labels for <see cref="CollectionFilterMinQtyPickerIndex"/> (Any, 2+, …, 30+).</summary>
+    public IReadOnlyList<string> CollectionMinQtyPickerOptions { get; } =
+        ["Any", .. Enumerable.Range(2, 29).Select(static i => $"{i}+")];
+
+    public string FiltersButtonText
+    {
+        get
+        {
+            var merged = CurrentOptions.Clone();
+            merged.NameFilter = SearchText?.Trim() ?? "";
+            var count = merged.ActiveFilterCount;
+            return count > 0 ? $"Filters ({count})" : "Filters";
+        }
+    }
+
+    /// <summary>Labels for the sort-mode picker (must match <see cref="CollectionSortMode"/> order).</summary>
+    public List<string> SortModeOptions { get; } =
+    [
+        "Manual",
+        "Name",
+        "CMC",
+        "Rarity",
+        "Color",
+        "Price",
+        "Set / #",
+        "Date added",
+        "Quantity",
+        "Type",
+        "CMC (high)",
+        "Δ vs baseline",
+    ];
 
     /// <summary>Single-line summary for the collection toolbar (card totals).</summary>
     public string CollectionStatsSummary => $"{TotalCards} cards · {UniqueCards} unique";
@@ -80,15 +127,33 @@ public partial class CollectionViewModel : BaseViewModel
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
     public IAsyncRelayCommand RefreshCommand { get; }
 
-    public CollectionViewModel(CardManager cardManager, IGridPriceLoadService gridPriceLoadService, CollectionImporter importer, CollectionExporter exporter)
+    /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
+    public IAsyncRelayCommand OpenFiltersCommand { get; }
+
+    /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
+    public IAsyncRelayCommand ClearCollectionFiltersCommand { get; }
+
+    /// <summary>Sets each row's stored baseline to the current retail unit price (overflow menu).</summary>
+    public IAsyncRelayCommand RecapturePriceBaselinesCommand { get; }
+
+    public CollectionViewModel(
+        CardManager cardManager,
+        ISearchFiltersOpener filtersOpener,
+        IGridPriceLoadService gridPriceLoadService,
+        CollectionImporter importer,
+        CollectionExporter exporter)
     {
         _cardManager = cardManager;
+        _filtersOpener = filtersOpener;
         _gridPriceLoadService = gridPriceLoadService;
         _importer = importer;
         _exporter = exporter;
         ImportCollectionCommand = new AsyncRelayCommand(ImportCollectionAsync);
         ExportCollectionCommand = new AsyncRelayCommand(ExportCollectionAsync);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+        OpenFiltersCommand = new AsyncRelayCommand(OpenFiltersAsync);
+        ClearCollectionFiltersCommand = new AsyncRelayCommand(ClearCollectionFiltersAsync);
+        RecapturePriceBaselinesCommand = new AsyncRelayCommand(RecapturePriceBaselinesAsync);
 
         _cardManager.OnPriceSyncProgress += (msg, pct) =>
         {
@@ -132,7 +197,7 @@ public partial class CollectionViewModel : BaseViewModel
         if (_grid != null) _grid.ViewMode = value;
     }
 
-    private const int FilterTextDebounceMs = 300;
+    private const int SearchTextDebounceMs = 300;
 
     private CancellationTokenSource? _filterCts;
     private CancellationTokenSource? _filterDebounceCts;
@@ -143,7 +208,42 @@ public partial class CollectionViewModel : BaseViewModel
         _ = ApplyFilterAndSortAsync(immediate: true);
     }
 
-    partial void OnFilterTextChanged(string value) => _ = ApplyFilterAndSortAfterDebounceAsync();
+    partial void OnSearchTextChanged(string value)
+    {
+        OnPropertyChanged(nameof(FiltersButtonText));
+        _ = ApplyFilterAndSortAfterDebounceAsync();
+    }
+
+    partial void OnCollectionFilterFoilOnlyChanged(bool value) => _ = ApplyFilterAndSortAsync(immediate: true);
+
+    partial void OnCollectionFilterEtchedOnlyChanged(bool value) => _ = ApplyFilterAndSortAsync(immediate: true);
+
+    partial void OnCollectionFilterMinQtyPickerIndexChanged(int value) => _ = ApplyFilterAndSortAsync(immediate: true);
+
+    /// <summary>Opens the shared filters page (same sheet as Search).</summary>
+    private async Task OpenFiltersAsync()
+    {
+        await _filtersOpener.OpenAsync(this, _cardManager);
+    }
+
+    /// <summary>Clears name query and all advanced filters, then reapplies the grid.</summary>
+    private async Task ClearCollectionFiltersAsync()
+    {
+        SearchText = "";
+        CurrentOptions = new SearchOptions();
+        CollectionFilterFoilOnly = false;
+        CollectionFilterEtchedOnly = false;
+        CollectionFilterMinQtyPickerIndex = 0;
+        OnPropertyChanged(nameof(FiltersButtonText));
+        await ApplyFilterAndSortAsync(immediate: true);
+    }
+
+    public async Task ApplyFiltersAndSearchAsync(SearchOptions options)
+    {
+        CurrentOptions = options;
+        OnPropertyChanged(nameof(FiltersButtonText));
+        await ApplyFilterAndSortAsync(immediate: true);
+    }
 
     /// <summary>Debounced path for filter text so each keystroke does not schedule a full filter+sort over the collection.</summary>
     private async Task ApplyFilterAndSortAfterDebounceAsync()
@@ -153,7 +253,7 @@ public partial class CollectionViewModel : BaseViewModel
         var debounceToken = _filterDebounceCts.Token;
         try
         {
-            await Task.Delay(FilterTextDebounceMs, debounceToken).ConfigureAwait(false);
+            await Task.Delay(SearchTextDebounceMs, debounceToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -193,18 +293,36 @@ public partial class CollectionViewModel : BaseViewModel
 
         try
         {
-            var filteredForSort = await Task.Run(() =>
+            CollectionItem[] filteredForSort;
+
+            var merged = CurrentOptions.Clone();
+            merged.NameFilter = SearchText?.Trim() ?? "";
+
+            if (!merged.HasActiveFilters)
             {
-                if (token.IsCancellationRequested) return Array.Empty<CollectionItem>();
+                filteredForSort = _allItems;
+            }
+            else
+            {
+                if (token.IsCancellationRequested) return;
+                var cards = await _cardManager.SearchCardsWithOptionsAsync(
+                    merged,
+                    nameContains: null,
+                    inCollectionOnly: true,
+                    limit: 0,
+                    restrictToDeckLegalFormat: false,
+                    DeckFormat.Standard).ConfigureAwait(false);
+                if (token.IsCancellationRequested) return;
+                var allowed = new HashSet<string>(cards.Select(static c => c.Uuid), StringComparer.Ordinal);
+                filteredForSort = CollectionFilterHelper.IntersectPreservingOrder(_allItems, allowed);
+            }
 
-                IEnumerable<CollectionItem> result = _allItems;
-
-                var filter = FilterText?.Trim();
-                if (!string.IsNullOrEmpty(filter))
-                    result = result.Where(i => i.Card.Name.Contains(filter, StringComparison.OrdinalIgnoreCase));
-
-                return result.ToArray();
-            }, token);
+            var minQty = CollectionFilterMinQtyPickerIndex <= 0 ? 0 : CollectionFilterMinQtyPickerIndex + 1;
+            filteredForSort = CollectionFilterHelper.ApplyRowFilters(
+                filteredForSort,
+                CollectionFilterFoilOnly,
+                CollectionFilterEtchedOnly,
+                minQty);
 
             if (token.IsCancellationRequested) return;
 
@@ -212,9 +330,13 @@ public partial class CollectionViewModel : BaseViewModel
                 && PricePreferences.PricesDataEnabled
                 && PricePreferences.CollectionPriceDisplayEnabled;
 
+            var usePriceDeltaSort = SortMode == CollectionSortMode.PriceChangePercent
+                && PricePreferences.PricesDataEnabled
+                && PricePreferences.CollectionPriceDisplayEnabled;
+
             // Same CardPriceData + vendor priority as grid; sort key matches grid label (GetDisplayPrice uses non-finish preference).
             Dictionary<string, CardPriceData> sortPriceData = [];
-            if (usePriceSort && filteredForSort.Length > 0)
+            if ((usePriceSort || usePriceDeltaSort) && filteredForSort.Length > 0)
             {
                 await EnsureCollectionSortPriceDataAsync(token).ConfigureAwait(false);
                 if (token.IsCancellationRequested) return;
@@ -239,6 +361,34 @@ public partial class CollectionViewModel : BaseViewModel
                     CollectionSortMode.Price when usePriceSort => result.OrderByDescending(i => PriceDisplayHelper.GetNumericPrice(
                         sortPriceData.GetValueOrDefault(i.Card.Uuid), false, false)).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     CollectionSortMode.Price => result.OrderBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.PriceChangePercent when usePriceDeltaSort => result.OrderByDescending(i =>
+                    {
+                        var b = i.ReferencePriceUsd ?? 0;
+                        if (b <= 0)
+                            return double.MinValue;
+                        var cur = PriceDisplayHelper.GetNumericPrice(
+                            sortPriceData.GetValueOrDefault(i.Card.Uuid), i.IsFoil, i.IsEtched);
+                        if (cur <= 0)
+                            return double.MinValue;
+                        return (cur - b) / b * 100.0;
+                    }).ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.PriceChangePercent => result.OrderBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.SetNumber => result
+                        .OrderBy(i => i.Card.SetCode, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(i => i.Card.Number, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.DateAdded => result
+                        .OrderByDescending(i => i.DateAdded)
+                        .ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.Quantity => result
+                        .OrderByDescending(i => i.Quantity)
+                        .ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.Type => result
+                        .OrderBy(i => i.Card.CardType, StringComparer.OrdinalIgnoreCase)
+                        .ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
+                    CollectionSortMode.CmcHigh => result
+                        .OrderByDescending(i => i.Card.EffectiveManaValue)
+                        .ThenBy(i => i.Card.Name, StringComparer.OrdinalIgnoreCase),
                     _ => result // Manual: keep loaded order
                 };
 
@@ -375,6 +525,41 @@ public partial class CollectionViewModel : BaseViewModel
     private async Task RefreshAsync()
     {
         await LoadCollectionAsync();
+    }
+
+    private async Task RecapturePriceBaselinesAsync()
+    {
+        if (!PricePreferences.PricesDataEnabled)
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                StatusIsError = true;
+                StatusMessage = "Turn on price data in Settings to capture baselines.";
+            });
+            return;
+        }
+
+        try
+        {
+            var updated = await _cardManager.RecaptureAllCollectionPriceBaselinesAsync();
+            await LoadCollectionAsync();
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                StatusIsError = false;
+                StatusMessage = updated > 0
+                    ? $"Updated price baselines for {updated} cards."
+                    : "No prices were available to store as baselines.";
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogStuff($"Recapture baselines failed: {ex.Message}", LogLevel.Error);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                StatusIsError = true;
+                StatusMessage = UserMessages.LoadFailed(ex.Message);
+            });
+        }
     }
 
     public async Task<Card?> GetCardDetailsAsync(string uuid)
@@ -573,7 +758,12 @@ public partial class CollectionViewModel : BaseViewModel
                 // empty when a previous filter matches no cards in the new dataset). Doing this
                 // after the load prevents a race where a filter-triggered apply could overwrite
                 // the grid with pre-import data.
-                FilterText = "";
+                SearchText = "";
+                CurrentOptions = new SearchOptions();
+                CollectionFilterFoilOnly = false;
+                CollectionFilterEtchedOnly = false;
+                CollectionFilterMinQtyPickerIndex = 0;
+                OnPropertyChanged(nameof(FiltersButtonText));
             }
         }
         catch (Exception ex)

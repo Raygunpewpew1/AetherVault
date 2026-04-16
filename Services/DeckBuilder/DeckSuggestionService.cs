@@ -50,10 +50,24 @@ public static class DeckSuggestionService
             return [];
 
         ColorIdentity commanderIdentity = ColorIdentity.Empty;
-        if (!string.IsNullOrWhiteSpace(deck.ColorIdentity))
-            commanderIdentity = ColorIdentity.FromString(deck.ColorIdentity);
+        if (!string.IsNullOrWhiteSpace(deck.CommanderId))
+        {
+            var (resolved, had, warn) = await DeckColorIdentityResolver.TryResolveCommanderDeckColorIdentityAsync(
+                    cardRepository, deck, deckEntities, cardMap)
+                .ConfigureAwait(false);
+            if (had && warn == null)
+                commanderIdentity = resolved;
+            else if (commanderCard != null)
+                commanderIdentity = commanderCard.GetColorIdentity();
+        }
         else if (commanderCard != null)
+        {
             commanderIdentity = commanderCard.GetColorIdentity();
+        }
+        else if (!string.IsNullOrWhiteSpace(deck.ColorIdentity))
+        {
+            commanderIdentity = deck.ParsedColorIdentity;
+        }
 
         var helper = cardRepository.CreateSearchHelper();
         helper.SearchCards();
@@ -68,7 +82,7 @@ public static class DeckSuggestionService
         var candidates = await cardRepository.SearchAdvancedAsync(helper);
         cancellationToken.ThrowIfCancellationRequested();
 
-        int maxCopies = format.IsCommanderLikeRules() ? 1 : 4;
+        int maxCopies = DeckFormatRules.MaxNonBasicCopies(format);
 
         var scored = new List<(Card Card, int Score)>();
         foreach (var card in candidates)

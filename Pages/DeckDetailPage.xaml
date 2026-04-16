@@ -10,6 +10,7 @@
              xmlns:views="clr-namespace:AetherVault.Views"
              xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              xmlns:constants="clr-namespace:AetherVault.Constants"
+             xmlns:deckbrowse="clr-namespace:AetherVault.Services.DeckBuilder;assembly=AetherVault"
              x:Class="AetherVault.Pages.DeckDetailPage"
              Title="{Binding Deck.Name}"
              BackgroundColor="{StaticResource Background}"
@@ -249,6 +250,34 @@
                         </Button>
                     </HorizontalStackLayout>
                 </Grid>
+
+                <VerticalStackLayout Spacing="6"
+                                     Margin="0,8,0,0">
+                    <Label Text="{x:Static constants:UserMessages.DeckAddQuickListsTitle}"
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource TextSecondary}" />
+                    <CollectionView ItemsSource="{Binding QuickBrowseListChips}"
+                                    SelectionMode="None"
+                                    HeightRequest="40"
+                                    HorizontalScrollBarVisibility="Never">
+                        <CollectionView.ItemsLayout>
+                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                        </CollectionView.ItemsLayout>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="deckbrowse:DeckBrowseListChipItem">
+                                <Button Text="{Binding DisplayText}"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.OpenAddCardsFromQuickListCommand}"
+                                        CommandParameter="{Binding .}"
+                                        FontSize="11"
+                                        Padding="10,6"
+                                        CornerRadius="14"
+                                        BackgroundColor="{StaticResource CardBackground}"
+                                        TextColor="{StaticResource TextPrimary}" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </Border>
 

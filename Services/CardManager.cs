@@ -488,12 +488,15 @@ public class CardManager : IDisposable
     {
         await _collectionRepository.AddCardAsync(cardUuid, quantity, isFoil, isEtched);
         InvalidateTotalValueCache();
+        await TrySeedReferenceBaselineForRowAsync(cardUuid).ConfigureAwait(false);
     }
 
     public async Task AddCardsToCollectionBulkAsync(IEnumerable<(string cardUUID, int quantity, bool isFoil, bool isEtched)> cards)
     {
         await _collectionRepository.AddCardsBulkAsync(cards);
         InvalidateTotalValueCache();
+        foreach (var uuid in cards.Select(static c => c.cardUUID).Where(static u => !string.IsNullOrEmpty(u)).Distinct(StringComparer.Ordinal))
+            await TrySeedReferenceBaselineForRowAsync(uuid).ConfigureAwait(false);
     }
 
     public async Task RemoveCardFromCollectionAsync(string cardUuid)
@@ -506,6 +509,64 @@ public class CardManager : IDisposable
     {
         await _collectionRepository.UpdateQuantityAsync(cardUuid, quantity, isFoil, isEtched);
         InvalidateTotalValueCache();
+        if (quantity > 0)
+            await TrySeedReferenceBaselineForRowAsync(cardUuid).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Overwrites each collection row's stored USD baseline with the current preferred retail unit price.
+    /// </summary>
+    public async Task<int> RecaptureAllCollectionPriceBaselinesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!PricePreferences.PricesDataEnabled || _priceManager == null)
+            return 0;
+
+        var entries = await _collectionRepository.GetPricingEntriesAsync().ConfigureAwait(false);
+        if (entries.Count == 0)
+            return 0;
+
+        var uuids = entries.Select(static e => e.Uuid).Where(static u => !string.IsNullOrEmpty(u)).Distinct(StringComparer.Ordinal).ToArray();
+        if (uuids.Length == 0)
+            return 0;
+
+        var prices = await GetCardPricesBulkAsync(uuids).ConfigureAwait(false);
+        var utc = DateTime.UtcNow;
+        int n = 0;
+        foreach (var e in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!prices.TryGetValue(e.Uuid, out var p))
+                continue;
+            var unit = PriceDisplayHelper.GetNumericPrice(p, e.IsFoil, e.IsEtched);
+            if (unit <= 0)
+                continue;
+            await _collectionRepository.SetReferenceBaselineAsync(e.Uuid, unit, utc).ConfigureAwait(false);
+            n++;
+        }
+
+        return n;
+    }
+
+    private async Task TrySeedReferenceBaselineForRowAsync(string cardUuid)
+    {
+        if (!PricePreferences.PricesDataEnabled || _priceManager == null)
+            return;
+        if (string.IsNullOrEmpty(cardUuid))
+            return;
+
+        var flags = await _collectionRepository.TryGetFinishFlagsAsync(cardUuid).ConfigureAwait(false);
+        if (flags is not var (isFoil, isEtched))
+            return;
+
+        var (found, priceData) = await GetCardPricesAsync(cardUuid).ConfigureAwait(false);
+        if (!found)
+            return;
+
+        var unit = PriceDisplayHelper.GetNumericPrice(priceData, isFoil, isEtched);
+        if (unit <= 0)
+            return;
+
+        await _collectionRepository.TrySetReferenceBaselineIfMissingAsync(cardUuid, unit, DateTime.UtcNow).ConfigureAwait(false);
     }
 
     public async Task<bool> IsInCollectionAsync(string cardUuid)

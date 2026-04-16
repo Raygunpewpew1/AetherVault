@@ -1,9 +1,7 @@
-using AetherVault.Core;
 using AetherVault.Services;
 using AetherVault.ViewModels;
 using CommunityToolkit.Maui;
 using CommunityToolkit.Maui.Extensions;
-using CommunityToolkit.Maui.Views;
 
 namespace AetherVault.Pages;
 

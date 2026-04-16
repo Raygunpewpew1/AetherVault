@@ -27,7 +27,7 @@ public class DeckSuggestionTests
         var stats = new DeckStats();
         var profile = new DeckCohesionProfile();
         int s = DeckSuggestionService.ComputeSuggestionScore(forest, CommanderArchetype.Unknown, null, stats, profile);
-        Assert.True(s < -1_000_000_000);
+        Assert.Equal(int.MinValue / 4, s);
     }
 
     [Fact]

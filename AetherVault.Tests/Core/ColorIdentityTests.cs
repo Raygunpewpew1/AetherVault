@@ -46,6 +46,18 @@ public class ColorIdentityTests
     }
 
     [Fact]
+    public void UnionAll_CombinesDistinctColors()
+    {
+        var a = new ColorIdentity { W = true };
+        var b = new ColorIdentity { U = true };
+        var u = ColorIdentity.UnionAll([a, b]);
+        Assert.True(u.W);
+        Assert.True(u.U);
+        Assert.Equal(2, u.Count);
+        Assert.Equal("WU", u.AsString());
+    }
+
+    [Fact]
     public void AllColors_ContainsAll()
     {
         var ci = ColorIdentity.AllColors;

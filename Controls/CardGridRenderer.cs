@@ -47,6 +47,9 @@ internal sealed class CardGridRenderer : IDisposable
     private SKPaint? _shadowPaint;
     private SKPaint? _borderPaint;
     private SKPaint? _chipBgPaint;
+    private SKPaint? _deltaPosPaint;
+    private SKPaint? _deltaNegPaint;
+    private SKPaint? _deltaNeutralPaint;
     private SKPaint? _shimmerPaint;
     private SKShader? _shimmerShader;
     private SKPaint? _trailParticlePaint;
@@ -85,6 +88,9 @@ internal sealed class CardGridRenderer : IDisposable
         _shadowPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, 140), MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, 10f) };
         _borderPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(100, 200, 255, 220), Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
         _chipBgPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(0, 0, 0, 185) };
+        _deltaPosPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(130, 210, 130) };
+        _deltaNegPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(255, 140, 120) };
+        _deltaNeutralPaint ??= new SKPaint { IsAntialias = true, Color = new SKColor(170, 170, 170) };
         _shimmerPaint ??= new SKPaint { IsAntialias = true };
         _cardRoundRect ??= new SKRoundRect();
         _imageRoundRect ??= new SKRoundRect();
@@ -132,6 +138,9 @@ internal sealed class CardGridRenderer : IDisposable
         _shadowPaint?.Dispose(); _shadowPaint = null;
         _borderPaint?.Dispose(); _borderPaint = null;
         _chipBgPaint?.Dispose(); _chipBgPaint = null;
+        _deltaPosPaint?.Dispose(); _deltaPosPaint = null;
+        _deltaNegPaint?.Dispose(); _deltaNegPaint = null;
+        _deltaNeutralPaint?.Dispose(); _deltaNeutralPaint = null;
         _shimmerPaint?.Dispose(); _shimmerPaint = null;
         _shimmerShader?.Dispose(); _shimmerShader = null;
         _trailParticlePaint?.Dispose(); _trailParticlePaint = null;
@@ -331,6 +340,16 @@ internal sealed class CardGridRenderer : IDisposable
         }
     }
 
+    private SKPaint DeltaPaintForLabel(string label)
+    {
+        EnsureResources();
+        if (label.Length > 0 && label[0] == '+')
+            return _deltaPosPaint!;
+        if (label.Length > 0 && label[0] == '-')
+            return _deltaNegPaint!;
+        return _deltaNeutralPaint!;
+    }
+
     private void DrawQuantityBadge(SKCanvas canvas, int quantity, float rightEdge, float top, float height)
     {
         if (quantity <= 0) return;
@@ -379,7 +398,7 @@ internal sealed class CardGridRenderer : IDisposable
 
         DrawWrappedText(canvas, card.Name, textX, textY, textWidth, _textFont, _textPaint);
 
-        // 4. Price chip
+        // 4. Price chip (+ optional % vs baseline on collection rows)
         if (!string.IsNullOrEmpty(card.CachedDisplayPrice))
         {
             const float chipPadX = 5f;
@@ -387,16 +406,26 @@ internal sealed class CardGridRenderer : IDisposable
             const float chipRadius = 4f;
             const float chipMargin = 6f;
 
+            bool hasDelta = !string.IsNullOrEmpty(card.CollectionPriceChangeLabel);
+            float deltaBlock = hasDelta ? _priceFont!.Size * 0.92f + 2f : 0f;
             float priceTextWidth = _priceFont!.MeasureText(card.CachedDisplayPrice);
-            float chipW = priceTextWidth + chipPadX * 2f;
-            float chipH = _priceFont.Size + chipPadY * 2f;
+            float deltaW = hasDelta ? _priceFont.MeasureText(card.CollectionPriceChangeLabel) : 0f;
+            float chipW = Math.Max(priceTextWidth, deltaW) + chipPadX * 2f;
+            float chipH = _priceFont.Size + chipPadY * 2f + deltaBlock;
             float chipY = imageRect.Bottom - (imageRect.Height * 0.15f) - chipH;
             float chipX = imageRect.Left + chipMargin;
             var chipRect = new SKRect(chipX, chipY, chipX + chipW, chipY + chipH);
 
             canvas.DrawRoundRect(chipRect, chipRadius, chipRadius, _chipBgPaint);
-            canvas.DrawText(card.CachedDisplayPrice, chipRect.Left + chipPadX, chipRect.Bottom - chipPadY - 1f,
-                SKTextAlign.Left, _priceFont, _pricePaint);
+            float yPrice = chipRect.Top + chipPadY + _priceFont.Size * 0.85f;
+            canvas.DrawText(card.CachedDisplayPrice, chipRect.Left + chipPadX, yPrice, SKTextAlign.Left, _priceFont, _pricePaint);
+            if (hasDelta)
+            {
+                float yDelta = chipRect.Bottom - chipPadY - 1f;
+                float inner = chipW - chipPadX * 2f;
+                float dx = chipRect.Left + chipPadX + Math.Max(0f, (inner - deltaW) * 0.5f);
+                canvas.DrawText(card.CollectionPriceChangeLabel, dx, yDelta, SKTextAlign.Left, _priceFont, DeltaPaintForLabel(card.CollectionPriceChangeLabel));
+            }
         }
 
         // 5. Quantity badge
@@ -434,8 +463,10 @@ internal sealed class CardGridRenderer : IDisposable
         float lineHeight = nameSize * 1.3f;
         float secLineHeight = secSize * 1.3f;
 
+        bool hasDelta = !string.IsNullOrEmpty(card.CollectionPriceChangeLabel);
+
         // Vertically distribute: name + type + set+price block, centered
-        float blockHeight = lineHeight + secLineHeight + secLineHeight;
+        float blockHeight = lineHeight + secLineHeight + secLineHeight + (hasDelta ? secLineHeight * 0.95f : 0f);
         float textTop = row.Top + (row.Height - blockHeight) / 2f + nameSize;
 
         // Card name
@@ -462,6 +493,12 @@ internal sealed class CardGridRenderer : IDisposable
         if (!string.IsNullOrEmpty(card.CachedDisplayPrice))
         {
             canvas.DrawText(card.CachedDisplayPrice, textRight, metaY, SKTextAlign.Right, _priceFont!, _pricePaint!);
+        }
+
+        if (hasDelta)
+        {
+            float deltaY = metaY + secLineHeight * 0.92f;
+            canvas.DrawText(card.CollectionPriceChangeLabel, textRight, deltaY, SKTextAlign.Right, _priceFont!, DeltaPaintForLabel(card.CollectionPriceChangeLabel));
         }
     }
 

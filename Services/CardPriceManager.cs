@@ -26,6 +26,20 @@ public class CardPriceManager : IDisposable
     private const string DbVersionFile = "db_meta_version.txt";
     private const string DbLastCheckFile = "db_last_checked.txt";
 
+    /// <summary>Date string from the last persisted price bundle meta (empty if never synced).</summary>
+    public static string GetPersistedPricesMetaDate()
+    {
+        var path = Path.Combine(AppDataManager.GetAppDataPath(), MetaDateFile);
+        try
+        {
+            return File.ReadAllText(path).Trim();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return "";
+        }
+    }
+
     /// <summary>Fired when price data load completes: (success, message).</summary>
     public Action<bool, string>? OnLoadComplete { get; set; }
 

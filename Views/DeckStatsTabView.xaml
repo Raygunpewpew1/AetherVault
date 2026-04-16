@@ -4,12 +4,57 @@
              xmlns:constants="clr-namespace:AetherVault.Constants"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
+             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
              x:Class="AetherVault.Views.DeckStatsTabView"
              x:DataType="vm:DeckDetailViewModel">
     <ScrollView Padding="16,8"
                 VerticalOptions="Fill"
                 HorizontalOptions="Fill">
         <VerticalStackLayout Spacing="16">
+            <Border Style="{StaticResource CardStyle}"
+                    Padding="12,10">
+                <VerticalStackLayout Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8">
+                        <Label Grid.Column="0"
+                               Text="Data snapshot"
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Command="{Binding ShowDeckDataTruthHelpCommand}"
+                                WidthRequest="40"
+                                HeightRequest="36"
+                                Padding="0"
+                                CornerRadius="10"
+                                FontFamily="FASolid"
+                                FontSize="16"
+                                Text="{x:Static fa:Solid.CircleInfo}"
+                                BackgroundColor="{StaticResource CardBackground}"
+                                TextColor="{StaticResource Accent}"
+                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDataTruthHelpTitle}" />
+                    </Grid>
+                    <Label Text="{Binding DeckDataTruthCatalogLine}"
+                           FontSize="11"
+                           TextColor="{StaticResource TextPrimary}" />
+                    <Label Text="{Binding DeckDataTruthPricesLine}"
+                           FontSize="11"
+                           TextColor="{StaticResource TextPrimary}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="4"
+                                 IsVisible="{Binding ShowDeckManaPipStrip}">
+                <Label Text="Mana symbols (non-land spell costs)"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextSecondary}" />
+                <controls:DeckManaPipStripView PipCounts="{Binding Stats.ManaPipCounts}"
+                                               HeightRequest="96"
+                                               BackgroundColor="Transparent" />
+            </VerticalStackLayout>
+
             <VerticalStackLayout Spacing="4">
                 <Label Text="Mana Curve"
                        FontSize="13"

@@ -1,7 +1,6 @@
 using AetherVault.Core;
 using CommunityToolkit.Maui.Views;
 using System.Collections.ObjectModel;
-using System.Threading;
 
 namespace AetherVault.Pages;
 

@@ -136,6 +136,30 @@ public class MtgSearchHelper
         return this;
     }
 
+    /// <summary>Matches any exact English card name (primary or face name). Empty entries skipped.</summary>
+    public MtgSearchHelper WhereNameEqualsAny(IReadOnlyList<string> exactNames)
+    {
+        if (exactNames == null || exactNames.Count == 0)
+            return this;
+
+        var parts = new List<string>();
+        foreach (var raw in exactNames)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                continue;
+            var name = raw.Trim();
+            var param = NextParam("NameIn");
+            parts.Add($"((c.name = @{param}) OR (c.faceName = @{param}))");
+            _params.Add(param, name);
+        }
+
+        if (parts.Count == 0)
+            return this;
+
+        _whereConditions.Add("(" + string.Join(" OR ", parts) + ")");
+        return this;
+    }
+
     public MtgSearchHelper WhereTextContains(string text)
     {
         var param = NextParam("Text");
@@ -375,6 +399,13 @@ public class MtgSearchHelper
     public MtgSearchHelper WhereCommanderOnly()
     {
         _whereConditions.Add(SqlQueries.CondCommanderOnly);
+        return this;
+    }
+
+    /// <summary>Restricts to cards with MTGJSON <c>isGameChanger</c> (Commander game changers).</summary>
+    public MtgSearchHelper WhereGameChangerOnly()
+    {
+        _whereConditions.Add(SqlQueries.CondGameChangerOnly);
         return this;
     }
 

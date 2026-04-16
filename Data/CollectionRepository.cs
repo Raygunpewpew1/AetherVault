@@ -1,9 +1,10 @@
-using System.Text;
 using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using System.Globalization;
+using System.Text;
 
 namespace AetherVault.Data;
 
@@ -62,6 +63,14 @@ public class CollectionRepository : ICollectionRepository
         public string Number { get; set; } = "";
         public long? IsOnlineOnly { get; set; }
         public string ScryfallId { get; set; } = "";
+        public double? ReferencePriceUsd { get; set; }
+        public string ReferenceCapturedAt { get; set; } = "";
+    }
+
+    private sealed class CollectionFinishRow
+    {
+        public int? IsFoil { get; set; }
+        public int? IsEtched { get; set; }
     }
 
     private readonly DatabaseManager _db;
@@ -177,12 +186,25 @@ public class CollectionRepository : ICollectionRepository
             for (int i = 0; i < rows.Count; i++)
             {
                 var row = rows[i];
+                DateTime? refCaptured = null;
+                if (!string.IsNullOrEmpty(row.ReferenceCapturedAt)
+                    && DateTime.TryParse(
+                        row.ReferenceCapturedAt,
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                        out var rc))
+                {
+                    refCaptured = rc;
+                }
+
                 items[i] = new CollectionItem
                 {
                     CardUuid = row.CardUuid,
                     Quantity = row.Quantity,
                     IsFoil = row.IsFoil.HasValue && row.IsFoil.Value != 0,
                     IsEtched = row.IsEtched.HasValue && row.IsEtched.Value != 0,
+                    ReferencePriceUsd = row.ReferencePriceUsd is > 0 ? row.ReferencePriceUsd : null,
+                    ReferenceCapturedAt = refCaptured,
                     DateAdded = DateTime.TryParse(row.DateAdded, out var d) ? d : DateTime.Now,
                     SortOrder = row.SortOrder ?? 0,
                     Card = ToSlimCollectionCard(row),
@@ -428,6 +450,74 @@ public class CollectionRepository : ICollectionRepository
                     trans);
             }
         });
+    }
+
+    public async Task<(bool IsFoil, bool IsEtched)?> TryGetFinishFlagsAsync(string cardUuid)
+    {
+        if (string.IsNullOrEmpty(cardUuid))
+            return null;
+
+        await _lock.WaitAsync();
+        try
+        {
+            var row = await _db.CollectionConnection.QueryFirstOrDefaultAsync<CollectionFinishRow>(
+                SqlQueries.CollectionGetFinishFlags,
+                new { uuid = cardUuid });
+            if (row == null)
+                return null;
+
+            return (row.IsFoil.HasValue && row.IsFoil.Value != 0, row.IsEtched.HasValue && row.IsEtched.Value != 0);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task TrySetReferenceBaselineIfMissingAsync(string cardUuid, double unitPriceUsd, DateTime capturedUtc)
+    {
+        if (string.IsNullOrEmpty(cardUuid) || unitPriceUsd <= 0)
+            return;
+
+        await _lock.WaitAsync();
+        try
+        {
+            await _db.CollectionConnection.ExecuteAsync(
+                SqlQueries.CollectionTrySetReferenceBaselineIfMissing,
+                new
+                {
+                    uuid = cardUuid,
+                    price = unitPriceUsd,
+                    captured = capturedUtc.ToString("o", CultureInfo.InvariantCulture),
+                });
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task SetReferenceBaselineAsync(string cardUuid, double unitPriceUsd, DateTime capturedUtc)
+    {
+        if (string.IsNullOrEmpty(cardUuid) || unitPriceUsd <= 0)
+            return;
+
+        await _lock.WaitAsync();
+        try
+        {
+            await _db.CollectionConnection.ExecuteAsync(
+                SqlQueries.CollectionSetReferenceBaseline,
+                new
+                {
+                    uuid = cardUuid,
+                    price = unitPriceUsd,
+                    captured = capturedUtc.ToString("o", CultureInfo.InvariantCulture),
+                });
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     // ── Private helpers ─────────────────────────────────────────────

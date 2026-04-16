@@ -1,7 +1,7 @@
-using System.Data;
 using AetherVault.Services;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using System.Data;
 
 namespace AetherVault.Data;
 
@@ -241,6 +241,8 @@ public sealed class DatabaseManager : IDisposable
         bool hasSortOrder = false;
         bool hasIsFoil = false;
         bool hasIsEtched = false;
+        bool hasReferencePriceUsd = false;
+        bool hasReferenceCapturedAt = false;
 
         var columns = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.CollectionTableInfo);
         foreach (var col in columns)
@@ -248,6 +250,8 @@ public sealed class DatabaseManager : IDisposable
             if (col.Name == "sort_order") hasSortOrder = true;
             if (col.Name == "is_foil") hasIsFoil = true;
             if (col.Name == "is_etched") hasIsEtched = true;
+            if (col.Name == "reference_price_usd") hasReferencePriceUsd = true;
+            if (col.Name == "reference_captured_at") hasReferenceCapturedAt = true;
         }
 
         if (!hasSortOrder)
@@ -267,6 +271,18 @@ public sealed class DatabaseManager : IDisposable
         {
             Logger.LogStuff("Migrating collection table: adding is_etched column.", LogLevel.Info);
             await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddIsEtched);
+        }
+
+        if (!hasReferencePriceUsd)
+        {
+            Logger.LogStuff("Migrating collection table: adding reference_price_usd column.", LogLevel.Info);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddReferencePriceUsd);
+        }
+
+        if (!hasReferenceCapturedAt)
+        {
+            Logger.LogStuff("Migrating collection table: adding reference_captured_at column.", LogLevel.Info);
+            await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddReferenceCapturedAt);
         }
 
         // Migrate Decks table — add CommanderName if missing

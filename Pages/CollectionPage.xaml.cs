@@ -146,9 +146,11 @@ public partial class CollectionPage : ContentPage
         const string import = "Import";
         const string export = "Export";
         const string refresh = "Refresh";
+        const string clearFilters = "Clear filters";
+        const string captureBaselines = "Update price baselines…";
         const string clear = "Clear collection…";
 
-        var pick = await DisplayActionSheetAsync("Collection", "Cancel", null, layout, import, export, refresh, clear);
+        var pick = await DisplayActionSheetAsync("Collection", "Cancel", null, layout, import, export, refresh, clearFilters, captureBaselines, clear);
         if (pick == layout)
         {
             if (_viewModel.ToggleViewModeCommand.CanExecute(null))
@@ -168,6 +170,22 @@ public partial class CollectionPage : ContentPage
         if (pick == refresh && _viewModel.RefreshCommand.CanExecute(null))
         {
             await _viewModel.RefreshCommand.ExecuteAsync(null);
+            return;
+        }
+        if (pick == clearFilters && _viewModel.ClearCollectionFiltersCommand.CanExecute(null))
+        {
+            await _viewModel.ClearCollectionFiltersCommand.ExecuteAsync(null);
+            return;
+        }
+        if (pick == captureBaselines)
+        {
+            bool ok = await DisplayAlertAsync(
+                "Update price baselines?",
+                "Each collection line will store its current retail unit price as the baseline used for percent change on the grid. Quantities are not changed.",
+                "Update",
+                "Cancel");
+            if (ok && _viewModel.RecapturePriceBaselinesCommand.CanExecute(null))
+                await _viewModel.RecapturePriceBaselinesCommand.ExecuteAsync(null);
             return;
         }
         if (pick != clear)

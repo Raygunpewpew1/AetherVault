@@ -1,7 +1,6 @@
 using AetherVault.Models;
 using AetherVault.Services;
 using AetherVault.ViewModels;
-using Microsoft.Maui.Devices;
 #if ANDROID
 using Android.OS;
 #endif

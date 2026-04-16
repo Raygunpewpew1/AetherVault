@@ -14,6 +14,9 @@ public static class SearchOptionsApplier
         if (!string.IsNullOrEmpty(options.NameFilter))
             helper.WhereNameContains(options.NameFilter);
 
+        if (options.NameEqualsAny is { Count: > 0 })
+            helper.WhereNameEqualsAny([.. options.NameEqualsAny]);
+
         if (!string.IsNullOrEmpty(options.TextFilter))
             helper.WhereTextContains(options.TextFilter);
 
@@ -75,6 +78,9 @@ public static class SearchOptionsApplier
 
         if (options.CommanderOnly)
             helper.WhereCommanderOnly();
+
+        if (options.GameChangerOnly)
+            helper.WhereGameChangerOnly();
 
         if (options.AvailabilityFilter.Count > 0)
             helper.WhereAvailabilityAny(options.AvailabilityFilter);

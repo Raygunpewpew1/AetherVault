@@ -97,6 +97,90 @@ public class DeckBuilderTests
     }
 
     [Fact]
+    public async Task AddCard_CommanderSectionPartner_ExpandsColorIdentityForValidation()
+    {
+        var deckId = await _service.CreateDeckAsync("Partner Deck", DeckFormat.Commander);
+
+        var commander = CreateCard("cmdr-w", "Mono W", DeckFormat.Commander, LegalityStatus.Legal);
+        commander.CardType = "Legendary Creature";
+        commander.Colors = "W";
+        _cardRepo.AddCard(commander);
+
+        var partner = CreateCard("partner-u", "Partner U", DeckFormat.Commander, LegalityStatus.Legal);
+        partner.CardType = "Legendary Creature";
+        partner.Colors = "U";
+        _cardRepo.AddCard(partner);
+
+        await _service.SetCommanderAsync(deckId, commander.Uuid);
+
+        await _service.AddCardAsync(deckId, partner.Uuid, 1, DeckCsvV1.Sections.Commander, skipLegalityCheck: true);
+
+        var blueCard = CreateCard("island-golem", "Thing", DeckFormat.Commander, LegalityStatus.Legal);
+        blueCard.Colors = "U";
+        _cardRepo.AddCard(blueCard);
+
+        var result = await _service.AddCardAsync(deckId, blueCard.Uuid, 1);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task ApplyEditorMutations_CommanderDeck_CachesCommanderIdentityForBatch()
+    {
+        var deckId = await _service.CreateDeckAsync("Batch Cmd", DeckFormat.Commander);
+        var commander = CreateCard("cmdr-batch", "Cmdr", DeckFormat.Commander, LegalityStatus.Legal);
+        commander.CardType = "Legendary Creature";
+        commander.Colors = "W";
+        _cardRepo.AddCard(commander);
+        var w1 = CreateCard("w1", "White One", DeckFormat.Commander, LegalityStatus.Legal);
+        w1.Colors = "W";
+        var w2 = CreateCard("w2", "White Two", DeckFormat.Commander, LegalityStatus.Legal);
+        w2.Colors = "W";
+        _cardRepo.AddCard(w1);
+        _cardRepo.AddCard(w2);
+
+        await _service.SetCommanderAsync(deckId, commander.Uuid);
+        var deck = await _deckRepo.GetDeckAsync(deckId);
+        Assert.NotNull(deck);
+        deck!.ColorIdentity = "";
+        await _deckRepo.UpdateDeckAsync(deck);
+
+        _cardRepo.ResetGetCardDetailsCallCount();
+
+        var mutations = new DeckEditorMutation[]
+        {
+            new(DeckEditorMutationKind.Add, w1.Uuid, "Main", null, 1),
+            new(DeckEditorMutationKind.Add, w2.Uuid, "Main", null, 1),
+        };
+
+        var result = await _service.ApplyEditorMutationsAsync(deckId, mutations);
+        Assert.True(result.IsSuccess);
+
+        // One commander lookup for batch color resolution + one per distinct added card (no per-add commander refetch).
+        Assert.Equal(3, _cardRepo.GetCardDetailsAsyncCallCount);
+    }
+
+    [Fact]
+    public void DeckFormatRules_MaxNonBasicCopies_MatchesCommanderLikeRules()
+    {
+        Assert.Equal(1, DeckFormatRules.MaxNonBasicCopies(DeckFormat.Commander));
+        Assert.Equal(1, DeckFormatRules.MaxNonBasicCopies(DeckFormat.Duel));
+        Assert.Equal(4, DeckFormatRules.MaxNonBasicCopies(DeckFormat.Standard));
+    }
+
+    [Fact]
+    public void ValidationResult_Combined_PreservesDetailLines()
+    {
+        var a = ValidationResult.Warning("Size issue");
+        var b = ValidationResult.Warning("Color issue");
+        var c = ValidationResult.Combined(a, b);
+        Assert.True(c.IsWarning);
+        Assert.Equal(2, c.DetailLines.Count);
+        Assert.Contains("Size issue", c.Message);
+        Assert.Contains("Color issue", c.Message);
+    }
+
+    [Fact]
     public async Task AddCard_WrongColorIdentity_Commander_Fails()
     {
         // Arrange
@@ -645,7 +729,8 @@ public class DeckBuilderTests
         await _service.ValidateDeckAsync(deck, entities, partialMap);
         int after = _cardRepo.GetCardDetailsAsyncCallCount;
 
-        Assert.Equal(before + 1, after);
+        // Commander resolution (not in partial map) + one fallback fetch for the main-deck row missing from the map.
+        Assert.Equal(before + 2, after);
     }
 }
 
@@ -800,6 +885,8 @@ public class MockCardRepository : ICardRepository
 
     /// <summary>Increments on each <see cref="GetCardDetailsAsync"/> call (for perf-related tests).</summary>
     public int GetCardDetailsAsyncCallCount { get; private set; }
+
+    public void ResetGetCardDetailsCallCount() => GetCardDetailsAsyncCallCount = 0;
 
     public void AddCard(Card card)
     {

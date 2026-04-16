@@ -131,7 +131,7 @@ public static class UserMessages
     public const string DeckToolsImportFile = "Import deck file";
     public const string DeckToolsImportLink = "Import from link";
     public const string DeckToolsPasteList = "Paste decklist";
-    public const string DeckToolsBrowseMtgJson = "Browse sample decks";
+    public const string DeckToolsBrowseMtgJson = "Browse Preconstructed Decks";
     public const string DeckToolsExportAll = "Export all decks";
 
     /// <summary>Deck detail — overflow menu title.</summary>
@@ -199,7 +199,13 @@ public static class UserMessages
 
     public const string DeckAddSynergyChipsTitle = "Search by deck theme";
 
-    public const string DeckAddClearThemeFilter = "Clear theme filter";
+    public const string DeckAddClearThemeFilter = "Clear filter";
+
+    public const string DeckAddQuickListsTitle = "Popular lists";
+
+    public const string DeckAddListFilterPrefix = "List: ";
+
+    public const string DeckAddThemeFilterActiveCaption = "Theme filter active";
 
     public const string DeckAddStrategyTitle = "Deck strategy (suggestions)";
 
@@ -228,6 +234,8 @@ public static class UserMessages
     public const string DeckDetailLayoutCardGrid = "Card grid";
 
     public const string DeckDetailLayoutStatsHint = "Layout options apply to Main deck and Sideboard.";
+
+    public const string DeckDataTruthHelpTitle = "About this data";
 
     public const string ValidationDetailsTitle = "Validation details";
 

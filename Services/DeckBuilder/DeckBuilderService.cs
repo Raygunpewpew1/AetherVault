@@ -71,7 +71,7 @@ public class DeckBuilderService
 
         // Validate (pass quantityToAdd to check against limits relative to current state)
         // DeckValidator logic: total = existing + toAdd. Correct.
-        var result = await _validator.ValidateCardAdditionAsync(deck, card, quantityToAdd, currentCards, skipLegalityCheck);
+        var result = await _validator.ValidateCardAdditionAsync(deck, card, quantityToAdd, currentCards, skipLegalityCheck, preResolvedCommanderDeckIdentity: null, targetSection: section);
 
         if (result.IsError)
             return result;
@@ -109,7 +109,7 @@ public class DeckBuilderService
         if (deck == null) return ValidationResult.Error("Deck not found.");
 
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
-        if (format != DeckFormat.Commander && format != DeckFormat.Brawl && format != DeckFormat.Oathbreaker && format != DeckFormat.StandardBrawl && format != DeckFormat.PauperCommander && format != DeckFormat.Duel)
+        if (!DeckFormatRules.IsCommanderLike(format))
         {
             return ValidationResult.Error("This format does not support commanders.");
         }
@@ -126,10 +126,9 @@ public class DeckBuilderService
             await _repository.RemoveCardFromDeckAsync(deckId, deck.CommanderId, "Commander");
         }
 
-        // Update deck commander
+        // Update deck commander (cached color identity filled after Commander rows exist; see resolver union).
         deck.CommanderId = cardUuid;
         deck.CommanderName = card.Name;
-        deck.ColorIdentity = card.GetColorIdentity().AsString(); // "W,U,B" etc.
         deck.DateModified = DateTime.Now;
 
         // Also add commander to deck as a card in "Commander" section?
@@ -151,7 +150,19 @@ public class DeckBuilderService
 
         // Soft warning: after commander is set, check existing cards for color identity issues.
         var currentCards = await _repository.GetDeckCardsAsync(deckId);
-        var colorCheck = await _validator.ValidateDeckColorIdentityAsync(deck, currentCards);
+        var (resolvedIdentity, hadIdentity, identityWarn) =
+            await DeckColorIdentityResolver.TryResolveCommanderDeckColorIdentityAsync(_cardRepository, deck, currentCards, cardsByUuid: null);
+        if (identityWarn != null)
+            return identityWarn;
+
+        if (hadIdentity)
+        {
+            deck.ColorIdentity = resolvedIdentity.AsString();
+            deck.DateModified = DateTime.Now;
+            await _repository.UpdateDeckAsync(deck);
+        }
+
+        var colorCheck = await _validator.ValidateDeckColorIdentityAsync(deck, currentCards, null, hadIdentity ? resolvedIdentity : null);
         if (colorCheck.IsError || colorCheck.IsWarning)
             return colorCheck;
 
@@ -190,7 +201,7 @@ public class DeckBuilderService
 
         if (diff > 0)
         {
-            var result = await _validator.ValidateCardAdditionAsync(deck, card, diff, currentCards);
+            var result = await _validator.ValidateCardAdditionAsync(deck, card, diff, currentCards, skipLegalityCheck: false, preResolvedCommanderDeckIdentity: null, targetSection: section);
             if (result.IsError)
             {
                 return result;
@@ -211,12 +222,17 @@ public class DeckBuilderService
         if (deck == null) return 0;
 
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
-        int targetLands = format is DeckFormat.Commander or DeckFormat.Brawl or DeckFormat.Oathbreaker or DeckFormat.StandardBrawl or DeckFormat.PauperCommander or DeckFormat.Duel
+        int targetLands = DeckFormatRules.IsCommanderLike(format)
             ? 37
             : 24;
 
         var entities = await _repository.GetDeckCardsAsync(deckId);
-        var uuids = entities.Select(e => e.CardId).Distinct().ToArray();
+        var uuidSet = entities.Select(e => e.CardId).Distinct().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(deck.CommanderId))
+            uuidSet.Add(deck.CommanderId.Trim());
+        if (!string.IsNullOrWhiteSpace(deck.PartnerId))
+            uuidSet.Add(deck.PartnerId.Trim());
+        var uuids = uuidSet.Count > 0 ? uuidSet.ToArray() : [];
         Dictionary<string, Card> cardMap = uuids.Length > 0
             ? await _cardRepository.GetCardsAsync(uuids)
             : [];
@@ -234,28 +250,27 @@ public class DeckBuilderService
         int delta = targetLands - currentLands;
         if (delta <= 0) return 0;
 
-        // Determine basic land names based on deck color identity.
-        string identity = deck.ColorIdentity ?? "";
-        if (string.IsNullOrWhiteSpace(identity) && !string.IsNullOrWhiteSpace(deck.CommanderId))
+        // Determine basic land names from stored identity or commander/partner/commander-row union.
+        ColorIdentity colorIdentity = deck.ParsedColorIdentity;
+        if (colorIdentity.Count == 0 && !string.IsNullOrWhiteSpace(deck.CommanderId))
         {
-            // Some older decks may have a commander but no cached ColorIdentity.
-            // Derive it from commander and persist for future operations.
-            var commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
-            if (!string.IsNullOrEmpty(commander?.Uuid))
+            var (resolved, had, warn) = await DeckColorIdentityResolver.TryResolveCommanderDeckColorIdentityAsync(
+                _cardRepository, deck, entities, cardMap);
+            if (had && warn == null)
             {
-                identity = commander.GetColorIdentity().AsString();
-                deck.ColorIdentity = identity;
+                colorIdentity = resolved;
+                deck.ColorIdentity = resolved.AsString();
                 deck.DateModified = DateTime.Now;
                 await _repository.UpdateDeckAsync(deck);
             }
         }
 
         var landNames = new List<string>();
-        if (identity.Contains('W')) landNames.Add("Plains");
-        if (identity.Contains('U')) landNames.Add("Island");
-        if (identity.Contains('B')) landNames.Add("Swamp");
-        if (identity.Contains('R')) landNames.Add("Mountain");
-        if (identity.Contains('G')) landNames.Add("Forest");
+        if (colorIdentity.W) landNames.Add("Plains");
+        if (colorIdentity.U) landNames.Add("Island");
+        if (colorIdentity.B) landNames.Add("Swamp");
+        if (colorIdentity.R) landNames.Add("Mountain");
+        if (colorIdentity.G) landNames.Add("Forest");
 
         if (landNames.Count == 0)
             landNames.Add("Wastes");
@@ -422,44 +437,22 @@ public class DeckBuilderService
         var cardList = cards as List<DeckCardEntity> ?? [.. cards];
 
         var sizeResult = _validator.ValidateDeckSize(deck, cardList);
-        var colorResult = await _validator.ValidateDeckColorIdentityAsync(deck, cardList, cardsByUuid);
 
-        return CombineValidationResults(sizeResult, colorResult);
-    }
-
-    private static ValidationResult CombineValidationResults(ValidationResult sizeResult, ValidationResult colorResult)
-    {
-        var messages = new List<string>();
-        var level = ValidationLevel.Success;
-
-        void Apply(ValidationResult r)
+        ColorIdentity? preResolved = null;
+        var fmt = EnumExtensions.ParseDeckFormat(deck.Format);
+        if (DeckFormatRules.IsCommanderLike(fmt) && !string.IsNullOrEmpty(deck.CommanderId))
         {
-            if (r.Level == ValidationLevel.Success || string.IsNullOrWhiteSpace(r.Message))
-                return;
-
-            if (r.Level == ValidationLevel.Error)
-            {
-                level = ValidationLevel.Error;
-                messages.Add(r.Message);
-            }
-            else if (r.Level == ValidationLevel.Warning && level != ValidationLevel.Error)
-            {
-                level = ValidationLevel.Warning;
-                messages.Add(r.Message);
-            }
+            var (identity, had, warn) = await DeckColorIdentityResolver.TryResolveCommanderDeckColorIdentityAsync(
+                _cardRepository, deck, cardList, cardsByUuid);
+            if (warn != null)
+                return ValidationResult.Combined(sizeResult, warn);
+            if (had)
+                preResolved = identity;
         }
 
-        Apply(sizeResult);
-        Apply(colorResult);
+        var colorResult = await _validator.ValidateDeckColorIdentityAsync(deck, cardList, cardsByUuid, preResolved);
 
-        if (level == ValidationLevel.Success)
-            return ValidationResult.Success();
-
-        var message = string.Join(" ", messages);
-        var lines = (IReadOnlyList<string>)[.. messages];
-        return level == ValidationLevel.Error
-            ? new ValidationResult { Level = ValidationLevel.Error, Message = message, DetailLines = lines }
-            : new ValidationResult { Level = ValidationLevel.Warning, Message = message, DetailLines = lines };
+        return ValidationResult.Combined(sizeResult, colorResult);
     }
 
     /// <summary>
@@ -481,9 +474,19 @@ public class DeckBuilderService
         var beforeSnapshot = CloneDeckCardList(await _repository.GetDeckCardsAsync(deckId));
         var working = CloneDeckCardList(beforeSnapshot);
 
+        ColorIdentity? batchCommanderDeckIdentity = null;
+        var batchFormat = EnumExtensions.ParseDeckFormat(deck.Format);
+        if (DeckFormatRules.IsCommanderLike(batchFormat) && !string.IsNullOrEmpty(deck.CommanderId))
+        {
+            var (id, had, w) = await DeckColorIdentityResolver.TryResolveCommanderDeckColorIdentityAsync(
+                _cardRepository, deck, working, cardsByUuid: null);
+            if (had && w == null)
+                batchCommanderDeckIdentity = id;
+        }
+
         foreach (var m in mutations)
         {
-            var step = await ApplyOneEditorMutationAsync(deckId, deck, working, m, skipLegalityCheck);
+            var step = await ApplyOneEditorMutationAsync(deckId, deck, working, m, skipLegalityCheck, batchCommanderDeckIdentity);
             if (step.IsError)
                 return step;
         }
@@ -516,136 +519,137 @@ public class DeckBuilderService
         DeckEntity deck,
         List<DeckCardEntity> working,
         DeckEditorMutation m,
-        bool skipLegalityCheck)
+        bool skipLegalityCheck,
+        ColorIdentity? preResolvedCommanderDeckIdentity)
     {
         switch (m.Kind)
         {
             case DeckEditorMutationKind.Add:
-            {
-                int delta = m.Quantity <= 0 ? 1 : m.Quantity;
-                var card = await _cardRepository.GetCardDetailsAsync(m.CardId);
-                if (card == null)
-                    return ValidationResult.Error("Card not found.");
-
-                var vr = await _validator.ValidateCardAdditionAsync(deck, card, delta, working, skipLegalityCheck);
-                if (vr.IsError)
-                    return vr;
-
-                var ex = FindRow(working, m.CardId, m.Section);
-                if (ex != null)
-                    ex.Quantity += delta;
-                else
                 {
-                    working.Add(new DeckCardEntity
-                    {
-                        DeckId = deckId,
-                        CardId = m.CardId,
-                        Section = m.Section,
-                        Quantity = delta,
-                        DateAdded = DateTime.Now
-                    });
-                }
-
-                return ValidationResult.Success();
-            }
-
-            case DeckEditorMutationKind.SetQuantity:
-            {
-                var ex = FindRow(working, m.CardId, m.Section);
-                int oldQ = ex?.Quantity ?? 0;
-                int newQ = m.Quantity;
-                if (newQ < 0)
-                    newQ = 0;
-
-                int diff = newQ - oldQ;
-                if (diff > 0)
-                {
+                    int delta = m.Quantity <= 0 ? 1 : m.Quantity;
                     var card = await _cardRepository.GetCardDetailsAsync(m.CardId);
                     if (card == null)
                         return ValidationResult.Error("Card not found.");
 
-                    var vr = await _validator.ValidateCardAdditionAsync(deck, card, diff, working, skipLegalityCheck);
+                    var vr = await _validator.ValidateCardAdditionAsync(deck, card, delta, working, skipLegalityCheck, preResolvedCommanderDeckIdentity, m.Section);
                     if (vr.IsError)
                         return vr;
-                }
 
-                if (newQ <= 0)
-                {
+                    var ex = FindRow(working, m.CardId, m.Section);
                     if (ex != null)
-                        working.Remove(ex);
-                }
-                else if (ex != null)
-                {
-                    ex.Quantity = newQ;
-                }
-                else
-                {
-                    working.Add(new DeckCardEntity
+                        ex.Quantity += delta;
+                    else
                     {
-                        DeckId = deckId,
-                        CardId = m.CardId,
-                        Section = m.Section,
-                        Quantity = newQ,
-                        DateAdded = DateTime.Now
-                    });
+                        working.Add(new DeckCardEntity
+                        {
+                            DeckId = deckId,
+                            CardId = m.CardId,
+                            Section = m.Section,
+                            Quantity = delta,
+                            DateAdded = DateTime.Now
+                        });
+                    }
+
+                    return ValidationResult.Success();
                 }
 
-                return ValidationResult.Success();
-            }
+            case DeckEditorMutationKind.SetQuantity:
+                {
+                    var ex = FindRow(working, m.CardId, m.Section);
+                    int oldQ = ex?.Quantity ?? 0;
+                    int newQ = m.Quantity;
+                    if (newQ < 0)
+                        newQ = 0;
+
+                    int diff = newQ - oldQ;
+                    if (diff > 0)
+                    {
+                        var card = await _cardRepository.GetCardDetailsAsync(m.CardId);
+                        if (card == null)
+                            return ValidationResult.Error("Card not found.");
+
+                        var vr = await _validator.ValidateCardAdditionAsync(deck, card, diff, working, skipLegalityCheck, preResolvedCommanderDeckIdentity, m.Section);
+                        if (vr.IsError)
+                            return vr;
+                    }
+
+                    if (newQ <= 0)
+                    {
+                        if (ex != null)
+                            working.Remove(ex);
+                    }
+                    else if (ex != null)
+                    {
+                        ex.Quantity = newQ;
+                    }
+                    else
+                    {
+                        working.Add(new DeckCardEntity
+                        {
+                            DeckId = deckId,
+                            CardId = m.CardId,
+                            Section = m.Section,
+                            Quantity = newQ,
+                            DateAdded = DateTime.Now
+                        });
+                    }
+
+                    return ValidationResult.Success();
+                }
 
             case DeckEditorMutationKind.Remove:
-            {
-                var ex = FindRow(working, m.CardId, m.Section);
-                if (ex != null)
-                    working.Remove(ex);
-                return ValidationResult.Success();
-            }
-
-            case DeckEditorMutationKind.Move:
-            {
-                if (string.IsNullOrEmpty(m.TargetSection))
-                    return ValidationResult.Error("Move requires a target section.");
-
-                if (string.Equals(m.Section, m.TargetSection, StringComparison.OrdinalIgnoreCase))
-                    return ValidationResult.Error("Source and target section are the same.");
-
-                var from = FindRow(working, m.CardId, m.Section);
-                if (from == null || from.Quantity <= 0)
-                    return ValidationResult.Error("Nothing to move from source section.");
-
-                int amt = m.Quantity <= 0 ? from.Quantity : Math.Min(m.Quantity, from.Quantity);
-                if (amt <= 0)
-                    return ValidationResult.Error("Nothing to move.");
-
-                from.Quantity -= amt;
-                if (from.Quantity <= 0)
-                    working.Remove(from);
-
-                var card = await _cardRepository.GetCardDetailsAsync(m.CardId);
-                if (card == null)
-                    return ValidationResult.Error("Card not found.");
-
-                var addCheck = await _validator.ValidateCardAdditionAsync(deck, card, amt, working, skipLegalityCheck);
-                if (addCheck.IsError)
-                    return addCheck;
-
-                var to = FindRow(working, m.CardId, m.TargetSection);
-                if (to != null)
-                    to.Quantity += amt;
-                else
                 {
-                    working.Add(new DeckCardEntity
-                    {
-                        DeckId = deckId,
-                        CardId = m.CardId,
-                        Section = m.TargetSection,
-                        Quantity = amt,
-                        DateAdded = DateTime.Now
-                    });
+                    var ex = FindRow(working, m.CardId, m.Section);
+                    if (ex != null)
+                        working.Remove(ex);
+                    return ValidationResult.Success();
                 }
 
-                return ValidationResult.Success();
-            }
+            case DeckEditorMutationKind.Move:
+                {
+                    if (string.IsNullOrEmpty(m.TargetSection))
+                        return ValidationResult.Error("Move requires a target section.");
+
+                    if (string.Equals(m.Section, m.TargetSection, StringComparison.OrdinalIgnoreCase))
+                        return ValidationResult.Error("Source and target section are the same.");
+
+                    var from = FindRow(working, m.CardId, m.Section);
+                    if (from == null || from.Quantity <= 0)
+                        return ValidationResult.Error("Nothing to move from source section.");
+
+                    int amt = m.Quantity <= 0 ? from.Quantity : Math.Min(m.Quantity, from.Quantity);
+                    if (amt <= 0)
+                        return ValidationResult.Error("Nothing to move.");
+
+                    from.Quantity -= amt;
+                    if (from.Quantity <= 0)
+                        working.Remove(from);
+
+                    var card = await _cardRepository.GetCardDetailsAsync(m.CardId);
+                    if (card == null)
+                        return ValidationResult.Error("Card not found.");
+
+                    var addCheck = await _validator.ValidateCardAdditionAsync(deck, card, amt, working, skipLegalityCheck, preResolvedCommanderDeckIdentity, m.TargetSection);
+                    if (addCheck.IsError)
+                        return addCheck;
+
+                    var to = FindRow(working, m.CardId, m.TargetSection);
+                    if (to != null)
+                        to.Quantity += amt;
+                    else
+                    {
+                        working.Add(new DeckCardEntity
+                        {
+                            DeckId = deckId,
+                            CardId = m.CardId,
+                            Section = m.TargetSection,
+                            Quantity = amt,
+                            DateAdded = DateTime.Now
+                        });
+                    }
+
+                    return ValidationResult.Success();
+                }
 
             default:
                 return ValidationResult.Error("Unknown mutation.");

@@ -4,6 +4,7 @@ namespace AetherVault.Pages;
 
 public partial class DeckAddCardsPage : ContentPage
 {
+    /// <summary>Cap chrome height so the bottom results list always receives space on Android.</summary>
     private const double ChromeMaxHeightFraction = 0.42;
     private double _lastChromeCap;
 
@@ -15,10 +16,6 @@ public partial class DeckAddCardsPage : ContentPage
         PageRootGrid.SizeChanged += OnPageRootGridSizeChanged;
     }
 
-    /// <summary>
-    /// ScrollView inside a proportional Grid row can expand to full content height on Android,
-    /// starving the results row. Cap chrome height so the bottom list always gets space.
-    /// </summary>
     private void OnPageRootGridSizeChanged(object? sender, EventArgs e) => ApplyChromeMaxHeight();
 
     private void ApplyChromeMaxHeight()

@@ -90,6 +90,31 @@ public static class PriceDisplayHelper
         return price;
     }
 
+    /// <summary>
+    /// Percent change from a stored per-row baseline (USD) to the current preferred retail unit price.
+    /// Returns empty when baseline is unknown or current price is unavailable.
+    /// </summary>
+    public static string FormatCollectionPriceChangeLabel(
+        double? baselineUsd,
+        CardPriceData? current,
+        bool isFoil,
+        bool isEtched,
+        PriceVendor[]? vendorPriorityOverride = null)
+    {
+        if (baselineUsd is not double b || b <= 0 || current == null)
+            return "";
+        var cur = GetNumericPrice(current, isFoil, isEtched, vendorPriorityOverride);
+        if (cur <= 0)
+            return "";
+        var pct = (cur - b) / b * 100.0;
+        // Whole-percent labels: treat sub-half-percent moves as flat (avoids "+0%" from tiny float drift).
+        if (Math.Abs(pct) < 0.5)
+            return "0%";
+        if (pct > 0)
+            return $"+{pct:F0}%";
+        return $"{pct:F0}%";
+    }
+
     /// <summary>Preferred retail unit price for deck rows (non-foil); used for line totals and deck sum.</summary>
     public static bool TryGetPreferredUnitPrice(
         CardPriceData? data,

@@ -16,20 +16,29 @@
                 Style="{StaticResource CardStyle}"
                 Padding="8,6"
                 Margin="6,4,6,4">
-            <Grid RowDefinitions="Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto"
                   RowSpacing="6">
 
-                <!-- Filter + overflow menu -->
+                <!-- Name / filters / overflow -->
                 <Grid Grid.Row="0"
-                      ColumnDefinitions="*,Auto"
+                      ColumnDefinitions="*,Auto,Auto"
                       ColumnSpacing="8">
                     <material:TextField Grid.Column="0"
-                                        Title="Filter"
-                                        Text="{Binding FilterText, Mode=TwoWay}"
+                                        Title="Name"
+                                        Text="{Binding SearchText, Mode=TwoWay}"
                                         TitleColor="{StaticResource TextSecondary}"
                                         AccentColor="{StaticResource Primary}"
                                         AllowClear="True" />
-                    <ImageButton Grid.Column="1"
+                    <Button Grid.Column="1"
+                            Text="{Binding FiltersButtonText}"
+                            Command="{Binding OpenFiltersCommand}"
+                            FontSize="11"
+                            LineBreakMode="NoWrap"
+                            Padding="10,6"
+                            VerticalOptions="Center"
+                            BackgroundColor="{StaticResource CardBackground}"
+                            TextColor="{StaticResource Primary}" />
+                    <ImageButton Grid.Column="2"
                                  VerticalOptions="Center"
                                  BackgroundColor="{StaticResource CardBackground}"
                                  WidthRequest="44"
@@ -47,8 +56,41 @@
                     </ImageButton>
                 </Grid>
 
+                <!-- Foil / etched / min qty (collection DB fields only) -->
+                <HorizontalStackLayout Grid.Row="1"
+                                       Spacing="10"
+                                       VerticalOptions="Center">
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding CollectionFilterFoilOnly}"
+                                  VerticalOptions="Center" />
+                        <Label Text="Foil only"
+                               FontSize="11"
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding CollectionFilterEtchedOnly}"
+                                  VerticalOptions="Center" />
+                        <Label Text="Etched only"
+                               FontSize="11"
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label Text="Min copies"
+                           FontSize="11"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center" />
+                    <Picker Title=""
+                            ItemsSource="{Binding CollectionMinQtyPickerOptions}"
+                            SelectedIndex="{Binding CollectionFilterMinQtyPickerIndex, Mode=TwoWay}"
+                            FontSize="11"
+                            TextColor="{StaticResource TextPrimary}"
+                            WidthRequest="92"
+                            VerticalOptions="Center" />
+                </HorizontalStackLayout>
+
                 <!-- Stats, status, busy, sort -->
-                <Grid Grid.Row="1"
+                <Grid Grid.Row="2"
                       ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                       ColumnSpacing="6">
                     <Label Grid.Column="0"
@@ -96,9 +138,9 @@
                             ItemsSource="{Binding SortModeOptions}"
                             SelectedIndex="{Binding SortModeIndex, Mode=TwoWay}"
                             Title="Sort"
-                            FontSize="12"
+                            FontSize="11"
                             TextColor="{StaticResource TextPrimary}"
-                            WidthRequest="118"
+                            WidthRequest="158"
                             VerticalOptions="Center" />
                 </Grid>
 

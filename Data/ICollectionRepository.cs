@@ -22,4 +22,13 @@ public interface ICollectionRepository
     /// <summary>Returns owned quantity per UUID (0 for cards not in collection).</summary>
     Task<Dictionary<string, int>> GetQuantitiesAsync(IEnumerable<string> cardUuids);
     Task ReorderAsync(IList<string> orderedUuids);
+
+    /// <summary>Returns foil/etched flags for an owned row, or null when the UUID is not in the collection.</summary>
+    Task<(bool IsFoil, bool IsEtched)?> TryGetFinishFlagsAsync(string cardUuid);
+
+    /// <summary>Stores a price baseline when the row has none (NULL or &lt;= 0).</summary>
+    Task TrySetReferenceBaselineIfMissingAsync(string cardUuid, double unitPriceUsd, DateTime capturedUtc);
+
+    /// <summary>Overwrites the stored baseline (e.g. user-initiated recapture).</summary>
+    Task SetReferenceBaselineAsync(string cardUuid, double unitPriceUsd, DateTime capturedUtc);
 }

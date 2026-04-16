@@ -1,7 +1,7 @@
+using AetherVault.Services;
 using Android.Content;
 using Android.OS;
 using Android.Provider;
-using AetherVault.Services;
 
 namespace AetherVault.Platforms.Android;
 

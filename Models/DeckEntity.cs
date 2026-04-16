@@ -23,6 +23,12 @@ public class DeckEntity
     public string PartnerId { get; set; } = "";
     public string ColorIdentity { get; set; } = "";
 
+    /// <summary>
+    /// Parsed WUBRG set from persisted <see cref="ColorIdentity"/> string (not a separate DB column).
+    /// For the full commander+partner+commander-row union, use <c>DeckColorIdentityResolver</c> in Services.DeckBuilder.
+    /// </summary>
+    public ColorIdentity ParsedColorIdentity => global::AetherVault.Core.ColorIdentity.FromString(ColorIdentity);
+
     /// <summary>Commander deck strategy for in-app suggestions; enum name in DB (e.g. <c>Midrange</c>).</summary>
     public string CommanderArchetype { get; set; } = "Unknown";
 
@@ -47,12 +53,12 @@ public class DeckEntity
     {
         get
         {
-            var id = global::AetherVault.Core.ColorIdentity.FromString(ColorIdentity);
+            var id = ParsedColorIdentity;
             var s = id.AsString();
             if (string.IsNullOrEmpty(s)) return "";
             return string.Concat(s.Select(c => $"{{{char.ToUpperInvariant(c)}}}"));
         }
     }
 
-    public bool HasColorIdentity => global::AetherVault.Core.ColorIdentity.FromString(ColorIdentity).Count > 0;
+    public bool HasColorIdentity => ParsedColorIdentity.Count > 0;
 }

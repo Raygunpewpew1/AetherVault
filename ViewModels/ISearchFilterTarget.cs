@@ -4,7 +4,7 @@ namespace AetherVault.ViewModels;
 
 /// <summary>
 /// Target for the shared search filters sheet popup.
-/// Implemented by SearchViewModel and CardSearchPickerViewModel.
+/// Implemented by <see cref="SearchViewModel"/>, <see cref="CardSearchPickerViewModel"/>, and <see cref="CollectionViewModel"/>.
 /// </summary>
 public interface ISearchFilterTarget
 {

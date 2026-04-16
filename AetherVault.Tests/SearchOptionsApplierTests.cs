@@ -32,6 +32,10 @@ public class SearchOptionsApplierTests
         Assert.Contains("json_valid(c.keywords)", BuildSql(o => o.KeywordsFilter = "Flying"), StringComparison.OrdinalIgnoreCase);
 
     [Fact]
+    public void Apply_GameChangerOnly_ContainsIsGameChanger() =>
+        Assert.Contains("isGameChanger", BuildSql(o => o.GameChangerOnly = true), StringComparison.OrdinalIgnoreCase);
+
+    [Fact]
     public void Apply_TypeFilter_ContainsTypeLike() =>
         Assert.Contains("c.type LIKE", BuildSql(o => o.TypeFilter = "Creature"), StringComparison.OrdinalIgnoreCase);
 

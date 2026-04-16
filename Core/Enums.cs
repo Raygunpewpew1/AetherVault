@@ -110,6 +110,19 @@ public enum CollectionSortMode
     Rarity = 3,
     Color = 4,
     Price = 5,
+    /// <summary>Set code, then collector number (string order).</summary>
+    SetNumber = 6,
+    /// <summary>Newest collection <c>DateAdded</c> first.</summary>
+    DateAdded = 7,
+    /// <summary>Most copies first.</summary>
+    Quantity = 8,
+    /// <summary>Type line, then name.</summary>
+    Type = 9,
+    /// <summary>Highest mana value first.</summary>
+    CmcHigh = 10,
+
+    /// <summary>Largest % gain vs stored baseline first (needs prices + baselines).</summary>
+    PriceChangePercent = 11,
 }
 
 /// <summary>Main / sideboard list presentation on the deck editor page.</summary>

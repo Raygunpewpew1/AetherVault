@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\AetherVault.Local.props" Condition="Exists('..\AetherVault.Local.props')" />
+
+  <PropertyGroup Label="AetherVault footprint">
+    <AetherVaultRepositoryWebUrl Condition="'$(AetherVaultRepositoryWebUrl)' == ''">https://github.com/Raygunpewpew1/AetherVault</AetherVaultRepositoryWebUrl>
+    <AetherVaultReleasesRoot Condition="'$(AetherVaultReleasesRoot)' == ''">$(AetherVaultRepositoryWebUrl)/releases</AetherVaultReleasesRoot>
+  </PropertyGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -40,12 +47,14 @@
     <Compile Include="..\Core\ScryfallCDN.cs" Link="Core\ScryfallCDN.cs" />
     <Compile Include="..\Core\SetInfo.cs" Link="Core\SetInfo.cs" />
     <Compile Include="..\Core\SearchOptions.cs" Link="Core\SearchOptions.cs" />
+    <Compile Include="..\Core\CollectionFilterHelper.cs" Link="Core\CollectionFilterHelper.cs" />
     <Compile Include="..\Core\Layout\GridLayoutEngine.cs" Link="Core\Layout\GridLayoutEngine.cs" />
     <Compile Include="..\Core\Layout\GridState.cs" Link="Core\Layout\GridState.cs" />
     <Compile Include="..\Services\CardPriceTypes.cs" Link="Services\CardPriceTypes.cs" />
     <Compile Include="..\Services\PriceDisplayHelper.cs" Link="Services\PriceDisplayHelper.cs" />
     <Compile Include="..\Models\Card.cs" Link="Models\Card.cs" />
     <Compile Include="..\Core\ColorIdentity.cs" Link="Core\ColorIdentity.cs" />
+    <Compile Include="..\Core\ManaCostPipAnalyzer.cs" Link="Core\ManaCostPipAnalyzer.cs" />
     <Compile Include="..\Constants\MTGConstants.cs" Link="Constants\MTGConstants.cs" />
     <Compile Include="..\Constants\UserMessages.cs" Link="Constants\UserMessages.cs" />
     <Compile Include="..\Core\CardLegalities.cs" Link="Models\CardLegalities.cs" />
@@ -69,6 +78,9 @@
     <Compile Include="..\Services\DeckBuilder\DeckCohesionProfile.cs" Link="Services\DeckBuilder\DeckCohesionProfile.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckCohesionAnalyzer.cs" Link="Services\DeckBuilder\DeckCohesionAnalyzer.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckCardRoleClassifier.cs" Link="Services\DeckBuilder\DeckCardRoleClassifier.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckValidationConstants.cs" Link="Services\DeckBuilder\DeckValidationConstants.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckFormatRules.cs" Link="Services\DeckBuilder\DeckFormatRules.cs" />
+    <Compile Include="..\Services\DeckBuilder\DeckColorIdentityResolver.cs" Link="Services\DeckBuilder\DeckColorIdentityResolver.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckValidator.cs" Link="Services\DeckBuilder\DeckValidator.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckBuilderService.cs" Link="Services\DeckBuilder\DeckBuilderService.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckSuggestionService.cs" Link="Services\DeckBuilder\DeckSuggestionService.cs" />
@@ -81,5 +93,32 @@
     <Compile Include="..\Services\ImportExport\MoxfieldDeckJsonParser.cs" Link="Services\ImportExport\MoxfieldDeckJsonParser.cs" />
     <Compile Include="..\Services\ImportExport\DeckExporter.cs" Link="Services\ImportExport\DeckExporter.cs" />
   </ItemGroup>
+
+  <!-- Same release URL constants as AetherVault.csproj (partial MtgConstants); required when compiling linked AppDataManager etc. -->
+  <Target Name="GenerateAetherVaultReleaseEndpoints" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_AvDbUrl>$(AetherVaultDatabaseDownloadUrl)</_AvDbUrl>
+      <_AvDbUrl Condition="'$(_AvDbUrl)' == ''">$(AetherVaultReleasesRoot)/latest/download/MTG_App_DB.zip</_AvDbUrl>
+      <_AvPricesZip>$(AetherVaultPricesBundleDownloadUrl)</_AvPricesZip>
+      <_AvPricesZip Condition="'$(_AvPricesZip)' == ''">$(AetherVaultReleasesRoot)/download/aethervault-prices-rolling/AetherVault_Prices.sqlite.zip</_AvPricesZip>
+      <_AvPricesMeta>$(AetherVaultPricesBundleMetaUrl)</_AvPricesMeta>
+      <_AvPricesMeta Condition="'$(_AvPricesMeta)' == ''">$(AetherVaultReleasesRoot)/download/aethervault-prices-rolling/prices_bundle_meta.txt</_AvPricesMeta>
+      <_AvGenFile>$(IntermediateOutputPath)AetherVault.ReleaseEndpoints.g.cs</_AvGenFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AvGenLines Include="// &lt;auto-generated /&gt;" />
+      <_AvGenLines Include="namespace AetherVault.Constants%3b" />
+      <_AvGenLines Include="public static partial class MtgConstants" />
+      <_AvGenLines Include="{" />
+      <_AvGenLines Include="    public const string DatabaseDownloadUrl = &quot;$(_AvDbUrl)&quot;%3b" />
+      <_AvGenLines Include="    public const string PricesBundleDownloadUrl = &quot;$(_AvPricesZip)&quot;%3b" />
+      <_AvGenLines Include="    public const string PricesBundleMetaUrl = &quot;$(_AvPricesMeta)&quot;%3b" />
+      <_AvGenLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_AvGenFile)" Lines="@(_AvGenLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(_AvGenFile)" />
+    </ItemGroup>
+  </Target>
 
 </Project>

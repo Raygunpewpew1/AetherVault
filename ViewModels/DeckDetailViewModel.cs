@@ -1,7 +1,3 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Text;
-using AetherVault.Constants;
 using AetherVault.Core;
 using AetherVault.Data;
 using AetherVault.Models;
@@ -9,9 +5,9 @@ using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Storage;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Text;
 
 namespace AetherVault.ViewModels;
 
@@ -183,16 +179,20 @@ public partial class DeckDetailViewModel(
     ICardRepository cardRepository,
     ICollectionRepository collectionRepository,
     CardManager cardManager,
-    IToastService toast) : BaseViewModel
+    IToastService toast,
+    IDialogService dialogService) : BaseViewModel
 {
     private readonly DeckBuilderService _deckService = deckService;
     private readonly ICardRepository _cardRepository = cardRepository;
     private readonly ICollectionRepository _collectionRepository = collectionRepository;
     private readonly CardManager _cardManager = cardManager;
     private readonly IToastService _toast = toast;
+    private readonly IDialogService _dialogService = dialogService;
     private Dictionary<string, Card> _cardMapCache = [];
     private List<DeckCardEntity> _deckEntitiesCache = [];
     private SearchOptions? _addCardSynergyPreset;
+    private SearchOptions? _addCardQuickBrowseOptions;
+    private string? _quickBrowseListLabel;
     private int _deckId;
     private CancellationTokenSource? _addCardSearchCts;
     private int _addCardSearchGeneration;
@@ -342,6 +342,11 @@ public partial class DeckDetailViewModel(
     [RelayCommand]
     private void RequestAddCardsModal() => AddCardsModalRequested?.Invoke();
 
+    private async Task ShowDeckDataTruthHelpAsync()
+    {
+        await _dialogService.DisplayAlertAsync(UserMessages.DeckDataTruthHelpTitle, DataTruthLabels.HelpBody, "OK");
+    }
+
     /// <summary>Called from <see cref="Pages.DeckDetailPage"/> layout action sheet (and tests).</summary>
     public void SetDeckEditorLayout(DeckEditorLayoutMode mode) => DeckEditorLayoutMode = mode;
 
@@ -357,6 +362,18 @@ public partial class DeckDetailViewModel(
     [ObservableProperty]
     public partial DeckStats Stats { get; set; } = new();
 
+    partial void OnStatsChanged(DeckStats value) => OnPropertyChanged(nameof(ShowDeckManaPipStrip));
+
+    /// <summary>Local MTG catalog + price bundle snapshot (Stats tab).</summary>
+    [ObservableProperty]
+    public partial string DeckDataTruthCatalogLine { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string DeckDataTruthPricesLine { get; set; } = "";
+
+    /// <summary>True when the deck has non-land mana symbols to chart.</summary>
+    public bool ShowDeckManaPipStrip => Stats.ManaPipCounts.Sum() > 0;
+
     [ObservableProperty]
     public partial ObservableCollection<string> SynergySubtypeSummaryLines { get; set; } = [];
 
@@ -365,6 +382,10 @@ public partial class DeckDetailViewModel(
 
     [ObservableProperty]
     public partial ObservableCollection<DeckSynergyChipItem> AddCardSynergyPresetChips { get; set; } = [];
+
+    /// <summary>Add-cards sheet: horizontal chips for curated lists (shocks, fetches, …).</summary>
+    public ObservableCollection<DeckBrowseListChipItem> QuickBrowseListChips { get; } =
+        new(DeckBrowseListCatalog.CreateChipItems());
 
     /// <summary>Deck stats tab: show subtype theme block.</summary>
     public bool HasSynergySubtypeSummary => SynergySubtypeSummaryLines.Count > 0;
@@ -375,8 +396,20 @@ public partial class DeckDetailViewModel(
     /// <summary>Add-cards sheet: show theme chip row.</summary>
     public bool HasSynergyPresetChips => AddCardSynergyPresetChips.Count > 0;
 
-    /// <summary>Active subtype/keyword filter on add-cards search.</summary>
-    public bool HasActiveAddCardSynergyPreset => _addCardSynergyPreset != null;
+    /// <summary>Subtype/keyword theme or a curated quick list is driving add-cards search.</summary>
+    public bool HasAddCardStructuredFilter => _addCardSynergyPreset != null || _addCardQuickBrowseOptions != null;
+
+    /// <summary>Short hint for the active structured add-cards filter (shown under search).</summary>
+    public string AddCardStructuredFilterCaption =>
+        !string.IsNullOrEmpty(_quickBrowseListLabel)
+            ? $"{UserMessages.DeckAddListFilterPrefix}{_quickBrowseListLabel}"
+            : _addCardSynergyPreset != null ? UserMessages.DeckAddThemeFilterActiveCaption : "";
+
+    private void RaiseAddCardStructuredFilterChanged()
+    {
+        OnPropertyChanged(nameof(HasAddCardStructuredFilter));
+        OnPropertyChanged(nameof(AddCardStructuredFilterCaption));
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCommanderTab))]
@@ -629,6 +662,10 @@ public partial class DeckDetailViewModel(
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
     public IAsyncRelayCommand SuggestLandsCommand => _suggestLandsCommand ??= new AsyncRelayCommand(SuggestLandsAsync);
 
+    private IAsyncRelayCommand? _showDeckDataTruthHelpCommand;
+    /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
+    public IAsyncRelayCommand ShowDeckDataTruthHelpCommand => _showDeckDataTruthHelpCommand ??= new AsyncRelayCommand(ShowDeckDataTruthHelpAsync);
+
     private IRelayCommand? _toggleSelectionModeCommand;
     public IRelayCommand ToggleSelectionModeCommand => _toggleSelectionModeCommand ??= new RelayCommand(ToggleSelectionMode);
 
@@ -728,7 +765,7 @@ public partial class DeckDetailViewModel(
     partial void OnAddCardSearchOnlyCollectionChanged(bool value)
     {
         AddCardResultsAreSuggestions = false;
-        if (!string.IsNullOrWhiteSpace(AddCardSearchText) || _addCardSynergyPreset != null)
+        if (!string.IsNullOrWhiteSpace(AddCardSearchText) || _addCardSynergyPreset != null || _addCardQuickBrowseOptions != null)
             _ = ExecuteAddCardSearchAsync();
         else
             MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
@@ -780,7 +817,9 @@ public partial class DeckDetailViewModel(
         try
         {
             bool useSynergy = _addCardSynergyPreset != null;
-            if (!useSynergy && string.IsNullOrEmpty(query))
+            bool useQuickBrowse = _addCardQuickBrowseOptions != null;
+            bool useStructured = useSynergy || useQuickBrowse;
+            if (!useStructured && string.IsNullOrEmpty(query))
             {
                 if (AddCardResultsAreSuggestions)
                     return;
@@ -793,17 +832,19 @@ public partial class DeckDetailViewModel(
             }
 
             Card[] cards;
-            if (useSynergy)
+            if (useStructured)
             {
                 var fmt = Deck != null
                     ? EnumExtensions.ParseDeckFormat(Deck.Format)
                     : global::AetherVault.Core.DeckFormat.Standard;
                 string? namePart = string.IsNullOrEmpty(query) ? null : query;
+                var structuredOptions = useSynergy ? _addCardSynergyPreset! : _addCardQuickBrowseOptions!;
+                int structuredLimit = useQuickBrowse ? 120 : 50;
                 cards = await _cardManager.SearchCardsWithOptionsAsync(
-                    _addCardSynergyPreset!,
+                    structuredOptions,
                     namePart,
                     AddCardSearchOnlyCollection,
-                    50,
+                    structuredLimit,
                     restrictToDeckLegalFormat: true,
                     fmt);
             }
@@ -957,7 +998,9 @@ public partial class DeckDetailViewModel(
         IsAddCardSearchBusy = false;
         AddCardResultsAreSuggestions = false;
         _addCardSynergyPreset = null;
-        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        _addCardQuickBrowseOptions = null;
+        _quickBrowseListLabel = null;
+        RaiseAddCardStructuredFilterChanged();
         NotifyStagedAddPresentationChanged();
     }
 
@@ -966,8 +1009,38 @@ public partial class DeckDetailViewModel(
     {
         if (chip == null) return;
         AddCardResultsAreSuggestions = false;
+        _addCardQuickBrowseOptions = null;
+        _quickBrowseListLabel = null;
         _addCardSynergyPreset = chip.ToPresetSearchOptions();
-        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        RaiseAddCardStructuredFilterChanged();
+        _ = ExecuteAddCardSearchAsync();
+    }
+
+    private void ApplyQuickBrowseListCore(DeckBrowseListChipItem item)
+    {
+        AddCardResultsAreSuggestions = false;
+        _addCardSynergyPreset = null;
+        _addCardQuickBrowseOptions = DeckBrowseListCatalog.CreateOptions(item.Key);
+        _quickBrowseListLabel = item.DisplayText;
+        RaiseAddCardStructuredFilterChanged();
+    }
+
+    /// <summary>Apply a curated list while already on the add-cards sheet.</summary>
+    [RelayCommand]
+    private void ApplyQuickBrowseList(DeckBrowseListChipItem? item)
+    {
+        if (item == null) return;
+        ApplyQuickBrowseListCore(item);
+        _ = ExecuteAddCardSearchAsync();
+    }
+
+    /// <summary>From deck editor: open add-cards with this list pre-selected and results loading.</summary>
+    [RelayCommand]
+    private void OpenAddCardsFromQuickList(DeckBrowseListChipItem? item)
+    {
+        if (item == null) return;
+        ApplyQuickBrowseListCore(item);
+        AddCardsModalRequested?.Invoke();
         _ = ExecuteAddCardSearchAsync();
     }
 
@@ -976,7 +1049,9 @@ public partial class DeckDetailViewModel(
     {
         AddCardResultsAreSuggestions = false;
         _addCardSynergyPreset = null;
-        OnPropertyChanged(nameof(HasActiveAddCardSynergyPreset));
+        _addCardQuickBrowseOptions = null;
+        _quickBrowseListLabel = null;
+        RaiseAddCardStructuredFilterChanged();
         if (string.IsNullOrWhiteSpace(AddCardSearchText))
             MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
         else
@@ -1171,6 +1246,7 @@ public partial class DeckDetailViewModel(
                 SideboardCount = sideboardCount;
                 TotalCardCount = totalCardCount;
                 Stats = stats;
+                RefreshDeckDataTruthLabels();
                 UpdateSynergyCollections(cohesionProfile);
                 OnPropertyChanged(nameof(HasNoCommander));
                 OnPropertyChanged(nameof(HasMultipleCommanders));
@@ -2292,12 +2368,19 @@ public partial class DeckDetailViewModel(
                 cmcCount += qty;
                 int slot = Math.Min((int)cmc, 10);
                 stats.ManaCurve[slot] += qty;
+                ManaCostPipAnalyzer.Accumulate(card.ManaCost, qty, stats.ManaPipCounts);
             }
         }
 
         stats.AvgCmc = cmcCount > 0 ? Math.Round(totalCmc / cmcCount, 2) : 0;
         cohesionProfile = DeckCohesionAnalyzer.BuildProfileAndRoles(entities, cardMap, stats);
         return stats;
+    }
+
+    private void RefreshDeckDataTruthLabels()
+    {
+        DeckDataTruthCatalogLine = DataTruthLabels.FormatCatalogLine(AppDataManager.GetLocalDatabaseVersion());
+        DeckDataTruthPricesLine = DataTruthLabels.FormatPricesLine(CardPriceManager.GetPersistedPricesMetaDate());
     }
 
     private void UpdateSynergyCollections(DeckCohesionProfile profile)

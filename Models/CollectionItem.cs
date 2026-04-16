@@ -10,6 +10,13 @@ public class CollectionItem
     public int Quantity { get; set; }
     public bool IsFoil { get; set; }
     public bool IsEtched { get; set; }
+
+    /// <summary>Preferred retail USD per copy when baseline was captured (nullable for legacy rows).</summary>
+    public double? ReferencePriceUsd { get; set; }
+
+    /// <summary>UTC when <see cref="ReferencePriceUsd"/> was stored.</summary>
+    public DateTime? ReferenceCapturedAt { get; set; }
+
     public DateTime DateAdded { get; set; }
     public int SortOrder { get; set; }
     public Card Card { get; set; } = new();

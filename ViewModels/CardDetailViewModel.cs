@@ -1,12 +1,10 @@
-using System.Text;
 using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.ApplicationModel.DataTransfer;
-using Microsoft.Maui.Controls;
 using SkiaSharp;
+using System.Text;
 using System.Windows.Input;
 
 namespace AetherVault.ViewModels;

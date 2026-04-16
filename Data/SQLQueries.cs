@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace AetherVault.Data;
 
 /// <summary>
@@ -421,6 +423,34 @@ public static class SqlQueries
     public const string CollectionAddIsFoil = "ALTER TABLE my_collection ADD COLUMN is_foil INTEGER NOT NULL DEFAULT 0";
     public const string CollectionAddIsEtched = "ALTER TABLE my_collection ADD COLUMN is_etched INTEGER NOT NULL DEFAULT 0";
 
+    /// <summary>Per-row preferred retail USD captured when the card was added (or reset via baseline update).</summary>
+    public const string CollectionAddReferencePriceUsd =
+        "ALTER TABLE my_collection ADD COLUMN reference_price_usd REAL";
+
+    public const string CollectionAddReferenceCapturedAt =
+        "ALTER TABLE my_collection ADD COLUMN reference_captured_at TEXT";
+
+    public const string CollectionGetFinishFlags =
+        "SELECT is_foil AS IsFoil, is_etched AS IsEtched FROM my_collection WHERE card_uuid = @uuid";
+
+    /// <summary>Sets baseline only when none stored (NULL or &lt;= 0).</summary>
+    public const string CollectionTrySetReferenceBaselineIfMissing =
+        """
+        UPDATE my_collection
+        SET reference_price_usd = @price,
+            reference_captured_at = @captured
+        WHERE card_uuid = @uuid
+          AND (reference_price_usd IS NULL OR reference_price_usd <= 0)
+        """;
+
+    public const string CollectionSetReferenceBaseline =
+        """
+        UPDATE my_collection
+        SET reference_price_usd = @price,
+            reference_captured_at = @captured
+        WHERE card_uuid = @uuid
+        """;
+
     // Aliases: Dapper matches column names to properties; snake_case columns do not map to PascalCase POCOs.
     public const string CollectionGetAll =
         "SELECT card_uuid AS CardUuid, quantity, date_added AS DateAdded, sort_order AS SortOrder, is_foil AS IsFoil, is_etched AS IsEtched FROM my_collection ORDER BY sort_order ASC, date_added DESC";
@@ -442,6 +472,8 @@ public static class SqlQueries
             mc.sort_order AS SortOrder,
             mc.is_foil AS IsFoil,
             mc.is_etched AS IsEtched,
+            mc.reference_price_usd AS ReferencePriceUsd,
+            mc.reference_captured_at AS ReferenceCapturedAt,
             COALESCE(c.uuid, t.uuid) AS Uuid,
             COALESCE(c.name, t.name) AS Name,
             COALESCE(c.type, t.type) AS CardType,
@@ -669,23 +701,37 @@ public static class SqlQueries
         ) c
         """;
 
-    public const string BaseCollection =
-        """
-        SELECT c.*, ci.scryfallId, s.name as setName,
-        cl.alchemy, cl.brawl, cl.commander, cl.duel, cl.future, cl.gladiator,
-        cl.historic, cl.legacy, cl.modern, cl.oathbreaker, cl.oldschool,
-        cl.pauper, cl.paupercommander, cl.penny, cl.pioneer, cl.predh,
-        cl.premodern, cl.standard, cl.standardbrawl, cl.timeless, cl.vintage,
-        cp.cardKingdom, cp.cardKingdomFoil, cp.cardKingdomEtched,
-        cp.cardmarket, cp.tcgplayer, cp.tcgplayerEtched,
-        mc.quantity
-        FROM cards c
-        INNER JOIN col.my_collection mc ON c.uuid = mc.card_uuid
-        LEFT JOIN cardIdentifiers ci ON c.uuid = ci.uuid
-        LEFT JOIN sets s ON c.setCode = s.code
-        LEFT JOIN cardLegalities cl ON c.uuid = cl.uuid
-        LEFT JOIN cardPurchaseUrls cp ON c.uuid = cp.uuid
+    /// <summary>
+    /// Collection search: same column layout as <see cref="BaseCards"/> / <see cref="BaseTokens"/> with <c>mc.quantity</c>,
+    /// union of cards and tokens in <c>my_collection</c> (aligned with <see cref="CollectionGridLoad"/>).
+    /// </summary>
+    public static readonly string BaseCollection = $"""
+        SELECT * FROM (
+        {PatchBaseForCollectionJoin(BaseCards, isCards: true)}
+        UNION ALL
+        {PatchBaseForCollectionJoin(BaseTokens, isCards: false)}
+        ) c
         """;
+
+    /// <summary>Inserts <c>mc.quantity</c> and <c>INNER JOIN col.my_collection</c>. Uses regex so raw-string dedent/newline variants still match.</summary>
+    private static string PatchBaseForCollectionJoin(string baseSql, bool isCards)
+    {
+        var s = baseSql.Replace("\r\n", "\n", StringComparison.Ordinal);
+        if (isCards)
+        {
+            s = Regex.Replace(s,
+                @"cp\.tcgplayerEtched\s+FROM cards c\s+LEFT JOIN cardIdentifiers ci ON c\.uuid = ci\.uuid",
+                "cp.tcgplayerEtched,\n        mc.quantity\n        FROM cards c\n        INNER JOIN col.my_collection mc ON c.uuid = mc.card_uuid\n        LEFT JOIN cardIdentifiers ci ON c.uuid = ci.uuid");
+        }
+        else
+        {
+            s = Regex.Replace(s,
+                @"NULL as tcgplayerEtched\s+FROM tokens c\s+LEFT JOIN tokenIdentifiers ci ON c\.uuid = ci\.uuid",
+                "NULL as tcgplayerEtched,\n        mc.quantity\n        FROM tokens c\n        INNER JOIN col.my_collection mc ON c.uuid = mc.card_uuid\n        LEFT JOIN tokenIdentifiers ci ON c.uuid = ci.uuid");
+        }
+
+        return s;
+    }
 
     public const string BaseSets = "SELECT * FROM sets";
 
@@ -726,4 +772,7 @@ public static class SqlQueries
             ((c.type LIKE '%Legendary%' AND c.type LIKE '%Creature%') OR (c.text LIKE '%can be your commander%'))
         )
         """;
+
+    /// <summary>MTGJSON Commander game changer flag (tokens union uses NULL → no match).</summary>
+    public const string CondGameChangerOnly = "(c.isGameChanger = 1)";
 }

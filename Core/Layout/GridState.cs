@@ -23,7 +23,11 @@ public record CardState(
     CardPriceData? PriceData = null,
     string CachedDisplayPrice = "",
     string ManaCost = "",
-    CardRarity Rarity = CardRarity.Common
+    CardRarity Rarity = CardRarity.Common,
+    double? ReferenceUnitPriceUsd = null,
+    bool CollectionRowIsFoil = false,
+    bool CollectionRowIsEtched = false,
+    string CollectionPriceChangeLabel = ""
 )
 {
     // Factory method to create state and pre-calculate display price
@@ -41,9 +45,30 @@ public record CardState(
             prices,
             "",
             card.ManaCost,
-            card.Rarity
+            card.Rarity,
+            null,
+            false,
+            false,
+            ""
         );
         return state with { CachedDisplayPrice = state.GetDisplayPrice() };
+    }
+
+    /// <summary>Grid state for an owned collection row (baseline + finish for % vs current price).</summary>
+    public static CardState FromCollectionItem(CollectionItem item, CardPriceData? prices = null)
+    {
+        var state = FromCard(item.Card, item.Quantity, prices);
+        return state with
+        {
+            ReferenceUnitPriceUsd = item.ReferencePriceUsd,
+            CollectionRowIsFoil = item.IsFoil,
+            CollectionRowIsEtched = item.IsEtched,
+            CollectionPriceChangeLabel = PriceDisplayHelper.FormatCollectionPriceChangeLabel(
+                item.ReferencePriceUsd,
+                prices,
+                item.IsFoil,
+                item.IsEtched),
+        };
     }
 
     // Helper to calculate display price if not provided (uses user's vendor priority)

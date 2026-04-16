@@ -5,7 +5,6 @@ using AppoMobi.Maui.Gestures;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 using System.Collections.Immutable;
-using System.Threading;
 using System.Threading.Channels;
 
 namespace AetherVault.Controls;
@@ -239,13 +238,13 @@ public class CardGrid : ContentView
 
     public void SetCollection(CollectionItem[] items)
     {
-        var cardStates = items.Select(i => CardState.FromCard(i.Card, i.Quantity)).ToImmutableArray();
+        var cardStates = items.Select(static i => CardState.FromCollectionItem(i)).ToImmutableArray();
         UpdateState(s => s with { Cards = cardStates });
     }
 
     public async Task SetCollectionAsync(IEnumerable<CollectionItem> items)
     {
-        var cardStates = await Task.Run(() => items.Select(i => CardState.FromCard(i.Card, i.Quantity)).ToImmutableArray());
+        var cardStates = await Task.Run(() => items.Select(static i => CardState.FromCollectionItem(i)).ToImmutableArray());
         UpdateState(s => s with { Cards = cardStates });
     }
 
@@ -274,8 +273,7 @@ public class CardGrid : ContentView
 
             if (index >= 0)
             {
-                var newCard = s.Cards[index] with { PriceData = prices, CachedDisplayPrice = "" };
-                newCard = newCard with { CachedDisplayPrice = newCard.GetDisplayPrice() };
+                var newCard = ApplyPricesWithCollectionDelta(s.Cards[index], prices);
                 return s with { Cards = s.Cards.SetItem(index, newCard) };
             }
             return s;
@@ -293,9 +291,7 @@ public class CardGrid : ContentView
                 var card = builder[i];
                 if (pricesMap.TryGetValue(card.Id.Value, out var prices))
                 {
-                    var newCard = card with { PriceData = prices, CachedDisplayPrice = "" };
-                    newCard = newCard with { CachedDisplayPrice = newCard.GetDisplayPrice() };
-                    builder[i] = newCard;
+                    builder[i] = ApplyPricesWithCollectionDelta(card, prices);
                     changed = true;
                 }
             }
@@ -304,6 +300,20 @@ public class CardGrid : ContentView
     }
 
     public void ForceRedraw() => _canvas.InvalidateSurface();
+
+    private static CardState ApplyPricesWithCollectionDelta(CardState card, CardPriceData? prices)
+    {
+        var n = card with { PriceData = prices, CachedDisplayPrice = "" };
+        n = n with { CachedDisplayPrice = n.GetDisplayPrice() };
+        return n with
+        {
+            CollectionPriceChangeLabel = PriceDisplayHelper.FormatCollectionPriceChangeLabel(
+                n.ReferenceUnitPriceUsd,
+                prices,
+                n.CollectionRowIsFoil,
+                n.CollectionRowIsEtched),
+        };
+    }
 
     /// <summary>
     /// Plays a short mana-colored burst from the card toward the top of the viewport (content coordinates).

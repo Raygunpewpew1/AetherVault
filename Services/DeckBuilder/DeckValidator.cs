@@ -23,21 +23,60 @@ public class ValidationResult
     public bool IsError => Level == ValidationLevel.Error;
     public bool IsWarning => Level == ValidationLevel.Warning;
 
+    private static IReadOnlyList<string> NormalizeDetailLines(string? message) =>
+        string.IsNullOrWhiteSpace(message) ? [] : [message.Trim()];
+
     public static ValidationResult Success() => new() { Level = ValidationLevel.Success };
 
     public static ValidationResult Error(string message) => new()
     {
         Level = ValidationLevel.Error,
-        Message = message,
-        DetailLines = string.IsNullOrWhiteSpace(message) ? [] : [message]
+        Message = message ?? "",
+        DetailLines = NormalizeDetailLines(message)
     };
 
     public static ValidationResult Warning(string message) => new()
     {
         Level = ValidationLevel.Warning,
-        Message = message,
-        DetailLines = string.IsNullOrWhiteSpace(message) ? [] : [message]
+        Message = message ?? "",
+        DetailLines = NormalizeDetailLines(message)
     };
+
+    /// <summary>
+    /// Merges multiple validation results into one message (joined) and preserves each message as its own detail line.
+    /// Prefer over ad hoc <c>new ValidationResult { … }</c> so <see cref="DetailLines"/> stays consistent.
+    /// </summary>
+    public static ValidationResult Combined(params ValidationResult[] results) => Combined((IReadOnlyList<ValidationResult>)results);
+
+    /// <inheritdoc cref="Combined(ValidationResult[])"/>
+    public static ValidationResult Combined(IReadOnlyList<ValidationResult> results)
+    {
+        var level = ValidationLevel.Success;
+        var messages = new List<string>();
+        foreach (var r in results)
+        {
+            if (r.Level == ValidationLevel.Success || string.IsNullOrWhiteSpace(r.Message))
+                continue;
+
+            if (r.Level == ValidationLevel.Error)
+                level = ValidationLevel.Error;
+            else if (r.Level == ValidationLevel.Warning && level != ValidationLevel.Error)
+                level = ValidationLevel.Warning;
+
+            messages.Add(r.Message);
+        }
+
+        if (level == ValidationLevel.Success)
+            return Success();
+
+        var message = string.Join(" ", messages);
+        return new ValidationResult
+        {
+            Level = level,
+            Message = message,
+            DetailLines = messages
+        };
+    }
 }
 
 public class DeckValidator
@@ -49,72 +88,82 @@ public class DeckValidator
         _cardRepository = cardRepository;
     }
 
-    public async Task<ValidationResult> ValidateCardAdditionAsync(DeckEntity deck, Card card, int quantityToAdd, List<DeckCardEntity> currentCards, bool skipLegalityCheck = false)
+    /// <param name="preResolvedCommanderDeckIdentity">When set, skips resolving commander/partner/commander rows again (batch validation / perf).</param>
+    /// <param name="targetSection">Destination section for this add (e.g. <see cref="DeckCardSections.Commander"/>); used with <paramref name="skipLegalityCheck"/>.</param>
+    public async Task<ValidationResult> ValidateCardAdditionAsync(
+        DeckEntity deck,
+        Card card,
+        int quantityToAdd,
+        List<DeckCardEntity> currentCards,
+        bool skipLegalityCheck = false,
+        ColorIdentity? preResolvedCommanderDeckIdentity = null,
+        string? targetSection = null)
     {
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
 
-        // 1. Format Legality
-        // Skipped during trusted imports (e.g. MTGJSON precon decks) where the source is authoritative.
+        // 1. Format legality (Vintage Restricted is handled first — clearer than burying it under "not legal").
         if (!skipLegalityCheck)
         {
-            // Note: CardLegalities indexer uses the DeckFormat enum directly
-            if (!card.Legalities.IsLegalInFormat(format))
+            bool handledVintageRestricted = false;
+            if (format == DeckFormat.Vintage && card.Legalities[DeckFormat.Vintage] == LegalityStatus.Restricted)
             {
-                // Allow restricted in Vintage
-                if (format == DeckFormat.Vintage && card.Legalities[format] == LegalityStatus.Restricted)
+                int currentQty = GetTotalQuantity(card.Uuid, currentCards);
+                if (currentQty + quantityToAdd > 1)
                 {
-                    // Validate restricted (max 1)
-                    int currentQty = GetTotalQuantity(card.Uuid, currentCards);
-                    if (currentQty + quantityToAdd > 1)
-                    {
-                        return ValidationResult.Error($"Card '{card.Name}' is Restricted in Vintage (Max 1).");
-                    }
+                    return ValidationResult.Error($"Card '{card.Name}' is Restricted in Vintage (Max 1).");
                 }
-                else
-                {
-                    return ValidationResult.Error($"Card '{card.Name}' is not legal in {format.ToDisplayName()}.");
-                }
+
+                handledVintageRestricted = true;
+            }
+
+            if (!handledVintageRestricted && !card.Legalities.IsLegalInFormat(format))
+            {
+                return ValidationResult.Error($"Card '{card.Name}' is not legal in {format.ToDisplayName()}.");
             }
         }
 
-        // 2. Quantity Limits
+        // 2. Quantity limits
         int existingQuantity = GetTotalQuantity(card.Uuid, currentCards);
         int totalQuantity = existingQuantity + quantityToAdd;
 
         bool isBasicLand = card.IsBasicLand;
-        bool isRelentless = card.Text.Contains("A deck can have any number of cards named", StringComparison.OrdinalIgnoreCase);
+        bool isRelentless = card.Text.Contains(DeckValidationConstants.RelentlessOracleTextFragment, StringComparison.OrdinalIgnoreCase);
 
-        int maxCopies = GetMaxCopies(format);
+        int maxCopies = DeckFormatRules.MaxNonBasicCopies(format);
 
         if (!isBasicLand && !isRelentless && totalQuantity > maxCopies)
         {
             return ValidationResult.Error($"Cannot have more than {maxCopies} copies of '{card.Name}' in {format.ToDisplayName()}.");
         }
 
-        // 3. Commander Color Identity
-        if (IsCommanderFormat(format))
-        {
-            // If deck has a commander, check color identity
-            if (!string.IsNullOrEmpty(deck.CommanderId))
-            {
-                // Use cached identity if available, otherwise fetch commander
-                ColorIdentity commanderIdentity;
-                if (!string.IsNullOrEmpty(deck.ColorIdentity))
-                {
-                    commanderIdentity = ColorIdentity.FromString(deck.ColorIdentity);
-                }
-                else
-                {
-                    var commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
-                    if (commander == null) return ValidationResult.Warning("Commander not found, skipping color check.");
-                    commanderIdentity = commander.GetColorIdentity();
-                }
+        // 3. Commander color identity (imports may add extra Commander-zone cards with skipLegalityCheck before identity is widened)
+        bool skipColorForTrustedCommanderZoneAdd = skipLegalityCheck &&
+            string.Equals(targetSection, DeckCardSections.Commander, StringComparison.OrdinalIgnoreCase);
 
-                var cardIdentity = card.GetColorIdentity();
-                if (!commanderIdentity.Contains(cardIdentity))
-                {
-                    return ValidationResult.Error($"Card '{card.Name}' ({cardIdentity.AsString()}) is outside commander's color identity ({commanderIdentity.AsString()}).");
-                }
+        if (!skipColorForTrustedCommanderZoneAdd && DeckFormatRules.IsCommanderLike(format) && !string.IsNullOrEmpty(deck.CommanderId))
+        {
+            ColorIdentity commanderIdentity;
+            if (preResolvedCommanderDeckIdentity.HasValue)
+            {
+                commanderIdentity = preResolvedCommanderDeckIdentity.Value;
+            }
+            else
+            {
+                var (identity, had, warning) = await DeckColorIdentityResolver
+                    .TryResolveCommanderDeckColorIdentityAsync(_cardRepository, deck, currentCards, cardsByUuid: null)
+                    .ConfigureAwait(false);
+                if (warning != null)
+                    return warning;
+                if (!had)
+                    return ValidationResult.Success();
+
+                commanderIdentity = identity;
+            }
+
+            var cardIdentity = card.GetColorIdentity();
+            if (!commanderIdentity.Contains(cardIdentity))
+            {
+                return ValidationResult.Error($"Card '{card.Name}' ({cardIdentity.AsString()}) is outside commander's color identity ({commanderIdentity.AsString()}).");
             }
         }
 
@@ -123,18 +172,16 @@ public class DeckValidator
 
     public async Task<ValidationResult> ValidateCommanderAsync(Card card, DeckFormat format)
     {
-        if (!IsCommanderFormat(format))
+        if (!DeckFormatRules.IsCommanderLike(format))
         {
             return ValidationResult.Error("Commanders are only valid in Commander-like formats.");
         }
 
-        // Must be Legendary Creature or Planeswalker with specific text
         bool isLegendaryCreature = card.IsCreature && card.IsLegendary;
-        bool canBeCommander = card.Text.Contains("can be your commander", StringComparison.OrdinalIgnoreCase);
+        bool canBeCommander = card.Text.Contains(DeckValidationConstants.CanBeYourCommanderOracleTextFragment, StringComparison.OrdinalIgnoreCase);
 
         if (!isLegendaryCreature && !canBeCommander)
         {
-            // Brawl allows any Planeswalker?
             if ((format == DeckFormat.Brawl || format == DeckFormat.StandardBrawl) && card.IsPlaneswalker)
             {
                 // Brawl commanders can be Planeswalkers
@@ -145,10 +192,6 @@ public class DeckValidator
             }
         }
 
-        // Check Ban list as Commander specifically? (Some cards are banned as commander only)
-        // CardLegalities usually handles "Banned", but doesn't distinguish "Banned as Commander" vs "Banned in 99" easily unless we have that data.
-        // Assuming Standard legality check covers it for now.
-
         return ValidationResult.Success();
     }
 
@@ -157,53 +200,38 @@ public class DeckValidator
         return cards.Where(c => c.CardId == cardId).Sum(c => c.Quantity);
     }
 
-    private int GetMaxCopies(DeckFormat format)
-    {
-        return format switch
-        {
-            DeckFormat.Commander
-            or DeckFormat.Brawl
-            or DeckFormat.Oathbreaker
-            or DeckFormat.StandardBrawl
-            or DeckFormat.PauperCommander
-            or DeckFormat.Duel => 1,
-            _ => 4
-        };
-    }
-
-    private bool IsCommanderFormat(DeckFormat format)
-    {
-        return format is DeckFormat.Commander or DeckFormat.Brawl or DeckFormat.Oathbreaker or DeckFormat.StandardBrawl or DeckFormat.PauperCommander or DeckFormat.Duel;
-    }
-
     /// <summary>
     /// Validates overall deck size (main / sideboard / commander slots) for the given format.
-    /// Returns soft warnings only (no hard errors) so the UI can surface guidance without blocking edits.
     /// </summary>
+    /// <remarks>
+    /// <para>Returns <see cref="ValidationLevel.Warning"/> only (never <see cref="ValidationLevel.Error"/>): deck size
+    /// violations are real rule issues in tournament Magic, but this app treats them as non-blocking guidance so users
+    /// can edit freely while still seeing what is wrong. Do not use <see cref="ValidationResult.Level"/> here as a
+    /// proxy for strict legality.</para>
+    /// </remarks>
     public ValidationResult ValidateDeckSize(DeckEntity deck, List<DeckCardEntity> currentCards)
     {
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
 
         int mainCount = currentCards
-            .Where(c => string.Equals(c.Section, "Main", StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.Section, DeckCardSections.Main, StringComparison.OrdinalIgnoreCase))
             .Sum(c => c.Quantity);
 
         int sideboardCount = currentCards
-            .Where(c => string.Equals(c.Section, "Sideboard", StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.Section, DeckCardSections.Sideboard, StringComparison.OrdinalIgnoreCase))
             .Sum(c => c.Quantity);
 
         int commanderCount = currentCards
-            .Where(c => string.Equals(c.Section, "Commander", StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.Section, DeckCardSections.Commander, StringComparison.OrdinalIgnoreCase))
             .Sum(c => c.Quantity);
 
         var issues = new List<string>();
         string formatName = format.ToDisplayName();
 
-        if (IsCommanderFormat(format))
+        if (DeckFormatRules.IsCommanderLike(format))
         {
-            // For Commander-like formats, total physical cards in main+commander should be close to 100.
             int total = mainCount + commanderCount;
-            const int target = 100;
+            int target = DeckFormatRules.CommanderLikeDeckTargetTotal;
 
             if (total != target)
             {
@@ -220,26 +248,17 @@ public class DeckValidator
         }
         else
         {
-            // Non-commander formats: only enforce minimum main count and sideboard size.
-            int minMain = format switch
-            {
-                DeckFormat.Standard or DeckFormat.Modern or DeckFormat.Pioneer or DeckFormat.Legacy or DeckFormat.Vintage
-                or DeckFormat.Historic or DeckFormat.Timeless => 60,
-                _ => 0
-            };
+            int minMain = DeckFormatRules.MinMainDeckCardsForConstructedWarning(format);
 
             if (minMain > 0 && mainCount < minMain)
             {
                 issues.Add($"{formatName} deck has only {mainCount} main-deck cards (needs at least {minMain}).");
             }
 
-            // Standard 15-card sideboard rule applied to traditional 4-of formats.
-            bool usesStandardSideboard =
-                format is DeckFormat.Standard or DeckFormat.Modern or DeckFormat.Pioneer or DeckFormat.Legacy or DeckFormat.Vintage;
-
-            if (usesStandardSideboard && sideboardCount > 15)
+            if (DeckFormatRules.UsesConstructedSideboardCap(format) &&
+                sideboardCount > DeckFormatRules.MaxConstructedSideboardCards)
             {
-                issues.Add($"Sideboard has {sideboardCount} cards (maximum is 15).");
+                issues.Add($"Sideboard has {sideboardCount} cards (maximum is {DeckFormatRules.MaxConstructedSideboardCards}).");
             }
         }
 
@@ -255,40 +274,43 @@ public class DeckValidator
     /// When <paramref name="cardsByUuid"/> is provided (e.g. from <see cref="ICardRepository.GetCardsAsync"/>),
     /// avoids one DB fetch per deck row.
     /// </summary>
+    /// <param name="preResolvedCommanderDeckIdentity">When set, skips commander/partner/commander-row resolution.</param>
     public async Task<ValidationResult> ValidateDeckColorIdentityAsync(
         DeckEntity deck,
         List<DeckCardEntity> currentCards,
-        IReadOnlyDictionary<string, Card>? cardsByUuid = null)
+        IReadOnlyDictionary<string, Card>? cardsByUuid = null,
+        ColorIdentity? preResolvedCommanderDeckIdentity = null)
     {
         var format = EnumExtensions.ParseDeckFormat(deck.Format);
-        if (!IsCommanderFormat(format))
+        if (!DeckFormatRules.IsCommanderLike(format))
             return ValidationResult.Success();
 
         if (string.IsNullOrEmpty(deck.CommanderId))
             return ValidationResult.Success();
 
         ColorIdentity commanderIdentity;
-        if (!string.IsNullOrEmpty(deck.ColorIdentity))
+        if (preResolvedCommanderDeckIdentity.HasValue)
         {
-            commanderIdentity = ColorIdentity.FromString(deck.ColorIdentity);
+            commanderIdentity = preResolvedCommanderDeckIdentity.Value;
         }
         else
         {
-            Card? commander = null;
-            if (cardsByUuid != null && cardsByUuid.TryGetValue(deck.CommanderId, out var fromMap))
-                commander = fromMap;
-            else
-                commander = await _cardRepository.GetCardDetailsAsync(deck.CommanderId);
-            if (commander == null || string.IsNullOrEmpty(commander.Uuid))
-                return ValidationResult.Warning("Commander not found, skipping color identity check.");
-            commanderIdentity = commander.GetColorIdentity();
+            var (identity, had, warning) = await DeckColorIdentityResolver
+                .TryResolveCommanderDeckColorIdentityAsync(_cardRepository, deck, currentCards, cardsByUuid)
+                .ConfigureAwait(false);
+            if (warning != null)
+                return warning;
+            if (!had)
+                return ValidationResult.Success();
+
+            commanderIdentity = identity;
         }
 
         var offendingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entity in currentCards)
         {
-            if (string.Equals(entity.Section, "Commander", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(entity.Section, DeckCardSections.Commander, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             if (entity.Quantity <= 0)
@@ -298,7 +320,7 @@ public class DeckValidator
             if (cardsByUuid != null && cardsByUuid.TryGetValue(entity.CardId, out var fromMap))
                 card = fromMap;
             else
-                card = await _cardRepository.GetCardDetailsAsync(entity.CardId);
+                card = await _cardRepository.GetCardDetailsAsync(entity.CardId).ConfigureAwait(false);
             if (card == null || string.IsNullOrEmpty(card.Uuid))
                 continue;
 
@@ -313,8 +335,9 @@ public class DeckValidator
             return ValidationResult.Success();
 
         string commanderColors = commanderIdentity.AsString();
-        string list = string.Join(", ", offendingNames.Take(5));
-        if (offendingNames.Count > 5)
+        int maxNames = DeckValidationConstants.MaxOffendingNamesInMessage;
+        string list = string.Join(", ", offendingNames.Take(maxNames));
+        if (offendingNames.Count > maxNames)
             list += ", ...";
 
         string msg = $"Deck has {offendingNames.Count} card(s) outside the commander's color identity ({commanderColors}): {list}.";
