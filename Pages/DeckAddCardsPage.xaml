@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
              xmlns:controls="clr-namespace:AetherVault.Controls"
@@ -9,165 +10,169 @@
              xmlns:constants="clr-namespace:AetherVault.Constants"
              xmlns:deckbrowse="clr-namespace:AetherVault.Services.DeckBuilder;assembly=AetherVault"
              x:Class="AetherVault.Pages.DeckAddCardsPage"
-             x:DataType="vm:DeckDetailViewModel"
+             x:DataType="vm:DeckAddCardsViewModel"
              Title="Add cards"
              BackgroundColor="{StaticResource Background}">
 
-    <!-- Chrome is Auto-height capped in code (see DeckAddCardsPage) so ScrollView cannot steal all space from results on Android. -->
     <Grid x:Name="PageRootGrid"
-          RowDefinitions="Auto,*"
+          RowDefinitions="Auto,Auto,*"
           Padding="0,8,0,0"
           RowSpacing="6">
 
-        <ScrollView x:Name="ChromeScrollView"
-                    Grid.Row="0"
-                    Orientation="Vertical"
-                    VerticalOptions="Start"
-                    MaximumHeightRequest="320">
-            <VerticalStackLayout Spacing="6">
+        <!-- Compact chrome: search first; optional filters live in collapsed expander. -->
+        <VerticalStackLayout Grid.Row="0"
+                             Spacing="6"
+                             VerticalOptions="Start">
 
-                <Grid ColumnDefinitions="*,Auto"
-                      Padding="16,4,16,8"
-                      ColumnSpacing="12"
-                      BackgroundColor="{StaticResource Surface}">
-                    <Label Text="Add cards"
-                           FontSize="18"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextPrimary}"
-                           VerticalOptions="Center" />
-                    <Button Grid.Column="1"
-                            Text="Done"
-                            Clicked="OnDoneClicked"
-                            BackgroundColor="{StaticResource Primary}"
-                            TextColor="White"
-                            CornerRadius="8"
-                            Padding="16,8"
-                            VerticalOptions="Center" />
-                </Grid>
+            <Grid ColumnDefinitions="*,Auto"
+                  Padding="16,4,16,8"
+                  ColumnSpacing="12"
+                  BackgroundColor="{StaticResource Surface}">
+                <Label Text="Add cards"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextPrimary}"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Done"
+                        Clicked="OnDoneClicked"
+                        BackgroundColor="{StaticResource Primary}"
+                        TextColor="White"
+                        CornerRadius="8"
+                        Padding="16,8"
+                        VerticalOptions="Center" />
+            </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
-                      Padding="16,0,12,0"
-                      ColumnSpacing="8">
-                    <material:TextField Title="Search cards…"
-                                        Text="{Binding AddCardSearchText, Mode=TwoWay}"
-                                        ReturnCommand="{Binding AddCardSearchCommand}"
-                                        BackgroundColor="{StaticResource Surface}"
-                                        TextColor="{StaticResource TextPrimary}"
-                                        TitleColor="{StaticResource TextSecondary}"
-                                        AccentColor="{StaticResource Primary}"
-                                        AllowClear="True" />
-                    <ActivityIndicator Grid.Column="1"
-                                       IsRunning="{Binding IsAddCardSearchBusy}"
-                                       IsVisible="{Binding IsAddCardSearchBusy}"
-                                       HeightRequest="24"
-                                       WidthRequest="24"
-                                       VerticalOptions="Center"
-                                       Color="{StaticResource Primary}" />
-                </Grid>
+            <Grid ColumnDefinitions="*,Auto"
+                  Padding="16,0,12,0"
+                  ColumnSpacing="8">
+                <material:TextField Title="Search cards…"
+                                    Text="{Binding AddCardSearchText, Mode=TwoWay}"
+                                    ReturnCommand="{Binding AddCardSearchCommand}"
+                                    BackgroundColor="{StaticResource Surface}"
+                                    TextColor="{StaticResource TextPrimary}"
+                                    TitleColor="{StaticResource TextSecondary}"
+                                    AccentColor="{StaticResource Primary}"
+                                    AllowClear="True" />
+                <ActivityIndicator Grid.Column="1"
+                                   IsRunning="{Binding IsAddCardSearchBusy}"
+                                   IsVisible="{Binding IsAddCardSearchBusy}"
+                                   HeightRequest="24"
+                                   WidthRequest="24"
+                                   VerticalOptions="Center"
+                                   Color="{StaticResource Primary}" />
+            </Grid>
 
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="8"
-                      Padding="16,4,16,0">
-                    <Label Text="Only my collection"
-                           TextColor="{StaticResource TextSecondary}"
-                           FontSize="13"
-                           VerticalOptions="Center" />
-                    <Switch Grid.Column="1"
-                            IsToggled="{Binding AddCardSearchOnlyCollection, Mode=TwoWay}"
-                            OnColor="{StaticResource Primary}"
-                            VerticalOptions="Center" />
-                </Grid>
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="8"
+                  Padding="16,4,16,0">
+                <Label Text="Only my collection"
+                       TextColor="{StaticResource TextSecondary}"
+                       FontSize="13"
+                       VerticalOptions="Center" />
+                <Switch Grid.Column="1"
+                        IsToggled="{Binding AddCardSearchOnlyCollection, Mode=TwoWay}"
+                        OnColor="{StaticResource Primary}"
+                        VerticalOptions="Center" />
+            </Grid>
 
-                <VerticalStackLayout Spacing="4"
-                                     Padding="16,4,16,0"
-                                     IsVisible="{Binding HasAddCardStructuredFilter}">
-                    <Label Text="{Binding AddCardStructuredFilterCaption}"
-                           FontSize="11"
-                           TextColor="{StaticResource Accent}" />
-                    <Button Text="{x:Static constants:UserMessages.DeckAddClearThemeFilter}"
-                            Command="{Binding ClearAddCardSynergyPresetCommand}"
-                            HorizontalOptions="End"
-                            FontSize="11"
-                            Padding="10,6"
-                            CornerRadius="8"
-                            BackgroundColor="{StaticResource CardBackground}"
-                            TextColor="{StaticResource Accent}" />
-                </VerticalStackLayout>
+            <VerticalStackLayout Spacing="4"
+                                 Padding="16,4,16,0"
+                                 IsVisible="{Binding HasAddCardStructuredFilter}">
+                <Label Text="{Binding AddCardStructuredFilterCaption}"
+                       FontSize="11"
+                       TextColor="{StaticResource Accent}" />
+                <Button Text="{x:Static constants:UserMessages.DeckAddClearThemeFilter}"
+                        Command="{Binding ClearAddCardSynergyPresetCommand}"
+                        HorizontalOptions="End"
+                        FontSize="11"
+                        Padding="10,6"
+                        CornerRadius="8"
+                        BackgroundColor="{StaticResource CardBackground}"
+                        TextColor="{StaticResource Accent}" />
+            </VerticalStackLayout>
 
-                <VerticalStackLayout Spacing="8"
-                                     Padding="16,4,16,0"
-                                     IsVisible="{Binding HasSynergyPresetChips}">
-                    <Label Text="{x:Static constants:UserMessages.DeckAddSynergyChipsTitle}"
-                           FontSize="12"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextSecondary}"
-                           VerticalOptions="Center" />
-                    <CollectionView ItemsSource="{Binding AddCardSynergyPresetChips}"
-                                    SelectionMode="None"
-                                    HeightRequest="44"
-                                    HorizontalScrollBarVisibility="Never">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DeckSynergyChipItem">
-                                <Button Text="{Binding DisplayText}"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.ApplyAddCardSynergyPresetCommand}"
-                                        CommandParameter="{Binding .}"
-                                        FontSize="11"
-                                        Padding="12,8"
-                                        CornerRadius="16"
-                                        BackgroundColor="{StaticResource CardBackground}"
-                                        TextColor="{StaticResource TextPrimary}" />
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
+            <Border Stroke="Transparent"
+                    StrokeShape="RoundRectangle 8"
+                    BackgroundColor="{StaticResource Surface}"
+                    Padding="12,8"
+                    Margin="16,4,16,0">
+                <uranium:ExpanderView IsExpanded="False">
+                    <uranium:ExpanderView.Header>
+                        <Label Text="{x:Static constants:UserMessages.DeckAddBrowseMoreTitle}"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource TextSecondary}"
+                               VerticalOptions="Center" />
+                    </uranium:ExpanderView.Header>
+                    <VerticalStackLayout Spacing="10">
+                        <VerticalStackLayout Spacing="8"
+                                             Padding="0,4,0,0"
+                                             IsVisible="{Binding HasSynergyPresetChips}">
+                            <Label Text="{x:Static constants:UserMessages.DeckAddSynergyChipsTitle}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource TextSecondary}"
+                                   VerticalOptions="Center" />
+                            <CollectionView ItemsSource="{Binding AddCardSynergyPresetChips}"
+                                            SelectionMode="None"
+                                            HeightRequest="44"
+                                            HorizontalScrollBarVisibility="Never">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DeckSynergyChipItem">
+                                        <Button Text="{Binding DisplayText}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.ApplyAddCardSynergyPresetCommand}"
+                                                CommandParameter="{Binding .}"
+                                                FontSize="11"
+                                                Padding="12,8"
+                                                CornerRadius="16"
+                                                BackgroundColor="{StaticResource CardBackground}"
+                                                TextColor="{StaticResource TextPrimary}" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
 
-                <VerticalStackLayout Spacing="8"
-                                     Padding="16,4,16,0">
-                    <Label Text="{x:Static constants:UserMessages.DeckAddQuickListsTitle}"
-                           FontSize="12"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextSecondary}"
-                           VerticalOptions="Center" />
-                    <CollectionView ItemsSource="{Binding QuickBrowseListChips}"
-                                    SelectionMode="None"
-                                    HeightRequest="44"
-                                    HorizontalScrollBarVisibility="Never">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="deckbrowse:DeckBrowseListChipItem">
-                                <Button Text="{Binding DisplayText}"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.ApplyQuickBrowseListCommand}"
-                                        CommandParameter="{Binding .}"
-                                        FontSize="11"
-                                        Padding="12,8"
-                                        CornerRadius="16"
-                                        BackgroundColor="{StaticResource CardBackground}"
-                                        TextColor="{StaticResource TextPrimary}" />
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="8"
+                                             Padding="0,4,0,0">
+                            <Label Text="{x:Static constants:UserMessages.DeckAddQuickListsTitle}"
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource TextSecondary}"
+                                   VerticalOptions="Center" />
+                            <CollectionView ItemsSource="{Binding QuickBrowseListChips}"
+                                            SelectionMode="None"
+                                            HeightRequest="44"
+                                            HorizontalScrollBarVisibility="Never">
+                                <CollectionView.ItemsLayout>
+                                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                                </CollectionView.ItemsLayout>
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="deckbrowse:DeckBrowseListChipItem">
+                                        <Button Text="{Binding DisplayText}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.ApplyQuickBrowseListCommand}"
+                                                CommandParameter="{Binding .}"
+                                                FontSize="11"
+                                                Padding="12,8"
+                                                CornerRadius="16"
+                                                BackgroundColor="{StaticResource CardBackground}"
+                                                TextColor="{StaticResource TextPrimary}" />
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
 
-                <Border Stroke="Transparent"
-                        StrokeShape="RoundRectangle 8"
-                        BackgroundColor="{StaticResource Surface}"
-                        Padding="12,8"
-                        Margin="16,4,16,0"
-                        IsVisible="{Binding ShowDeckSuggestionUi}">
-                    <uranium:ExpanderView IsExpanded="True">
-                        <uranium:ExpanderView.Header>
+                        <VerticalStackLayout Spacing="8"
+                                             Padding="0,4,0,0"
+                                             IsVisible="{Binding ShowDeckSuggestionUi}">
                             <Label Text="{x:Static constants:UserMessages.DeckAddStrategyTitle}"
                                    FontSize="12"
                                    FontAttributes="Bold"
                                    TextColor="{StaticResource TextSecondary}"
                                    VerticalOptions="Center" />
-                        </uranium:ExpanderView.Header>
-                        <VerticalStackLayout Spacing="8">
                             <Picker Title="Strategy"
                                     TitleColor="{StaticResource TextSecondary}"
                                     TextColor="{StaticResource TextPrimary}"
@@ -192,160 +197,167 @@
                                                    Color="{StaticResource Primary}" />
                             </Grid>
                         </VerticalStackLayout>
-                    </uranium:ExpanderView>
-                </Border>
-
-                <Border Stroke="Transparent"
-                        StrokeShape="RoundRectangle 8"
-                        BackgroundColor="{StaticResource Surface}"
-                        Padding="12,8"
-                        Margin="16,4,16,0"
-                        IsVisible="{Binding IsStagedAddActive}">
-                    <VerticalStackLayout Spacing="8">
-                        <Grid ColumnDefinitions="Auto,*,*"
-                              ColumnSpacing="8"
-                              VerticalOptions="Center">
-                            <Label Grid.Column="0"
-                                   Text="{x:Static constants:UserMessages.DeckAddTargetPickerTitle}"
-                                   FontSize="12"
-                                   TextColor="{StaticResource TextSecondary}"
-                                   VerticalOptions="Center" />
-                            <Button Grid.Column="1"
-                                    Text="{x:Static constants:UserMessages.DeckAddTargetMainShort}"
-                                    Command="{Binding SetAddModalTargetMainCommand}"
-                                    FontSize="12"
-                                    Padding="10,8"
-                                    CornerRadius="8"
-                                    TextColor="{StaticResource TextPrimary}"
-                                    BackgroundColor="{StaticResource CardBackground}">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button"
-                                                 Binding="{Binding IsAddModalTargetMain}"
-                                                 Value="True">
-                                        <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                        <Setter Property="TextColor" Value="Black" />
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-                            <Button Grid.Column="2"
-                                    Text="{x:Static constants:UserMessages.DeckAddTargetSideboardShort}"
-                                    Command="{Binding SetAddModalTargetSideboardCommand}"
-                                    FontSize="12"
-                                    Padding="10,8"
-                                    CornerRadius="8"
-                                    TextColor="{StaticResource TextPrimary}"
-                                    BackgroundColor="{StaticResource CardBackground}">
-                                <Button.Triggers>
-                                    <DataTrigger TargetType="Button"
-                                                 Binding="{Binding IsAddModalTargetSideboard}"
-                                                 Value="True">
-                                        <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                        <Setter Property="TextColor" Value="Black" />
-                                    </DataTrigger>
-                                </Button.Triggers>
-                            </Button>
-                        </Grid>
-                        <Label Text="{Binding StagedAddSummaryText}"
-                               FontSize="12"
-                               TextColor="{StaticResource TextSecondary}"
-                               LineBreakMode="WordWrap" />
-                        <CollectionView ItemsSource="{Binding StagedAddItems}"
-                                        MaximumHeightRequest="140"
-                                        SelectionMode="None"
-                                        IsVisible="{Binding HasStagedAddItems}">
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="vm:StagedDeckAddItem">
-                                    <Grid Padding="0,4"
-                                          ColumnDefinitions="*,Auto,Auto,Auto,Auto"
-                                          ColumnSpacing="8"
-                                          VerticalOptions="Center">
-                                        <Label Grid.Column="0"
-                                               Text="{Binding Card.Name}"
-                                               TextColor="{StaticResource TextPrimary}"
-                                               FontSize="13"
-                                               LineBreakMode="TailTruncation"
-                                               VerticalOptions="Center" />
-                                        <Button Grid.Column="1"
-                                                Text="−"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.DecrementStagedAddQuantityCommand}"
-                                                CommandParameter="{Binding .}"
-                                                WidthRequest="36"
-                                                HeightRequest="36"
-                                                Padding="0"
-                                                FontSize="18"
-                                                BackgroundColor="{StaticResource CardBackground}"
-                                                TextColor="{StaticResource TextPrimary}"
-                                                CornerRadius="8" />
-                                        <Label Grid.Column="2"
-                                               Text="{Binding Quantity}"
-                                               FontSize="14"
-                                               FontAttributes="Bold"
-                                               TextColor="{StaticResource TextPrimary}"
-                                               VerticalOptions="Center"
-                                               WidthRequest="28"
-                                               HorizontalTextAlignment="Center" />
-                                        <Button Grid.Column="3"
-                                                Text="+"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.IncrementStagedAddQuantityCommand}"
-                                                CommandParameter="{Binding .}"
-                                                WidthRequest="36"
-                                                HeightRequest="36"
-                                                Padding="0"
-                                                FontSize="18"
-                                                BackgroundColor="{StaticResource Accent}"
-                                                TextColor="Black"
-                                                CornerRadius="8" />
-                                    </Grid>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                        <Grid ColumnDefinitions="*,Auto"
-                              ColumnSpacing="8">
-                            <Button Grid.Column="0"
-                                    Text="{Binding AddStagedCardsToDeckButtonText}"
-                                    Command="{Binding AddStagedCardsToDeckCommand}"
-                                    BackgroundColor="{StaticResource Accent}"
-                                    TextColor="Black"
-                                    CornerRadius="8"
-                                    Padding="12,8" />
-                            <Button Grid.Column="1"
-                                    Text="Clear"
-                                    Command="{Binding ClearStagedAddsCommand}"
-                                    BackgroundColor="{StaticResource CardBackground}"
-                                    TextColor="{StaticResource TextPrimary}"
-                                    CornerRadius="8"
-                                    Padding="12,8" />
-                        </Grid>
                     </VerticalStackLayout>
-                </Border>
+                </uranium:ExpanderView>
+            </Border>
 
-                <VerticalStackLayout Spacing="2"
-                                     Padding="16,4,16,0">
-                    <Label Text="{x:Static constants:UserMessages.DeckAddHintStaged}"
-                           FontSize="11"
-                           TextColor="{StaticResource TextSecondary}"
-                           LineBreakMode="WordWrap"
-                           IsVisible="{Binding IsStagedAddActive}" />
-                    <Label Text="{x:Static constants:UserMessages.DeckAddHintCommander}"
-                           FontSize="11"
-                           TextColor="{StaticResource TextSecondary}"
-                           LineBreakMode="WordWrap"
-                           IsVisible="{Binding IsAddModalCommanderFlow}" />
-                </VerticalStackLayout>
+            <VerticalStackLayout Spacing="2"
+                                 Padding="16,4,16,0">
+                <Label Text="{x:Static constants:UserMessages.DeckAddHintStaged}"
+                       FontSize="11"
+                       TextColor="{StaticResource TextSecondary}"
+                       LineBreakMode="WordWrap"
+                       IsVisible="{Binding IsStagedAddActive}" />
+                <Label Text="{x:Static constants:UserMessages.DeckAddHintCommander}"
+                       FontSize="11"
+                       TextColor="{StaticResource TextSecondary}"
+                       LineBreakMode="WordWrap"
+                       IsVisible="{Binding IsAddModalCommanderFlow}" />
             </VerticalStackLayout>
-        </ScrollView>
+        </VerticalStackLayout>
 
+        <!-- Staging docked between chrome and results (not inside a scroll). -->
         <Border Grid.Row="1"
+                Stroke="Transparent"
+                StrokeShape="RoundRectangle 8"
+                BackgroundColor="{StaticResource Surface}"
+                Padding="12,8"
+                Margin="16,0,16,0"
+                VerticalOptions="Start"
+                IsVisible="{Binding IsStagedAddActive}">
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="Auto,*,*"
+                      ColumnSpacing="8"
+                      VerticalOptions="Center">
+                    <Label Grid.Column="0"
+                           Text="{x:Static constants:UserMessages.DeckAddTargetPickerTitle}"
+                           FontSize="12"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center" />
+                    <Button Grid.Column="1"
+                            Text="{x:Static constants:UserMessages.DeckAddTargetMainShort}"
+                            Command="{Binding SetAddModalTargetMainCommand}"
+                            FontSize="12"
+                            Padding="10,8"
+                            CornerRadius="8"
+                            TextColor="{StaticResource TextPrimary}"
+                            BackgroundColor="{StaticResource CardBackground}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button"
+                                         Binding="{Binding IsAddModalTargetMain}"
+                                         Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                <Setter Property="TextColor" Value="Black" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button Grid.Column="2"
+                            Text="{x:Static constants:UserMessages.DeckAddTargetSideboardShort}"
+                            Command="{Binding SetAddModalTargetSideboardCommand}"
+                            FontSize="12"
+                            Padding="10,8"
+                            CornerRadius="8"
+                            TextColor="{StaticResource TextPrimary}"
+                            BackgroundColor="{StaticResource CardBackground}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button"
+                                         Binding="{Binding IsAddModalTargetSideboard}"
+                                         Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                <Setter Property="TextColor" Value="Black" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </Grid>
+                <Label Text="{Binding StagedAddSummaryText}"
+                       FontSize="12"
+                       TextColor="{StaticResource TextSecondary}"
+                       LineBreakMode="WordWrap" />
+                <CollectionView ItemsSource="{Binding StagedAddItems}"
+                                MaximumHeightRequest="140"
+                                SelectionMode="None"
+                                IsVisible="{Binding HasStagedAddItems}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StagedDeckAddItem">
+                            <Grid Padding="0,4"
+                                  ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                                  ColumnSpacing="8"
+                                  VerticalOptions="Center">
+                                <Label Grid.Column="0"
+                                       Text="{Binding Card.Name}"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       FontSize="13"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalOptions="Center" />
+                                <Button Grid.Column="1"
+                                        Text="−"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.DecrementStagedAddQuantityCommand}"
+                                        CommandParameter="{Binding .}"
+                                        WidthRequest="36"
+                                        HeightRequest="36"
+                                        Padding="0"
+                                        FontSize="18"
+                                        BackgroundColor="{StaticResource CardBackground}"
+                                        TextColor="{StaticResource TextPrimary}"
+                                        CornerRadius="8" />
+                                <Label Grid.Column="2"
+                                       Text="{Binding Quantity}"
+                                       FontSize="14"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       VerticalOptions="Center"
+                                       WidthRequest="28"
+                                       HorizontalTextAlignment="Center" />
+                                <Button Grid.Column="3"
+                                        Text="+"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.IncrementStagedAddQuantityCommand}"
+                                        CommandParameter="{Binding .}"
+                                        WidthRequest="36"
+                                        HeightRequest="36"
+                                        Padding="0"
+                                        FontSize="18"
+                                        BackgroundColor="{StaticResource Accent}"
+                                        TextColor="Black"
+                                        CornerRadius="8" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+                <Grid ColumnDefinitions="*,Auto"
+                      ColumnSpacing="8">
+                    <Button Grid.Column="0"
+                            Text="{Binding AddStagedCardsToDeckButtonText}"
+                            Command="{Binding AddStagedCardsToDeckCommand}"
+                            BackgroundColor="{StaticResource Accent}"
+                            TextColor="Black"
+                            CornerRadius="8"
+                            Padding="12,8" />
+                    <Button Grid.Column="1"
+                            Text="Clear"
+                            Command="{Binding ClearStagedAddsCommand}"
+                            BackgroundColor="{StaticResource CardBackground}"
+                            TextColor="{StaticResource TextPrimary}"
+                            CornerRadius="8"
+                            Padding="12,8" />
+                </Grid>
+            </VerticalStackLayout>
+        </Border>
+
+        <Border Grid.Row="2"
                 Stroke="Transparent"
                 StrokeShape="RoundRectangle 4"
                 BackgroundColor="{StaticResource Surface}"
                 Padding="0,4"
                 Margin="16,8,16,16"
                 VerticalOptions="Fill">
-            <CollectionView ItemsSource="{Binding AddCardSearchResultRows}"
-                            SelectionMode="None"
-                            VerticalOptions="Fill">
-                <CollectionView.EmptyView>
+            <Grid VerticalOptions="Fill">
+                <controls:CardGrid x:Name="AddResultsCardGrid"
+                                   IsVisible="{Binding IsAddCardResultsEmpty, Converter={StaticResource InvertedBool}}"
+                                   VerticalOptions="Fill"
+                                   HorizontalOptions="Fill" />
+                <ScrollView IsVisible="{Binding IsAddCardResultsEmpty}"
+                            VerticalOptions="Fill"
+                            HorizontalOptions="Fill">
                     <Label Text="{x:Static constants:UserMessages.DeckAddResultsEmpty}"
                            FontSize="14"
                            TextColor="{StaticResource TextSecondary}"
@@ -353,70 +365,8 @@
                            VerticalTextAlignment="Center"
                            Margin="20"
                            LineBreakMode="WordWrap" />
-                </CollectionView.EmptyView>
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="8" />
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="vm:DeckAddSearchResultRow">
-                        <Grid Padding="14,10"
-                              ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="14"
-                              BackgroundColor="Transparent">
-                            <Grid.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.ToggleStagedSearchRowCommand}"
-                                                     CommandParameter="{Binding .}" />
-                            </Grid.GestureRecognizers>
-                            <Border Grid.Column="0"
-                                    WidthRequest="78"
-                                    HeightRequest="109"
-                                    BackgroundColor="{StaticResource CardBackground}"
-                                    StrokeShape="RoundRectangle 6"
-                                    StrokeThickness="1"
-                                    Stroke="{StaticResource Surface}">
-                                <Border.Triggers>
-                                    <DataTrigger TargetType="Border" Binding="{Binding IsStaged}" Value="True">
-                                        <Setter Property="Stroke" Value="{StaticResource Accent}" />
-                                        <Setter Property="StrokeThickness" Value="2" />
-                                    </DataTrigger>
-                                </Border.Triggers>
-                                <controls:CachedCardImage CardUuid="{Binding Card.ImageId}"
-                                                           HorizontalOptions="Fill"
-                                                           VerticalOptions="Fill" />
-                            </Border>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 VerticalOptions="Center"
-                                                 Spacing="4">
-                                <Label Text="{Binding Card.Name}"
-                                       TextColor="{StaticResource TextPrimary}"
-                                       FontSize="16"
-                                       FontAttributes="Bold"
-                                       LineBreakMode="TailTruncation" />
-                                <Label Text="{Binding Card.CardType}"
-                                       TextColor="{StaticResource TextSecondary}"
-                                       FontSize="13"
-                                       LineBreakMode="TailTruncation" />
-                                <Label Text="{x:Static constants:UserMessages.DeckAddRowHintStage}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource TextSecondary}"
-                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.IsStagedAddActive}" />
-                                <Label Text="{x:Static constants:UserMessages.DeckAddRowHintCommander}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource TextSecondary}"
-                                       IsVisible="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckAddCardsPage}}, Path=BindingContext.IsAddModalCommanderFlow}" />
-                                <Label Text="{Binding SynergyHintText}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource Accent}"
-                                       LineBreakMode="WordWrap" />
-                            </VerticalStackLayout>
-                            <controls:ManaCostView Grid.Column="2"
-                                                   ManaText="{Binding Card.ManaCost}"
-                                                   SymbolSize="16"
-                                                   VerticalOptions="Center" />
-                        </Grid>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+                </ScrollView>
+            </Grid>
         </Border>
     </Grid>
 </ContentPage>

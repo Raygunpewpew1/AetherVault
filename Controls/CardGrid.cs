@@ -236,6 +236,22 @@ public class CardGrid : ContentView
         UpdateState(s => s with { Cards = cardStates });
     }
 
+    /// <summary>
+    /// Sets grid cards with optional quantity badges (e.g. staged count in deck add flow). When <paramref name="quantityBadges"/> is null or shorter, missing entries use 0.
+    /// </summary>
+    public void SetCards(IReadOnlyList<Card> cards, IReadOnlyList<int>? quantityBadges = null)
+    {
+        if (cards == null) throw new ArgumentNullException(nameof(cards));
+        var states = new CardState[cards.Count];
+        for (int i = 0; i < cards.Count; i++)
+        {
+            int q = quantityBadges != null && i < quantityBadges.Count ? quantityBadges[i] : 0;
+            states[i] = CardState.FromCard(cards[i], q);
+        }
+
+        UpdateState(s => s with { Cards = states.ToImmutableArray() });
+    }
+
     public void SetCollection(CollectionItem[] items)
     {
         var cardStates = items.Select(static i => CardState.FromCollectionItem(i)).ToImmutableArray();

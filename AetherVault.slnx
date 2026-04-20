@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="AetherVault.csproj">
+    <Platform Solution="*|x86" Project="x86" />
+    <Deploy Solution="*|x86" />
+    <Deploy Solution="Debug|Any CPU" />
+  </Project>
+  <Project Path="AetherVault.Tests/AetherVault.Tests.csproj">
+    <Build Solution="Debug|Any CPU" Project="false" />
+  </Project>
+</Solution>

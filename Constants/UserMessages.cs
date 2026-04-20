@@ -189,7 +189,11 @@ public static class UserMessages
 
     public const string DeckAddRowHintCommander = "Tap to set commander.";
 
-    public const string DeckAddResultsEmpty = "No results yet. Type to search, or use Search by deck theme / Deck strategy (above, under the search bar). Theme chips only appear when your deck has matching subtypes or keywords.";
+    public const string DeckAddResultsEmpty =
+        "No results yet. Type to search, or open Browse & suggestions for deck theme, popular lists, and commander suggestions. Theme chips only appear when your deck has matching subtypes or keywords.";
+
+    /// <summary>Add-cards modal — collapsed section for synergy chips, quick lists, and strategy UI.</summary>
+    public const string DeckAddBrowseMoreTitle = "Browse & suggestions";
 
     public const string DeckStatsSynergySubtypesTitle = "Top subtypes (main + commander)";
 

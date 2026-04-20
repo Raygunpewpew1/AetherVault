@@ -1,67 +1,60 @@
+using AetherVault.Controls;
 using AetherVault.ViewModels;
 
 namespace AetherVault.Pages;
 
 public partial class DeckAddCardsPage : ContentPage
 {
-    /// <summary>Cap chrome height so the bottom results list always receives space on Android.</summary>
-    private const double ChromeMaxHeightFraction = 0.42;
-    private double _lastChromeCap;
-
+    private readonly DeckAddCardsViewModel _addCardsVm;
     private Func<Task>? _dismissModal;
 
-    public DeckAddCardsPage()
+    public DeckAddCardsPage(DeckAddCardsViewModel addCardsVm)
     {
         InitializeComponent();
-        PageRootGrid.SizeChanged += OnPageRootGridSizeChanged;
+        _addCardsVm = addCardsVm;
+        AddResultsCardGrid.CardClicked += OnAddResultCardClicked;
     }
 
-    private void OnPageRootGridSizeChanged(object? sender, EventArgs e) => ApplyChromeMaxHeight();
-
-    private void ApplyChromeMaxHeight()
-    {
-        if (PageRootGrid.Height <= 1)
-            return;
-        double cap = PageRootGrid.Height * ChromeMaxHeightFraction;
-        if (Math.Abs(cap - _lastChromeCap) < 0.5)
-            return;
-        _lastChromeCap = cap;
-        ChromeScrollView.MaximumHeightRequest = cap;
-    }
+    private void OnAddResultCardClicked(string cardUuid) => _addCardsVm.OnResultCardClicked(cardUuid);
 
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        ApplyChromeMaxHeight();
+        _addCardsVm.AttachGrid(AddResultsCardGrid);
+        AddResultsCardGrid.OnResume();
+        _addCardsVm.NotifyAddCardsSheetAppeared();
     }
 
     /// <summary>Pops the modal using the same navigation object that opened it.</summary>
-    public void Init(DeckDetailViewModel viewModel, Func<Task> dismissModal)
+    public void Init(DeckDetailViewModel deckVm, Func<Task> dismissModal)
     {
-        viewModel.PrepareAddCardsModal();
-        BindingContext = viewModel;
+        var pending = deckVm.ConsumePendingAddModalQuickList();
+        _addCardsVm.PrepareModalTargetFromDeckTab(deckVm.SelectedSectionIndex);
+        _addCardsVm.AttachHost(deckVm);
+        if (pending != null)
+            _addCardsVm.ApplyQuickBrowseListFromPending(pending);
+
+        BindingContext = _addCardsVm;
         _dismissModal = dismissModal;
-        viewModel.AddCardsModalDismissAction = async () =>
+        _addCardsVm.AddCardsModalDismissAction = async () =>
         {
-            viewModel.ClearAddCardSearch();
+            _addCardsVm.ClearAddCardSearch();
             await dismissModal();
         };
     }
 
     protected override void OnDisappearing()
     {
-        if (BindingContext is DeckDetailViewModel vm)
-        {
-            vm.AddCardsModalDismissAction = null;
-            vm.ClearAddCardSearch();
-        }
+        _addCardsVm.AddCardsModalDismissAction = null;
+        _addCardsVm.DetachHost();
+        _addCardsVm.DetachGrid();
+        _addCardsVm.ClearAddCardSearch();
         base.OnDisappearing();
     }
 
     private async void OnDoneClicked(object? sender, EventArgs e)
     {
-        if (BindingContext is DeckDetailViewModel vm)
-            vm.ClearAddCardSearch();
+        _addCardsVm.ClearAddCardSearch();
 
         if (_dismissModal != null)
             await _dismissModal();

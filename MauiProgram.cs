@@ -108,6 +108,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CardDetailPage>();
         builder.Services.AddTransient<DeckDetailPage>();
         builder.Services.AddTransient<SearchFiltersPage>();
+        builder.Services.AddTransient<DeckAddCardsViewModel>();
         builder.Services.AddTransient<DeckAddCardsPage>();
         builder.Services.AddTransient<CardSearchPickerPage>();
         builder.Services.AddTransient<CreateDeckPage>();

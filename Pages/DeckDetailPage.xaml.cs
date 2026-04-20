@@ -23,6 +23,9 @@ public partial class DeckDetailPage : ContentPage
 
     private SKImage? _commanderArtImage;
 
+    /// <summary>Reuse the add-cards modal so each open does not re-parse the full XAML tree (major win on Android).</summary>
+    private DeckAddCardsPage? _cachedAddCardsPage;
+
     public string DeckId
     {
         set
@@ -198,15 +201,20 @@ public partial class DeckDetailPage : ContentPage
 
     private async Task OpenAddCardsModalAsync()
     {
-        var page = _serviceProvider.GetRequiredService<DeckAddCardsPage>();
+        _cachedAddCardsPage ??= _serviceProvider.GetRequiredService<DeckAddCardsPage>();
         var nav = Navigation;
-        page.Init(_viewModel, async () => await nav.PopModalAsync());
-        await Navigation.PushModalAsync(page);
+        _cachedAddCardsPage.Init(_viewModel, async () => await nav.PopModalAsync());
+        await Navigation.PushModalAsync(_cachedAddCardsPage);
     }
 
     private void OnAddCardsModalRequested()
     {
-        MainThread.BeginInvokeOnMainThread(() => _ = OpenAddCardsModalAsync());
+        // Open immediately on the UI thread (event is raised from RelayCommand). Extra BeginInvoke
+        // deferred the modal behind other work and worsened perceived latency with add-card search.
+        if (MainThread.IsMainThread)
+            _ = OpenAddCardsModalAsync();
+        else
+            MainThread.BeginInvokeOnMainThread(() => _ = OpenAddCardsModalAsync());
     }
 
     private async Task OnValidationDetailsAlertRequested(string body) =>

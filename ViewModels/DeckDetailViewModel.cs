@@ -11,169 +11,6 @@ using System.Text;
 
 namespace AetherVault.ViewModels;
 
-/// <summary>
-/// Represents a single card row in the deck editor list.
-/// </summary>
-public partial class DeckCardDisplayItem : ObservableObject
-{
-    [ObservableProperty]
-    public partial DeckCardEntity Entity { get; set; } = null!;
-
-    [ObservableProperty]
-    public partial Card Card { get; set; } = null!;
-
-    /// <summary>Copies of this printing in the user's collection (0 if none).</summary>
-    [ObservableProperty]
-    public partial int OwnedQuantity { get; set; }
-
-    public string DisplayName => Card?.Name ?? Entity.CardId;
-    public string ManaCostText => Card?.ManaCost ?? "";
-    public string CardTypeText => Card?.CardType ?? "";
-    public string ImageId => Card?.ImageId ?? "";
-    public double Cmc => Card?.EffectiveManaValue ?? 0;
-    /// <summary>Rules text for quick-detail popup.</summary>
-    public string RulesText => Card?.Text ?? "";
-    /// <summary>Power/toughness or loyalty for quick-detail popup.</summary>
-    public string PtOrLoyaltyText =>
-        Card == null ? "" :
-        !string.IsNullOrEmpty(Card.Power) && !string.IsNullOrEmpty(Card.Toughness) ? $"{Card.Power}/{Card.Toughness}" :
-        !string.IsNullOrEmpty(Card.Loyalty) ? $"Loyalty: {Card.Loyalty}" : "";
-    public string CardUuid => Entity.CardId;
-    /// <summary>e.g. "2 in Main" for quick-detail popup.</summary>
-    public string InDeckSummary => $"{Entity.Quantity} in {Entity.Section}";
-
-    /// <summary>Quantity badge binding; use <see cref="SetDeckQuantity"/> so the UI updates without a full reload.</summary>
-    public string DeckQtyLabel => Entity.Quantity.ToString();
-
-    [ObservableProperty]
-    public partial CardPriceData? PriceData { get; set; }
-
-    /// <summary>Unit price from bundled DB (vendor order in Settings). Empty when prices off or missing.</summary>
-    public string DeckUnitPriceDisplay =>
-        !PricePreferences.PricesDataEnabled ? "" : PriceDisplayHelper.GetDeckUnitPriceDisplay(PriceData);
-
-    /// <summary>Line total (unit × in-deck qty) for deck lists and grid.</summary>
-    public string DeckLinePriceDisplay =>
-        !PricePreferences.PricesDataEnabled ? "" : PriceDisplayHelper.GetDeckLinePriceDisplay(PriceData, Entity.Quantity);
-
-    /// <summary>Short collection hint for list rows.</summary>
-    public string OwnedShortText => OwnedQuantity <= 0 ? "—" : $"Own {OwnedQuantity}";
-
-    /// <summary>True when the deck plays more copies than the user owns (both must be &gt; 0).</summary>
-    public bool IsOverCollection => OwnedQuantity > 0 && Entity.Quantity > OwnedQuantity;
-
-    partial void OnOwnedQuantityChanged(int value)
-    {
-        OnPropertyChanged(nameof(OwnedShortText));
-        OnPropertyChanged(nameof(IsOverCollection));
-    }
-
-    partial void OnPriceDataChanged(CardPriceData? value)
-    {
-        OnPropertyChanged(nameof(DeckUnitPriceDisplay));
-        OnPropertyChanged(nameof(DeckLinePriceDisplay));
-    }
-
-    partial void OnEntityChanged(DeckCardEntity value)
-    {
-        OnPropertyChanged(nameof(DeckLinePriceDisplay));
-    }
-
-    /// <summary>Updates in-deck quantity and notifies quantity-related bindings.</summary>
-    public void SetDeckQuantity(int quantity)
-    {
-        Entity.Quantity = quantity;
-        OnPropertyChanged(nameof(InDeckSummary));
-        OnPropertyChanged(nameof(DeckQtyLabel));
-        OnPropertyChanged(nameof(IsOverCollection));
-        OnPropertyChanged(nameof(DeckLinePriceDisplay));
-    }
-
-    /// <summary>List row fill: solid for 1 or 3+ colors, horizontal WUBRG gradient for exactly two colors.</summary>
-    public Brush StripBackground => DeckDetailViewModel.GetDeckRowStripBackgroundBrush(Card);
-
-    /// <summary>Multi-select mode for bulk deck edits.</summary>
-    [ObservableProperty]
-    public partial bool IsSelected { get; set; }
-
-    partial void OnCardChanged(Card value) => OnPropertyChanged(nameof(StripBackground));
-
-    public void NotifyDeckPriceBindingsChanged()
-    {
-        OnPropertyChanged(nameof(DeckUnitPriceDisplay));
-        OnPropertyChanged(nameof(DeckLinePriceDisplay));
-    }
-}
-
-/// <summary>Search result row in the add-cards sheet (staging + commander quick-add).</summary>
-public partial class DeckAddSearchResultRow : ObservableObject
-{
-    public DeckAddSearchResultRow(Card card, bool initiallyStaged)
-    {
-        Card = card;
-        IsStaged = initiallyStaged;
-    }
-
-    public Card Card { get; }
-
-    [ObservableProperty]
-    public partial bool IsStaged { get; set; }
-
-    /// <summary>Overlap with current deck themes (main + commander).</summary>
-    [ObservableProperty]
-    public partial string SynergyHintText { get; set; } = "";
-}
-
-/// <summary>Card queued for batch add from the add-cards sheet.</summary>
-public partial class StagedDeckAddItem : ObservableObject
-{
-    public StagedDeckAddItem(Card card, int quantity = 1)
-    {
-        Card = card;
-        Quantity = quantity;
-    }
-
-    public Card Card { get; }
-
-    [ObservableProperty]
-    public partial int Quantity { get; set; }
-}
-
-/// <summary>
-/// Grouped list of DeckCardDisplayItems for CollectionView IsGrouped support.
-/// </summary>
-public class DeckCardGroup : ObservableCollection<DeckCardDisplayItem>
-{
-    private int _totalQuantity;
-
-    public string GroupName { get; }
-
-    /// <summary>Sum of Entity.Quantity for all items in this group (e.g. for "Creatures (32)" header).</summary>
-    public int TotalQuantity
-    {
-        get => _totalQuantity;
-        private set
-        {
-            if (_totalQuantity == value) return;
-            _totalQuantity = value;
-            base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(TotalQuantity)));
-            base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(HeaderText)));
-        }
-    }
-
-    /// <summary>e.g. "Creatures (32)" for section header.</summary>
-    public string HeaderText => $"{GroupName} ({TotalQuantity})";
-
-    public DeckCardGroup(string name, IEnumerable<DeckCardDisplayItem> items, int count)
-        : base([.. items])
-    {
-        GroupName = name;
-        _totalQuantity = count;
-    }
-
-    public void RecalculateTotal() => TotalQuantity = this.Sum(i => i.Entity.Quantity);
-}
-
 public partial class DeckDetailViewModel(
     DeckBuilderService deckService,
     ICardRepository cardRepository,
@@ -190,12 +27,7 @@ public partial class DeckDetailViewModel(
     private readonly IDialogService _dialogService = dialogService;
     private Dictionary<string, Card> _cardMapCache = [];
     private List<DeckCardEntity> _deckEntitiesCache = [];
-    private SearchOptions? _addCardSynergyPreset;
-    private SearchOptions? _addCardQuickBrowseOptions;
-    private string? _quickBrowseListLabel;
     private int _deckId;
-    private CancellationTokenSource? _addCardSearchCts;
-    private int _addCardSearchGeneration;
     private CancellationTokenSource? _deckListFilterCts;
     private const string PrefDeckEditorLayoutMode = "DeckEditorLayoutMode";
     private bool _deckEditorLayoutPrefLoaded;
@@ -380,10 +212,7 @@ public partial class DeckDetailViewModel(
     [ObservableProperty]
     public partial ObservableCollection<string> SynergyKeywordSummaryLines { get; set; } = [];
 
-    [ObservableProperty]
-    public partial ObservableCollection<DeckSynergyChipItem> AddCardSynergyPresetChips { get; set; } = [];
-
-    /// <summary>Add-cards sheet: horizontal chips for curated lists (shocks, fetches, …).</summary>
+    /// <summary>Deck editor toolbar: horizontal chips for curated lists (opens add-cards with list pre-selected).</summary>
     public ObservableCollection<DeckBrowseListChipItem> QuickBrowseListChips { get; } =
         new(DeckBrowseListCatalog.CreateChipItems());
 
@@ -392,24 +221,6 @@ public partial class DeckDetailViewModel(
 
     /// <summary>Deck stats tab: show keyword theme block.</summary>
     public bool HasSynergyKeywordSummary => SynergyKeywordSummaryLines.Count > 0;
-
-    /// <summary>Add-cards sheet: show theme chip row.</summary>
-    public bool HasSynergyPresetChips => AddCardSynergyPresetChips.Count > 0;
-
-    /// <summary>Subtype/keyword theme or a curated quick list is driving add-cards search.</summary>
-    public bool HasAddCardStructuredFilter => _addCardSynergyPreset != null || _addCardQuickBrowseOptions != null;
-
-    /// <summary>Short hint for the active structured add-cards filter (shown under search).</summary>
-    public string AddCardStructuredFilterCaption =>
-        !string.IsNullOrEmpty(_quickBrowseListLabel)
-            ? $"{UserMessages.DeckAddListFilterPrefix}{_quickBrowseListLabel}"
-            : _addCardSynergyPreset != null ? UserMessages.DeckAddThemeFilterActiveCaption : "";
-
-    private void RaiseAddCardStructuredFilterChanged()
-    {
-        OnPropertyChanged(nameof(HasAddCardStructuredFilter));
-        OnPropertyChanged(nameof(AddCardStructuredFilterCaption));
-    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCommanderTab))]
@@ -491,103 +302,17 @@ public partial class DeckDetailViewModel(
     /// <summary>True when there are two or more commander cards (e.g. partner).</summary>
     public bool HasMultipleCommanders => CommanderCards.Count > 1;
 
-    // ── Inline add-card search (visible on Commander, Main, Sideboard tabs) ──
+    /// <summary>Invoked when deck cohesion profile updates; <see cref="DeckAddCardsViewModel"/> subscribes while the add modal is open.</summary>
+    public Action<DeckCohesionProfile>? AddCardsCohesionProfileHook { get; set; }
 
-    [ObservableProperty]
-    public partial string AddCardSearchText { get; set; } = "";
+    private DeckBrowseListChipItem? _pendingAddModalQuickList;
 
-    [ObservableProperty]
-    public partial bool IsAddCardSearchBusy { get; set; }
-
-    /// <summary>When true, add-card search only returns cards that are in the user's collection.</summary>
-    [ObservableProperty]
-    public partial bool AddCardSearchOnlyCollection { get; set; }
-
-    /// <summary>True while commander strategy suggestions are loading.</summary>
-    [ObservableProperty]
-    public partial bool IsDeckSuggestionBusy { get; set; }
-
-    /// <summary>When true, empty search text does not clear the list (suggestion results are shown).</summary>
-    [ObservableProperty]
-    public partial bool AddCardResultsAreSuggestions { get; set; }
-
-    /// <summary>Picker labels in <see cref="CommanderArchetype"/> enum order.</summary>
-    public string[] CommanderArchetypePickerItems { get; } =
-        [.. Enum.GetValues<CommanderArchetype>().Select(static a => a.ToDisplayName())];
-
-    [ObservableProperty]
-    public partial int CommanderArchetypePickerIndex { get; set; }
-
-    /// <summary>Commander/Brawl/etc. decks with a commander set: show strategy picker and suggestions.</summary>
-    public bool ShowDeckSuggestionUi =>
-        Deck != null
-        && EnumExtensions.ParseDeckFormat(Deck.Format).IsCommanderLikeRules()
-        && !HasNoCommander;
-
-    private bool _archetypePickerSyncFromLoad;
-
-    [ObservableProperty]
-    public partial ObservableCollection<DeckAddSearchResultRow> AddCardSearchResultRows { get; set; } = [];
-
-    [ObservableProperty]
-    public partial ObservableCollection<StagedDeckAddItem> StagedAddItems { get; set; } = [];
-
-    /// <summary>0 = commander quick-add, 1 = main, 2 = sideboard. Set when the add modal opens; user can switch Main/Side in the sheet.</summary>
-    [ObservableProperty]
-    public partial int AddCardsModalTargetSectionIndex { get; set; } = 1;
-
-    /// <summary>True when the add-cards sheet should show batch-add UI (Main / Sideboard).</summary>
-    public bool IsStagedAddActive => AddCardsModalTargetSectionIndex is 1 or 2;
-
-    /// <summary>Commander-only flow in the add modal (tap to set commander, no staging).</summary>
-    public bool IsAddModalCommanderFlow => AddCardsModalTargetSectionIndex == 0;
-
-    public bool IsAddModalTargetMain => AddCardsModalTargetSectionIndex == 1;
-
-    public bool IsAddModalTargetSideboard => AddCardsModalTargetSectionIndex == 2;
-
-    /// <summary>Primary action label for staged batch (depends on <see cref="AddCardsModalTargetSectionIndex"/>).</summary>
-    public string AddStagedCardsToDeckButtonText =>
-        AddCardsModalTargetSectionIndex == 2
-            ? UserMessages.DeckAddApplyToSideboard
-            : UserMessages.DeckAddApplyToMain;
-
-    /// <summary>Summary line for staged cards in the add sheet.</summary>
-    public string StagedAddSummaryText =>
-        StagedAddItems.Count == 0
-            ? UserMessages.DeckAddStagingEmpty
-            : UserMessages.DeckAddStagingSummary(StagedAddItems.Count, StagedAddItems.Sum(s => s.Quantity));
-
-    /// <summary>True when the staged list has rows (hides empty list chrome in add-cards sheet).</summary>
-    public bool HasStagedAddItems => StagedAddItems.Count > 0;
-
-    private void NotifyStagedAddPresentationChanged()
+    /// <summary>Consumed once when the add-cards modal opens after <see cref="OpenAddCardsFromQuickList"/>.</summary>
+    internal DeckBrowseListChipItem? ConsumePendingAddModalQuickList()
     {
-        OnPropertyChanged(nameof(StagedAddSummaryText));
-        OnPropertyChanged(nameof(HasStagedAddItems));
-    }
-
-    partial void OnStagedAddItemsChanged(ObservableCollection<StagedDeckAddItem> oldValue, ObservableCollection<StagedDeckAddItem> newValue)
-        => NotifyStagedAddPresentationChanged();
-
-    partial void OnAddCardsModalTargetSectionIndexChanged(int value)
-    {
-        OnPropertyChanged(nameof(IsStagedAddActive));
-        OnPropertyChanged(nameof(IsAddModalCommanderFlow));
-        OnPropertyChanged(nameof(IsAddModalTargetMain));
-        OnPropertyChanged(nameof(IsAddModalTargetSideboard));
-        OnPropertyChanged(nameof(AddStagedCardsToDeckButtonText));
-    }
-
-    /// <summary>Sync add-modal target from the current deck tab when opening the sheet.</summary>
-    public void PrepareAddCardsModal()
-    {
-        AddCardsModalTargetSectionIndex = SelectedSectionIndex switch
-        {
-            0 => 0,
-            2 => 2,
-            _ => 1
-        };
+        var x = _pendingAddModalQuickList;
+        _pendingAddModalQuickList = null;
+        return x;
     }
 
     /// <summary>Raised for main/sideboard grid ⋯ menu (page shows action sheet).</summary>
@@ -658,6 +383,10 @@ public partial class DeckDetailViewModel(
             _toast.ShowWithAction(toastSummary, "Undo", () => _ = UndoDeckEditAsync(), durationMs: 5000);
     }
 
+    /// <summary>Surfaces undo stack for <see cref="DeckAddCardsViewModel"/> batch mutations.</summary>
+    public void PushDeckEditorUndoFrame(DeckEditorMutation[] inverseMutations, string? toastSummary = null) =>
+        PushUndoFrame(inverseMutations, toastSummary);
+
     private IAsyncRelayCommand? _suggestLandsCommand;
     /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
     public IAsyncRelayCommand SuggestLandsCommand => _suggestLandsCommand ??= new AsyncRelayCommand(SuggestLandsAsync);
@@ -699,21 +428,6 @@ public partial class DeckDetailViewModel(
     private IAsyncRelayCommand? _moveCardRowToMainCommand;
     public IAsyncRelayCommand MoveCardRowToMainCommand => _moveCardRowToMainCommand ??= new AsyncRelayCommand<DeckCardDisplayItem?>(MoveCardRowToMainAsync);
 
-    private IRelayCommand? _toggleStagedSearchRowCommand;
-    public IRelayCommand ToggleStagedSearchRowCommand => _toggleStagedSearchRowCommand ??= new RelayCommand<DeckAddSearchResultRow?>(ToggleStagedSearchRow);
-
-    private IRelayCommand? _incrementStagedAddQuantityCommand;
-    public IRelayCommand IncrementStagedAddQuantityCommand => _incrementStagedAddQuantityCommand ??= new RelayCommand<StagedDeckAddItem?>(IncrementStagedAddQuantity);
-
-    private IRelayCommand? _decrementStagedAddQuantityCommand;
-    public IRelayCommand DecrementStagedAddQuantityCommand => _decrementStagedAddQuantityCommand ??= new RelayCommand<StagedDeckAddItem?>(DecrementStagedAddQuantity);
-
-    private IAsyncRelayCommand? _addStagedCardsToDeckCommand;
-    public IAsyncRelayCommand AddStagedCardsToDeckCommand => _addStagedCardsToDeckCommand ??= new AsyncRelayCommand(AddStagedCardsToDeckAsync);
-
-    private IRelayCommand? _clearStagedAddsCommand;
-    public IRelayCommand ClearStagedAddsCommand => _clearStagedAddsCommand ??= new RelayCommand(ClearStagedAdds);
-
     [RelayCommand]
     private void SelectCommander() => SelectedSectionIndex = 0;
 
@@ -725,12 +439,6 @@ public partial class DeckDetailViewModel(
 
     [RelayCommand]
     private void SelectStats() => SelectedSectionIndex = 3;
-
-    [RelayCommand]
-    private void SetAddModalTargetMain() => AddCardsModalTargetSectionIndex = 1;
-
-    [RelayCommand]
-    private void SetAddModalTargetSideboard() => AddCardsModalTargetSectionIndex = 2;
 
     [RelayCommand]
     private void RequestMainDeckGridMenu(DeckCardDisplayItem? item)
@@ -748,35 +456,6 @@ public partial class DeckDetailViewModel(
 
     [RelayCommand]
     private void ShowCardQuickDetail(DeckCardDisplayItem item) => RequestShowQuickDetail?.Invoke(item);
-
-    partial void OnAddCardSearchTextChanged(string value)
-    {
-        AddCardResultsAreSuggestions = false;
-        _addCardSearchCts?.Cancel();
-        _addCardSearchCts = new CancellationTokenSource();
-        var token = _addCardSearchCts.Token;
-        Task.Delay(750, token).ContinueWith(t =>
-        {
-            if (!t.IsCanceled)
-                MainThread.BeginInvokeOnMainThread(() => _ = ExecuteAddCardSearchAsync());
-        }, TaskContinuationOptions.None);
-    }
-
-    partial void OnAddCardSearchOnlyCollectionChanged(bool value)
-    {
-        AddCardResultsAreSuggestions = false;
-        if (!string.IsNullOrWhiteSpace(AddCardSearchText) || _addCardSynergyPreset != null || _addCardQuickBrowseOptions != null)
-            _ = ExecuteAddCardSearchAsync();
-        else
-            MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
-    }
-
-    partial void OnCommanderArchetypePickerIndexChanged(int value)
-    {
-        if (_archetypePickerSyncFromLoad || Deck == null) return;
-        if (value < 0 || value >= Enum.GetValues<CommanderArchetype>().Length) return;
-        _ = SaveDeckArchetypeAsync((CommanderArchetype)value);
-    }
 
     partial void OnSelectedSectionIndexChanged(int value)
     {
@@ -804,310 +483,26 @@ public partial class DeckDetailViewModel(
         }, TaskContinuationOptions.None);
     }
 
-    private IAsyncRelayCommand? _addCardSearchCommand;
-    /// <summary>Explicit command for XAML compiled bindings (MAUIG2045).</summary>
-    public IAsyncRelayCommand AddCardSearchCommand => _addCardSearchCommand ??= new AsyncRelayCommand(ExecuteAddCardSearchAsync);
-
-    private async Task ExecuteAddCardSearchAsync()
-    {
-        var query = (AddCardSearchText ?? "").Trim();
-        int myGen = ++_addCardSearchGeneration;
-
-        IsAddCardSearchBusy = true;
-        try
-        {
-            bool useSynergy = _addCardSynergyPreset != null;
-            bool useQuickBrowse = _addCardQuickBrowseOptions != null;
-            bool useStructured = useSynergy || useQuickBrowse;
-            if (!useStructured && string.IsNullOrEmpty(query))
-            {
-                if (AddCardResultsAreSuggestions)
-                    return;
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    if (myGen != _addCardSearchGeneration) return;
-                    AddCardSearchResultRows = [];
-                });
-                return;
-            }
-
-            Card[] cards;
-            if (useStructured)
-            {
-                var fmt = Deck != null
-                    ? EnumExtensions.ParseDeckFormat(Deck.Format)
-                    : global::AetherVault.Core.DeckFormat.Standard;
-                string? namePart = string.IsNullOrEmpty(query) ? null : query;
-                var structuredOptions = useSynergy ? _addCardSynergyPreset! : _addCardQuickBrowseOptions!;
-                int structuredLimit = useQuickBrowse ? 120 : 50;
-                cards = await _cardManager.SearchCardsWithOptionsAsync(
-                    structuredOptions,
-                    namePart,
-                    AddCardSearchOnlyCollection,
-                    structuredLimit,
-                    restrictToDeckLegalFormat: true,
-                    fmt);
-            }
-            else
-            {
-                cards = AddCardSearchOnlyCollection
-                    ? await _cardManager.SearchInCollectionAsync(query, 50)
-                    : await _cardManager.SearchCardsAsync(query, 50);
-            }
-
-            if (myGen != _addCardSearchGeneration) return;
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                var stagedUuids = new HashSet<string>(StagedAddItems.Select(s => s.Card.Uuid));
-                AddCardSearchResultRows = new ObservableCollection<DeckAddSearchResultRow>(
-                    cards.Select(c =>
-                    {
-                        var row = new DeckAddSearchResultRow(c, stagedUuids.Contains(c.Uuid));
-                        row.SynergyHintText = DeckCohesionAnalyzer.FormatOverlapHint(
-                            c, _deckEntitiesCache, _cardMapCache) ?? "";
-                        return row;
-                    }));
-            });
-        }
-        finally
-        {
-            if (myGen == _addCardSearchGeneration)
-                MainThread.BeginInvokeOnMainThread(() => IsAddCardSearchBusy = false);
-        }
-    }
-
-    private async Task SaveDeckArchetypeAsync(CommanderArchetype archetype)
-    {
-        if (Deck == null) return;
-        try
-        {
-            await _deckService.UpdateCommanderArchetypeAsync(Deck.Id, archetype);
-            Deck.CommanderArchetype = archetype.ToArchetypeDbValue();
-        }
-        catch (Exception ex)
-        {
-            StatusIsError = true;
-            StatusMessage = UserMessages.Error(ex.Message);
-        }
-    }
-
-    private IAsyncRelayCommand? _loadDeckSuggestionsCommand;
-
-    /// <summary>Loads ranked commander deck suggestions into the add-cards result list.</summary>
-    public IAsyncRelayCommand LoadDeckSuggestionsCommand =>
-        _loadDeckSuggestionsCommand ??= new AsyncRelayCommand(ExecuteLoadDeckSuggestionsAsync);
-
-    private async Task ExecuteLoadDeckSuggestionsAsync()
-    {
-        if (Deck == null || HasNoCommander || !EnumExtensions.ParseDeckFormat(Deck.Format).IsCommanderLikeRules())
-        {
-            _toast.Show(UserMessages.DeckAddSuggestionsNeedCommander, 4000);
-            return;
-        }
-
-        var commanderItem = FirstCommander;
-        if (commanderItem?.Card == null)
-        {
-            _toast.Show(UserMessages.DeckAddSuggestionsNeedCommander, 4000);
-            return;
-        }
-
-        int myGen = ++_addCardSearchGeneration;
-        IsDeckSuggestionBusy = true;
-        AddCardResultsAreSuggestions = false;
-        try
-        {
-            await _cardManager.EnsureInitializedAsync();
-            var archetype = (CommanderArchetype)CommanderArchetypePickerIndex;
-            var (stats, profile) = BuildCohesionSnapshot();
-            var cards = await _cardManager.GetDeckSuggestionsAsync(
-                Deck,
-                archetype,
-                commanderItem.Card,
-                _deckEntitiesCache,
-                _cardMapCache,
-                stats,
-                profile,
-                AddCardSearchOnlyCollection,
-                maxResults: 45);
-
-            if (myGen != _addCardSearchGeneration) return;
-
-            if (cards.Length == 0)
-            {
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    AddCardResultsAreSuggestions = false;
-                    AddCardSearchResultRows = [];
-                    _toast.Show(UserMessages.DeckAddSuggestionsNone, 4000);
-                });
-                return;
-            }
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                AddCardResultsAreSuggestions = true;
-                var stagedUuids = new HashSet<string>(StagedAddItems.Select(s => s.Card.Uuid));
-                AddCardSearchResultRows = new ObservableCollection<DeckAddSearchResultRow>(
-                    cards.Select(c =>
-                    {
-                        var row = new DeckAddSearchResultRow(c, stagedUuids.Contains(c.Uuid));
-                        row.SynergyHintText = DeckCohesionAnalyzer.FormatOverlapHint(
-                            c, _deckEntitiesCache, _cardMapCache) ?? "";
-                        return row;
-                    }));
-            });
-        }
-        catch (Exception ex)
-        {
-            if (myGen == _addCardSearchGeneration)
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    AddCardResultsAreSuggestions = false;
-                    StatusIsError = true;
-                    StatusMessage = UserMessages.SearchFailed(ex.Message);
-                });
-        }
-        finally
-        {
-            if (myGen == _addCardSearchGeneration)
-                MainThread.BeginInvokeOnMainThread(() => IsDeckSuggestionBusy = false);
-        }
-    }
-
-    private (DeckStats stats, DeckCohesionProfile profile) BuildCohesionSnapshot()
+    /// <summary>Snapshot for commander suggestions and cohesion (shared with <see cref="DeckAddCardsViewModel"/>).</summary>
+    public (DeckStats stats, DeckCohesionProfile profile) BuildCohesionSnapshot()
     {
         var stats = ComputeStatsAndCohesion(_deckEntitiesCache, _cardMapCache, out var profile);
         return (stats, profile);
     }
 
-    /// <summary>
-    /// Set by <see cref="Pages.DeckAddCardsPage"/> while the add-cards modal is open.
-    /// Invoked after a successful commander set so the modal can pop without requiring Done.
-    /// </summary>
-    public Func<Task>? AddCardsModalDismissAction { get; set; }
-
-    /// <summary>Clears add-card search state when the sheet closes.</summary>
-    public void ClearAddCardSearch()
-    {
-        _addCardSearchCts?.Cancel();
-        AddCardSearchText = "";
-        AddCardSearchResultRows = [];
-        StagedAddItems = [];
-        IsAddCardSearchBusy = false;
-        AddCardResultsAreSuggestions = false;
-        _addCardSynergyPreset = null;
-        _addCardQuickBrowseOptions = null;
-        _quickBrowseListLabel = null;
-        RaiseAddCardStructuredFilterChanged();
-        NotifyStagedAddPresentationChanged();
-    }
-
-    [RelayCommand]
-    private void ApplyAddCardSynergyPreset(DeckSynergyChipItem? chip)
-    {
-        if (chip == null) return;
-        AddCardResultsAreSuggestions = false;
-        _addCardQuickBrowseOptions = null;
-        _quickBrowseListLabel = null;
-        _addCardSynergyPreset = chip.ToPresetSearchOptions();
-        RaiseAddCardStructuredFilterChanged();
-        _ = ExecuteAddCardSearchAsync();
-    }
-
-    private void ApplyQuickBrowseListCore(DeckBrowseListChipItem item)
-    {
-        AddCardResultsAreSuggestions = false;
-        _addCardSynergyPreset = null;
-        _addCardQuickBrowseOptions = DeckBrowseListCatalog.CreateOptions(item.Key);
-        _quickBrowseListLabel = item.DisplayText;
-        RaiseAddCardStructuredFilterChanged();
-    }
-
-    /// <summary>Apply a curated list while already on the add-cards sheet.</summary>
-    [RelayCommand]
-    private void ApplyQuickBrowseList(DeckBrowseListChipItem? item)
-    {
-        if (item == null) return;
-        ApplyQuickBrowseListCore(item);
-        _ = ExecuteAddCardSearchAsync();
-    }
-
-    /// <summary>From deck editor: open add-cards with this list pre-selected and results loading.</summary>
+    /// <summary>From deck editor: open add-cards; optional quick list is applied via <see cref="ConsumePendingAddModalQuickList"/>.</summary>
     [RelayCommand]
     private void OpenAddCardsFromQuickList(DeckBrowseListChipItem? item)
     {
         if (item == null) return;
-        ApplyQuickBrowseListCore(item);
+        _pendingAddModalQuickList = item;
         AddCardsModalRequested?.Invoke();
-        _ = ExecuteAddCardSearchAsync();
-    }
-
-    [RelayCommand]
-    private void ClearAddCardSynergyPreset()
-    {
-        AddCardResultsAreSuggestions = false;
-        _addCardSynergyPreset = null;
-        _addCardQuickBrowseOptions = null;
-        _quickBrowseListLabel = null;
-        RaiseAddCardStructuredFilterChanged();
-        if (string.IsNullOrWhiteSpace(AddCardSearchText))
-            MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);
-        else
-            _ = ExecuteAddCardSearchAsync();
     }
 
     private static void ApplyOwnedQuantities(List<DeckCardDisplayItem> items, Dictionary<string, int> qtyOwned)
     {
         foreach (var item in items)
             item.OwnedQuantity = qtyOwned.GetValueOrDefault(item.Entity.CardId, 0);
-    }
-
-    [RelayCommand]
-    private async Task AddCardFromSearchAsync(Card? card)
-    {
-        if (card == null || Deck == null) return;
-
-        if (AddCardsModalTargetSectionIndex == 0)
-        {
-            var result = await _deckService.SetCommanderAsync(Deck.Id, card.Uuid);
-            if (result.IsError)
-            {
-                StatusIsError = true;
-                StatusMessage = result.Message ?? UserMessages.CouldNotSetCommander();
-            }
-            else
-            {
-                StatusIsError = false;
-                StatusMessage = !string.IsNullOrWhiteSpace(result.Message) ? result.Message : $"{card.Name} set as commander.";
-                await ReloadAsync(preserveState: true);
-                var dismiss = AddCardsModalDismissAction;
-                if (dismiss != null)
-                    await dismiss();
-            }
-            return;
-        }
-
-        string section = AddCardsModalTargetSectionIndex == 2 ? "Sideboard" : "Main";
-        var cardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
-        int qtyBefore = cardsBefore.FirstOrDefault(c => c.CardId == card.Uuid && c.Section == section)?.Quantity ?? 0;
-        var addResult = await _deckService.AddCardAsync(Deck.Id, card.Uuid, 1, section);
-        if (addResult.IsError)
-        {
-            StatusIsError = true;
-            StatusMessage = addResult.Message ?? UserMessages.CouldNotAddCardToDeck();
-        }
-        else
-        {
-            StatusIsError = false;
-            StatusMessage = UserMessages.CardsAddedToSection(1, card.Name, section);
-            PushUndoFrame(
-            [
-                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, card.Uuid, section, null, qtyBefore)
-            ], UserMessages.CardsAddedToSection(1, card.Name, section));
-            await ReloadAsync(preserveState: true);
-        }
     }
 
     public async Task ReloadAsync(bool preserveState = false) => await LoadAsync(_deckId, preserveState);
@@ -1250,10 +645,6 @@ public partial class DeckDetailViewModel(
                 UpdateSynergyCollections(cohesionProfile);
                 OnPropertyChanged(nameof(HasNoCommander));
                 OnPropertyChanged(nameof(HasMultipleCommanders));
-                _archetypePickerSyncFromLoad = true;
-                CommanderArchetypePickerIndex = (int)EnumExtensions.ParseCommanderArchetype(newDeck.CommanderArchetype);
-                _archetypePickerSyncFromLoad = false;
-                OnPropertyChanged(nameof(ShowDeckSuggestionUi));
                 RefreshDeckListFilter();
                 RecalculateDeckPriceTotals();
                 StatusIsError = validation.Level == ValidationLevel.Error;
@@ -1889,127 +1280,6 @@ public partial class DeckDetailViewModel(
         await ReloadAsync(preserveState: true);
     }
 
-    private void ToggleStagedSearchRow(DeckAddSearchResultRow? row)
-    {
-        if (row == null || Deck == null) return;
-
-        if (AddCardsModalTargetSectionIndex == 0)
-        {
-            _ = AddCardFromSearchAsync(row.Card);
-            return;
-        }
-
-        if (row.IsStaged)
-        {
-            var existing = StagedAddItems.FirstOrDefault(s => s.Card.Uuid == row.Card.Uuid);
-            if (existing != null)
-                StagedAddItems.Remove(existing);
-            row.IsStaged = false;
-        }
-        else
-        {
-            StagedAddItems.Add(new StagedDeckAddItem(row.Card));
-            row.IsStaged = true;
-        }
-
-        NotifyStagedAddPresentationChanged();
-    }
-
-    private void IncrementStagedAddQuantity(StagedDeckAddItem? item)
-    {
-        if (item == null) return;
-        item.Quantity++;
-        NotifyStagedAddPresentationChanged();
-    }
-
-    private void DecrementStagedAddQuantity(StagedDeckAddItem? item)
-    {
-        if (item == null) return;
-        if (item.Quantity <= 1)
-        {
-            StagedAddItems.Remove(item);
-            SyncSearchRowStagedState(item.Card.Uuid, false);
-        }
-        else
-        {
-            item.Quantity--;
-        }
-
-        NotifyStagedAddPresentationChanged();
-    }
-
-    private void SyncSearchRowStagedState(string cardUuid, bool staged)
-    {
-        var row = AddCardSearchResultRows.FirstOrDefault(r => r.Card.Uuid == cardUuid);
-        if (row != null)
-            row.IsStaged = staged;
-    }
-
-    private async Task AddStagedCardsToDeckAsync()
-    {
-        if (Deck == null || StagedAddItems.Count == 0) return;
-
-        if (AddCardsModalTargetSectionIndex == 0)
-        {
-            var first = StagedAddItems[0].Card;
-            var result = await _deckService.SetCommanderAsync(Deck.Id, first.Uuid);
-            if (result.IsError)
-            {
-                StatusIsError = true;
-                StatusMessage = result.Message ?? UserMessages.CouldNotSetCommander();
-            }
-            else
-            {
-                StatusIsError = false;
-                StatusMessage = StagedAddItems.Count > 1
-                    ? $"{first.Name} set as commander. (Additional staged cards were not added.)"
-                    : $"{first.Name} set as commander.";
-                StagedAddItems.Clear();
-                AddCardSearchResultRows = [];
-                NotifyStagedAddPresentationChanged();
-                await ReloadAsync(preserveState: true);
-            }
-
-            return;
-        }
-
-        string section = AddCardsModalTargetSectionIndex == 2 ? "Sideboard" : "Main";
-        var deckCardsBefore = await _deckService.GetDeckCardsAsync(Deck.Id);
-        var qtyBeforeList = StagedAddItems
-            .Select(s => deckCardsBefore.FirstOrDefault(c => c.CardId == s.Card.Uuid && c.Section == section)?.Quantity ?? 0)
-            .ToList();
-        var mutations = StagedAddItems
-            .Select(s => new DeckEditorMutation(DeckEditorMutationKind.Add, s.Card.Uuid, section, null, s.Quantity))
-            .ToList();
-        var addResult = await _deckService.ApplyEditorMutationsAsync(Deck.Id, mutations);
-        if (addResult.IsError)
-        {
-            StatusIsError = true;
-            StatusMessage = addResult.Message ?? UserMessages.CouldNotAddCardToDeck();
-            return;
-        }
-
-        int total = StagedAddItems.Sum(s => s.Quantity);
-        PushUndoFrame(
-            [.. StagedAddItems.Select((s, i) =>
-                new DeckEditorMutation(DeckEditorMutationKind.SetQuantity, s.Card.Uuid, section, null, qtyBeforeList[i]))],
-            $"Added {total} card(s) to {section}.");
-        StatusIsError = false;
-        StatusMessage = $"Added {total} card(s) to {section}.";
-        StagedAddItems.Clear();
-        AddCardSearchResultRows = [];
-        NotifyStagedAddPresentationChanged();
-        await ReloadAsync(preserveState: true);
-    }
-
-    private void ClearStagedAdds()
-    {
-        foreach (var row in AddCardSearchResultRows)
-            row.IsStaged = false;
-        StagedAddItems.Clear();
-        NotifyStagedAddPresentationChanged();
-    }
-
     private void ApplyLocalPatchAfterQuantitySuccess(DeckCardDisplayItem item, int newQty, string section)
     {
         if (newQty <= 0)
@@ -2145,162 +1415,6 @@ public partial class DeckDetailViewModel(
         }
     }
 
-    /// <summary>
-    /// WUBRG letters for consistent ordering on dual-color gradient strips (matches typical guild/shard display order).
-    /// </summary>
-    private static ReadOnlySpan<char> WubrgOrder => "WUBRG";
-
-    /// <summary>
-    /// Resolves identity text for strip coloring: <see cref="Card.ColorIdentity"/> when set; for lands, produced mana or basic name; else <see cref="Card.Colors"/>.
-    /// </summary>
-    private static string GetDeckRowColorIdentityString(Card? card)
-    {
-        if (card == null)
-            return "";
-
-        if (!string.IsNullOrWhiteSpace(card.ColorIdentity))
-            return card.ColorIdentity;
-
-        string type = card.CardType ?? "";
-        if (type.Contains("Land", StringComparison.OrdinalIgnoreCase))
-        {
-            string fromProduced = NormalizeProducedManaLetters(card.ProducedMana);
-            if (!string.IsNullOrEmpty(fromProduced))
-                return fromProduced;
-
-            string? basic = BasicLandColorIdentityFromName(card.Name);
-            if (basic != null)
-                return basic;
-        }
-
-        return card.Colors ?? "";
-    }
-
-    /// <summary>Deck list row background: 0 = neutral, 1 = single pip tint, 2 = horizontal dual gradient (WUBRG order), 3+ = gold.</summary>
-    public static Brush GetDeckRowStripBackgroundBrush(Card? card) =>
-        GetStripBackgroundBrushFromIdentity(GetDeckRowColorIdentityString(card));
-
-    private static string NormalizeProducedManaLetters(string? producedMana)
-    {
-        if (string.IsNullOrWhiteSpace(producedMana))
-            return "";
-
-        Span<char> buf = stackalloc char[5];
-        int n = 0;
-        foreach (char raw in producedMana)
-        {
-            char c = char.ToUpperInvariant(raw);
-            if (c is not ('W' or 'U' or 'B' or 'R' or 'G'))
-                continue;
-            bool dup = false;
-            for (int i = 0; i < n; i++)
-            {
-                if (buf[i] == c) { dup = true; break; }
-            }
-
-            if (!dup && n < buf.Length)
-                buf[n++] = c;
-        }
-
-        return n == 0 ? "" : new string(buf[..n]);
-    }
-
-    private static string? BasicLandColorIdentityFromName(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            return null;
-
-        ReadOnlySpan<char> n = name.AsSpan().Trim();
-        if (n.StartsWith("Snow-Covered ", StringComparison.OrdinalIgnoreCase))
-            n = n["Snow-Covered ".Length..];
-
-        return n.ToString() switch
-        {
-            "Plains" => "W",
-            "Island" => "U",
-            "Swamp" => "B",
-            "Mountain" => "R",
-            "Forest" => "G",
-            "Wastes" => "",
-            _ => null
-        };
-    }
-
-    private static Color StripColorForWubrgLetter(char letter) =>
-        char.ToUpperInvariant(letter) switch
-        {
-            'W' => Color.FromArgb("#3D3528"),
-            'U' => Color.FromArgb("#0D2E4F"),
-            'B' => Color.FromArgb("#1D1528"),
-            'R' => Color.FromArgb("#4F0D0D"),
-            'G' => Color.FromArgb("#0D351D"),
-            _ => Color.FromArgb("#2A2A33")
-        };
-
-    /// <summary>Dark solid for commander header / single-color strips; dual colors use <see cref="GetStripBackgroundBrushFromIdentity"/>.</summary>
-    public static Color GetStripBackgroundColorFromIdentity(string colorIdentity)
-    {
-        var brush = GetStripBackgroundBrushFromIdentity(colorIdentity);
-        if (brush is SolidColorBrush scb)
-            return scb.Color;
-        if (brush is LinearGradientBrush lgb && lgb.GradientStops.Count > 0)
-            return lgb.GradientStops[0].Color;
-        return Color.FromArgb("#2A2A33");
-    }
-
-    public static Brush GetStripBackgroundBrushFromIdentity(string colorIdentity)
-    {
-        colorIdentity = (colorIdentity ?? "").ToUpperInvariant();
-        bool w = colorIdentity.Contains('W');
-        bool u = colorIdentity.Contains('U');
-        bool b = colorIdentity.Contains('B');
-        bool r = colorIdentity.Contains('R');
-        bool g = colorIdentity.Contains('G');
-        int count = (w ? 1 : 0) + (u ? 1 : 0) + (b ? 1 : 0) + (r ? 1 : 0) + (g ? 1 : 0);
-
-        if (count == 0)
-            return new SolidColorBrush(Color.FromArgb("#2A2A33"));
-        if (count >= 3)
-            return new SolidColorBrush(Color.FromArgb("#3B2C0A"));
-
-        if (count == 2)
-        {
-            char first = ' ';
-            char second = ' ';
-            int n = 0;
-            foreach (char ch in WubrgOrder)
-            {
-                if (!colorIdentity.Contains(ch)) continue;
-                if (n == 0) first = ch;
-                else second = ch;
-                n++;
-                if (n == 2) break;
-            }
-
-            Color c0 = StripColorForWubrgLetter(first);
-            Color c1 = StripColorForWubrgLetter(second);
-            return new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0.5),
-                EndPoint = new Point(1, 0.5),
-                GradientStops =
-                [
-                    new GradientStop(c0, 0f),
-                    new GradientStop(c1, 1f)
-                ]
-            };
-        }
-
-        // Single color
-        if (w && !u && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('W'));
-        if (u && !w && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('U'));
-        if (b && !w && !u && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('B'));
-        if (r && !w && !u && !b && !g) return new SolidColorBrush(StripColorForWubrgLetter('R'));
-        if (g && !w && !u && !b && !r) return new SolidColorBrush(StripColorForWubrgLetter('G'));
-
-        return new SolidColorBrush(Color.FromArgb("#2A2A33"));
-    }
-
     private static ObservableCollection<DeckCardGroup> BuildGroups(List<DeckCardDisplayItem> items)
     {
         string[] order = ["Creatures", "Instants", "Sorceries", "Artifacts", "Enchantments", "Planeswalkers", "Lands", "Other"];
@@ -2395,30 +1509,8 @@ public partial class DeckDetailViewModel(
             kw.Add($"{label} — {count}");
         SynergyKeywordSummaryLines = kw;
 
-        var chips = new ObservableCollection<DeckSynergyChipItem>();
-        foreach (var (label, count) in DeckCohesionAnalyzer.TopSubtypes(profile, 6))
-        {
-            chips.Add(new DeckSynergyChipItem
-            {
-                DisplayText = $"{label} ({count})",
-                SubtypeOrKeywordValue = label,
-                IsSubtype = true
-            });
-        }
-
-        foreach (var (label, count) in DeckCohesionAnalyzer.TopKeywords(profile, 4))
-        {
-            chips.Add(new DeckSynergyChipItem
-            {
-                DisplayText = $"{label} ({count})",
-                SubtypeOrKeywordValue = label,
-                IsSubtype = false
-            });
-        }
-
-        AddCardSynergyPresetChips = chips;
         OnPropertyChanged(nameof(HasSynergySubtypeSummary));
         OnPropertyChanged(nameof(HasSynergyKeywordSummary));
-        OnPropertyChanged(nameof(HasSynergyPresetChips));
+        AddCardsCohesionProfileHook?.Invoke(profile);
     }
 }
