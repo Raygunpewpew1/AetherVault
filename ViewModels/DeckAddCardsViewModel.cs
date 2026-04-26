@@ -112,6 +112,9 @@ public partial class DeckAddCardsViewModel(
 
     public bool IsAddCardResultsEmpty => AddCardSearchResultRows.Count == 0;
 
+    /// <summary>Bottom dock: staging controls or commander-only hint.</summary>
+    public bool ShowAddCardsBottomBar => IsStagedAddActive || IsAddModalCommanderFlow;
+
     public bool ShowDeckSuggestionUi =>
         _host?.Deck != null
         && EnumExtensions.ParseDeckFormat(_host.Deck.Format).IsCommanderLikeRules()
@@ -163,6 +166,7 @@ public partial class DeckAddCardsViewModel(
     {
         SyncArchetypePickerFromHostDeck();
         OnPropertyChanged(nameof(ShowDeckSuggestionUi));
+        OnPropertyChanged(nameof(ShowAddCardsBottomBar));
     }
 
     private void SyncArchetypePickerFromHostDeck()
@@ -222,6 +226,7 @@ public partial class DeckAddCardsViewModel(
         OnPropertyChanged(nameof(IsAddModalTargetMain));
         OnPropertyChanged(nameof(IsAddModalTargetSideboard));
         OnPropertyChanged(nameof(AddStagedCardsToDeckButtonText));
+        OnPropertyChanged(nameof(ShowAddCardsBottomBar));
     }
 
     partial void OnAddCardSearchTextChanged(string value)

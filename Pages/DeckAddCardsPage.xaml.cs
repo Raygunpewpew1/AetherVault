@@ -1,5 +1,7 @@
 using AetherVault.Controls;
 using AetherVault.ViewModels;
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Extensions;
 
 namespace AetherVault.Pages;
 
@@ -16,6 +18,15 @@ public partial class DeckAddCardsPage : ContentPage
     }
 
     private void OnAddResultCardClicked(string cardUuid) => _addCardsVm.OnResultCardClicked(cardUuid);
+
+    private async void OnBrowseClicked(object? sender, EventArgs e)
+    {
+        var popup = new DeckAddCardsBrowsePopup { BindingContext = _addCardsVm };
+        await this.ShowPopupAsync(popup, new PopupOptions
+        {
+            PageOverlayColor = Color.FromRgba(0, 0, 0, 0.45)
+        });
+    }
 
     protected override void OnAppearing()
     {

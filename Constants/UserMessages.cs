@@ -190,10 +190,22 @@ public static class UserMessages
     public const string DeckAddRowHintCommander = "Tap to set commander.";
 
     public const string DeckAddResultsEmpty =
-        "No results yet. Type to search, or open Browse & suggestions for deck theme, popular lists, and commander suggestions. Theme chips only appear when your deck has matching subtypes or keywords.";
+        "No results yet. Type to search, or tap Browse for deck themes, popular lists, and commander suggestions. Theme chips only appear when your deck has matching subtypes or keywords.";
 
     /// <summary>Add-cards modal — collapsed section for synergy chips, quick lists, and strategy UI.</summary>
     public const string DeckAddBrowseMoreTitle = "Browse & suggestions";
+
+    /// <summary>Add-cards browse sheet — one-line description under the title.</summary>
+    public const string DeckAddBrowseSheetSubtitle = "Deck themes, quick lists, and commander suggestions live here so the main screen stays focused on search and picks.";
+
+    /// <summary>Add-cards browse sheet — dismiss control.</summary>
+    public const string DeckAddBrowseClose = "Done";
+
+    /// <summary>Add-cards — opens the browse sheet (toolbar).</summary>
+    public const string DeckAddBrowseOpen = "Browse";
+
+    /// <summary>Add-cards — collapsed header for the staged card list.</summary>
+    public const string DeckAddStagingReviewTitle = "Review staged cards";
 
     public const string DeckStatsSynergySubtypesTitle = "Top subtypes (main + commander)";
 
