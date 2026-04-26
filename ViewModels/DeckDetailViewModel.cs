@@ -593,13 +593,23 @@ public partial class DeckDetailViewModel(
             _deckEntitiesCache = cardEntities;
             var uuids = cardEntities.Select(c => c.CardId).Distinct().ToArray();
 
-            Dictionary<string, Card> cardMap = uuids.Length > 0
-                ? await _cardRepository.GetCardsAsync(uuids)
-                : [];
+            Dictionary<string, Card> cardMap;
+            Dictionary<string, int> qtyOwned;
+            if (uuids.Length == 0)
+            {
+                cardMap = [];
+                qtyOwned = [];
+            }
+            else
+            {
+                var cardsTask = _cardRepository.GetCardsAsync(uuids);
+                var qtyTask = _collectionRepository.GetQuantitiesAsync(uuids);
+                await Task.WhenAll(cardsTask, qtyTask);
+                cardMap = await cardsTask;
+                qtyOwned = await qtyTask;
+            }
 
             var (commander, main, sideboard) = MapEntitiesToSectionLists(cardEntities, cardMap);
-
-            var qtyOwned = await _collectionRepository.GetQuantitiesAsync(uuids);
             ApplyOwnedQuantities(commander, qtyOwned);
             ApplyOwnedQuantities(main, qtyOwned);
             ApplyOwnedQuantities(sideboard, qtyOwned);
@@ -614,22 +624,9 @@ public partial class DeckDetailViewModel(
 
             _cardMapCache = cardMap;
 
-            Dictionary<string, CardPriceData> priceMap = [];
-            if (PricePreferences.PricesDataEnabled && uuids.Length > 0)
+            await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                try
-                {
-                    priceMap = await _cardManager.GetCardPricesBulkAsync(uuids);
-                }
-                catch
-                {
-                    // Keep empty; rows show no unit price until retry.
-                }
-            }
-
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                ApplyDeckPricesToSectionLists(commander, main, sideboard, priceMap);
+                ApplyDeckPricesToSectionLists(commander, main, sideboard, []);
                 CommanderCards = new ObservableCollection<DeckCardDisplayItem>(commander);
                 FirstCommander = commander.Count > 0 ? commander[0] : null;
                 AdditionalCommanderCards = commander.Count > 1
@@ -652,6 +649,23 @@ public partial class DeckDetailViewModel(
                 SetValidationDetailLines(validation);
                 ReloadCompleted?.Invoke();
             });
+
+            if (PricePreferences.PricesDataEnabled && uuids.Length > 0)
+            {
+                try
+                {
+                    var priceMap = await _cardManager.GetCardPricesBulkAsync(uuids);
+                    await MainThread.InvokeOnMainThreadAsync(() =>
+                    {
+                        ApplyDeckPricesToSectionLists(commander, main, sideboard, priceMap);
+                        RecalculateDeckPriceTotals();
+                    });
+                }
+                catch
+                {
+                    // Keep empty; rows show no unit price until retry.
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -732,12 +746,14 @@ public partial class DeckDetailViewModel(
 
     private void RebuildMainDeckGridItems()
     {
-        MainDeckGridItems.Clear();
+        var flat = new List<DeckCardDisplayItem>();
         foreach (var g in FilteredMainDeckGroups)
         {
             foreach (var item in g)
-                MainDeckGridItems.Add(item);
+                flat.Add(item);
         }
+
+        MainDeckGridItems = new ObservableCollection<DeckCardDisplayItem>(flat);
     }
 
     private static void ApplyDeckPricesToSectionLists(

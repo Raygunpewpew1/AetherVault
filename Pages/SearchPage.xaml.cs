@@ -8,7 +8,6 @@ namespace AetherVault.Pages;
 /// <summary>
 /// Search tab: search box, filters, and card grid. Binds to SearchViewModel; grid events open card detail or add-to-collection/deck.
 /// CardGalleryContext is set on tap so CardDetailPage can swipe between cards from this result set.
-/// Easter egg: tap the bottom-right corner (above the tab bar) 7 times within 6 seconds to play a sound.
 /// </summary>
 public partial class SearchPage : ContentPage
 {
@@ -17,11 +16,8 @@ public partial class SearchPage : ContentPage
     private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
     private readonly DeckBuilderService _deckService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IEasterEggSoundService _easterEggSound;
-    private int _easterEggTapCount;
-    private IDispatcherTimer? _easterEggResetTimer;
 
-    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckSynergyNavigationContext deckSynergyNavigationContext, DeckBuilderService deckService, IServiceProvider serviceProvider, IEasterEggSoundService easterEggSound)
+    public SearchPage(SearchViewModel viewModel, CardGalleryContext galleryContext, DeckSynergyNavigationContext deckSynergyNavigationContext, DeckBuilderService deckService, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -29,7 +25,6 @@ public partial class SearchPage : ContentPage
         _deckSynergyNavigationContext = deckSynergyNavigationContext;
         _deckService = deckService;
         _serviceProvider = serviceProvider;
-        _easterEggSound = easterEggSound;
         BindingContext = _viewModel;
 
         // ViewModel needs the grid reference for pagination and visible-range (e.g. price loading)
@@ -46,30 +41,6 @@ public partial class SearchPage : ContentPage
                 await CardGrid.ScrollToAsync(0, false);
             });
         };
-    }
-
-    private void OnEasterEggTap(object? sender, TappedEventArgs e)
-    {
-        _easterEggResetTimer?.Stop();
-        _easterEggTapCount++;
-        Logger.LogStuff($"[EasterEgg] Tap {_easterEggTapCount}/7", LogLevel.Debug);
-        if (_easterEggTapCount >= 7)
-        {
-            _easterEggTapCount = 0;
-            Logger.LogStuff("[EasterEgg] Triggered — playing sound.", LogLevel.Debug);
-            _easterEggSound.Play();
-            return;
-        }
-        var timer = Dispatcher.CreateTimer();
-        timer.Interval = TimeSpan.FromSeconds(6);
-        timer.IsRepeating = false;
-        timer.Tick += (_, _) =>
-        {
-            _easterEggTapCount = 0;
-            timer.Stop();
-        };
-        timer.Start();
-        _easterEggResetTimer = timer;
     }
 
     protected override void OnAppearing()

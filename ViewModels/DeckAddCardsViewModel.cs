@@ -15,18 +15,21 @@ public partial class DeckAddCardsViewModel(
     CardManager cardManager,
     DeckBuilderService deckService,
     IToastService toast,
-    IGridPriceLoadService gridPriceLoadService) : ObservableObject
+    IGridPriceLoadService gridPriceLoadService,
+    DeckBrowseListResultCache quickBrowseListCache) : ObservableObject
 {
     private readonly CardManager _cardManager = cardManager;
     private readonly DeckBuilderService _deckService = deckService;
     private readonly IToastService _toast = toast;
     private readonly IGridPriceLoadService _gridPriceLoadService = gridPriceLoadService;
+    private readonly DeckBrowseListResultCache _quickBrowseListCache = quickBrowseListCache;
 
     private DeckDetailViewModel? _host;
     private CardGrid? _grid;
     private SearchOptions? _addCardSynergyPreset;
     private SearchOptions? _addCardQuickBrowseOptions;
     private string? _quickBrowseListLabel;
+    private string? _quickBrowseCatalogKey;
     private CancellationTokenSource? _addCardSearchCts;
     private int _addCardSearchGeneration;
     private bool _pickerSyncFromHost;
@@ -319,14 +322,47 @@ public partial class DeckAddCardsViewModel(
                     : DeckFormat.Standard;
                 string? namePart = string.IsNullOrEmpty(query) ? null : query;
                 var structuredOptions = useSynergy ? _addCardSynergyPreset! : _addCardQuickBrowseOptions!;
-                int structuredLimit = useQuickBrowse ? 40 : 50;
-                cards = await _cardManager.SearchCardsWithOptionsAsync(
-                    structuredOptions,
-                    namePart,
-                    AddCardSearchOnlyCollection,
-                    structuredLimit,
-                    restrictToDeckLegalFormat: true,
-                    fmt).ConfigureAwait(false);
+                int structuredLimit = useQuickBrowse
+                    ? DeckBrowseListCatalog.QuickBrowseSqlRowLimit(_quickBrowseCatalogKey, namePart)
+                    : 50;
+
+                var quickListDidHitCache = false;
+                if (useQuickBrowse
+                    && !string.IsNullOrEmpty(_quickBrowseCatalogKey)
+                    && _quickBrowseListCache.TryGet(
+                        _quickBrowseCatalogKey,
+                        fmt,
+                        AddCardSearchOnlyCollection,
+                        namePart,
+                        out var cachedCards)
+                    && cachedCards != null)
+                {
+                    cards = cachedCards;
+                    quickListDidHitCache = true;
+                }
+                else
+                {
+                    cards = await _cardManager.SearchCardsWithOptionsAsync(
+                        structuredOptions,
+                        namePart,
+                        AddCardSearchOnlyCollection,
+                        structuredLimit,
+                        restrictToDeckLegalFormat: true,
+                        fmt).ConfigureAwait(false);
+                }
+
+                if (useQuickBrowse)
+                    cards = DeckBrowseListNameCollapse.ApplyIfNeeded(_quickBrowseCatalogKey, namePart, cards);
+
+                if (useQuickBrowse
+                    && !string.IsNullOrEmpty(_quickBrowseCatalogKey)
+                    && !quickListDidHitCache)
+                    _quickBrowseListCache.Set(
+                        _quickBrowseCatalogKey,
+                        fmt,
+                        AddCardSearchOnlyCollection,
+                        namePart,
+                        cards);
             }
             else
             {
@@ -476,6 +512,7 @@ public partial class DeckAddCardsViewModel(
         _addCardSynergyPreset = null;
         _addCardQuickBrowseOptions = null;
         _quickBrowseListLabel = null;
+        _quickBrowseCatalogKey = null;
         RaiseAddCardStructuredFilterChanged();
         NotifyStagedAddPresentationChanged();
         _grid?.ClearCards();
@@ -491,6 +528,7 @@ public partial class DeckAddCardsViewModel(
         AddCardResultsAreSuggestions = false;
         _addCardQuickBrowseOptions = null;
         _quickBrowseListLabel = null;
+        _quickBrowseCatalogKey = null;
         _addCardSynergyPreset = chip.ToPresetSearchOptions();
         RaiseAddCardStructuredFilterChanged();
         _ = ExecuteAddCardSearchAsync();
@@ -502,6 +540,7 @@ public partial class DeckAddCardsViewModel(
         _addCardSynergyPreset = null;
         _addCardQuickBrowseOptions = DeckBrowseListCatalog.CreateOptions(item.Key);
         _quickBrowseListLabel = item.DisplayText;
+        _quickBrowseCatalogKey = item.Key;
         RaiseAddCardStructuredFilterChanged();
     }
 
@@ -513,11 +552,10 @@ public partial class DeckAddCardsViewModel(
         _ = ExecuteAddCardSearchAsync();
     }
 
-    /// <summary>Called from host when opening the modal with a pending quick-list chip.</summary>
+    /// <summary>Called from host when opening the modal with a pending quick-list chip. Search runs once from <see cref="NotifyAddCardsSheetAppeared"/> after the grid attaches.</summary>
     public void ApplyQuickBrowseListFromPending(DeckBrowseListChipItem item)
     {
         ApplyQuickBrowseListCore(item);
-        _ = ExecuteAddCardSearchAsync();
     }
 
     [RelayCommand]
@@ -527,6 +565,7 @@ public partial class DeckAddCardsViewModel(
         _addCardSynergyPreset = null;
         _addCardQuickBrowseOptions = null;
         _quickBrowseListLabel = null;
+        _quickBrowseCatalogKey = null;
         RaiseAddCardStructuredFilterChanged();
         if (string.IsNullOrWhiteSpace(AddCardSearchText))
             MainThread.BeginInvokeOnMainThread(() => AddCardSearchResultRows = []);

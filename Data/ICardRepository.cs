@@ -28,6 +28,8 @@ public interface ICardRepository
 
     Task<Card[]> SearchCardsAsync(string searchText, int limit = 100);
     Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper);
+    /// <summary>Like <see cref="SearchAdvancedAsync"/> but also returns the full match count via a window column (avoids a second COUNT query for pagination).</summary>
+    Task<(Card[] cards, int totalCount)> SearchAdvancedWithResultTotalAsync(MtgSearchHelper searchHelper);
     Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper);
     MtgSearchHelper CreateSearchHelper();
 

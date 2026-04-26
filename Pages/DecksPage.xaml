@@ -117,17 +117,8 @@
                                 <Border InputTransparent="True"
                                         StrokeThickness="0"
                                         VerticalOptions="Fill"
-                                        HorizontalOptions="Fill">
-                                    <Border.Background>
-                                        <!-- Vignette for legibility without hiding art (old stops were ~85–95% black over most of the tile). -->
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Color="#22000000" Offset="0.0" />
-                                            <GradientStop Color="#45000000" Offset="0.42" />
-                                            <GradientStop Color="#8F000000" Offset="0.78" />
-                                            <GradientStop Color="#B8000000" Offset="1.0" />
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
+                                        HorizontalOptions="Fill"
+                                        BackgroundColor="#5C000000" />
                                 <Grid Padding="10,8"
                                       RowDefinitions="Auto,*,Auto"
                                       RowSpacing="4">
@@ -141,8 +132,7 @@
                                                TextColor="White"
                                                FontSize="14"
                                                FontAttributes="Bold"
-                                               VerticalOptions="Start"
-                                               Shadow="{Shadow Brush=Black, Offset='0,1', Radius=2, Opacity=0.85}" />
+                                               VerticalOptions="Start" />
                                         <HorizontalStackLayout Grid.Column="1"
                                                                Spacing="2"
                                                                VerticalOptions="Start">

@@ -313,6 +313,7 @@ public class DeckImportExportTests
 
         public Task<Card[]> SearchCardsAsync(string searchText, int limit = 100) => throw new NotImplementedException();
         public Task<Card[]> SearchAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
+        public Task<(Card[] cards, int totalCount)> SearchAdvancedWithResultTotalAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
         public Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
         public MtgSearchHelper CreateSearchHelper() => throw new NotImplementedException();
         public Task<IReadOnlyList<SetInfo>> GetAllSetsAsync() => Task.FromResult<IReadOnlyList<SetInfo>>([]);

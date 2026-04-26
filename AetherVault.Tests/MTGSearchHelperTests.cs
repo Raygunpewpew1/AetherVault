@@ -504,6 +504,27 @@ public class MtgSearchHelperTests
         Assert.DoesNotContain("json_each(c.finishes)", result.sql);
     }
 
+    [Fact]
+    public void BuildWithResultTotal_UnionsAndTokens_InsertsWindowCountColumn()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards(includeTokens: true).WhereNameContains("a").OrderBy("c.name").Limit(50);
+        var (sql, _) = helper.BuildWithResultTotal();
+        Assert.Contains("COUNT(*) OVER()", sql, StringComparison.Ordinal);
+        Assert.Contains("av_result_total", sql, StringComparison.Ordinal);
+        Assert.Contains("SELECT c.*", sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildWithResultTotal_CardsOnly_InsertsWindowCountColumn()
+    {
+        var helper = new MtgSearchHelper();
+        helper.SearchCards(includeTokens: false).WhereNameContains("a").OrderBy("c.name").Limit(50);
+        var (sql, _) = helper.BuildWithResultTotal();
+        Assert.Contains("COUNT(*) OVER()", sql, StringComparison.Ordinal);
+        Assert.Contains("av_result_total", sql, StringComparison.Ordinal);
+    }
+
     // ── Helper ────────────────────────────────────────────────────────
 
     private static int CountOccurrences(string source, string substring)

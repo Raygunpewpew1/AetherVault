@@ -206,7 +206,6 @@ Use enums, not magic strings: `LegalityStatus`, `CardRarity`, `CardLayout`, `Dec
 | AppoMobi.Maui.Gestures | Swipe |
 | CsvHelper | Import/export CSV |
 | Microcharts.Maui | Charts (e.g. Stats) |
-| Plugin.Maui.Audio | Bundled audio (e.g. easter egg) |
 
 UraniumUI (MIT) replaced Syncfusion for licensing reasons.
 

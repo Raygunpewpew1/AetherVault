@@ -1,18 +1,15 @@
+using System.Collections.Concurrent;
 using AetherVault.Models;
 
 namespace AetherVault.ViewModels;
 
-/// <summary>Color identity → deck list row background brushes (main/sideboard rows).</summary>
+/// <summary>Color identity → deck list row background brushes (main/sideboard rows). Solids + static cache; no gradient fills.</summary>
 public static class DeckRowStripBrushes
 {
-    /// <summary>
-    /// WUBRG letters for consistent ordering on dual-color gradient strips (matches typical guild/shard display order).
-    /// </summary>
     private static ReadOnlySpan<char> WubrgOrder => "WUBRG";
 
-    /// <summary>
-    /// Resolves identity text for strip coloring: <see cref="Card.ColorIdentity"/> when set; for lands, produced mana or basic name; else <see cref="Card.Colors"/>.
-    /// </summary>
+    private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new(StringComparer.Ordinal);
+
     private static string GetDeckRowColorIdentityString(Card? card)
     {
         if (card == null)
@@ -36,7 +33,7 @@ public static class DeckRowStripBrushes
         return card.Colors ?? "";
     }
 
-    /// <summary>Deck list row background: 0 = neutral, 1 = single pip tint, 2 = horizontal dual gradient (WUBRG order), 3+ = gold.</summary>
+    /// <summary>Deck list row: neutral, single pip, dual-color blend, or gold for 3+.</summary>
     public static Brush GetDeckRowStripBackgroundBrush(Card? card) =>
         GetStripBackgroundBrushFromIdentity(GetDeckRowColorIdentityString(card));
 
@@ -97,14 +94,17 @@ public static class DeckRowStripBrushes
             _ => Color.FromArgb("#2A2A33")
         };
 
-    /// <summary>Dark solid for commander header / single-color strips; dual colors use <see cref="GetStripBackgroundBrushFromIdentity"/>.</summary>
+    private static Color AverageColors(Color a, Color b) =>
+        new(
+            (a.Red + b.Red) * 0.5f,
+            (a.Green + b.Green) * 0.5f,
+            (a.Blue + b.Blue) * 0.5f,
+            (a.Alpha + b.Alpha) * 0.5f);
+
     public static Color GetStripBackgroundColorFromIdentity(string colorIdentity)
     {
-        var brush = GetStripBackgroundBrushFromIdentity(colorIdentity);
-        if (brush is SolidColorBrush scb)
+        if (GetStripBackgroundBrushFromIdentity(colorIdentity) is SolidColorBrush scb)
             return scb.Color;
-        if (brush is LinearGradientBrush lgb && lgb.GradientStops.Count > 0)
-            return lgb.GradientStops[0].Color;
         return Color.FromArgb("#2A2A33");
     }
 
@@ -118,46 +118,59 @@ public static class DeckRowStripBrushes
         bool g = colorIdentity.Contains('G');
         int count = (w ? 1 : 0) + (u ? 1 : 0) + (b ? 1 : 0) + (r ? 1 : 0) + (g ? 1 : 0);
 
-        if (count == 0)
-            return new SolidColorBrush(Color.FromArgb("#2A2A33"));
-        if (count >= 3)
-            return new SolidColorBrush(Color.FromArgb("#3B2C0A"));
-
-        if (count == 2)
+        string key = count switch
         {
-            char first = ' ';
-            char second = ' ';
-            int n = 0;
-            foreach (char ch in WubrgOrder)
-            {
-                if (!colorIdentity.Contains(ch)) continue;
-                if (n == 0) first = ch;
-                else second = ch;
-                n++;
-                if (n == 2) break;
-            }
+            0 => "0",
+            >= 3 => "M",
+            2 => BuildTwoColorKey(colorIdentity),
+            _ => BuildSingleKey(w, u, b, r, g)
+        };
 
-            Color c0 = StripColorForWubrgLetter(first);
-            Color c1 = StripColorForWubrgLetter(second);
-            return new LinearGradientBrush
-            {
-                StartPoint = new Point(0, 0.5),
-                EndPoint = new Point(1, 0.5),
-                GradientStops =
-                [
-                    new GradientStop(c0, 0f),
-                    new GradientStop(c1, 1f)
-                ]
-            };
+        return BrushCache.GetOrAdd(key, static k => new SolidColorBrush(ResolveColorForKey(k)));
+    }
+
+    private static string BuildSingleKey(bool w, bool u, bool b, bool r, bool g)
+    {
+        if (w && !u && !b && !r && !g) return "W";
+        if (u && !w && !b && !r && !g) return "U";
+        if (b && !w && !u && !r && !g) return "B";
+        if (r && !w && !u && !b && !g) return "R";
+        if (g && !w && !u && !b && !r) return "G";
+        return "0";
+    }
+
+    private static string BuildTwoColorKey(string colorIdentity)
+    {
+        char first = ' ';
+        char second = ' ';
+        int n = 0;
+        foreach (char ch in WubrgOrder)
+        {
+            if (!colorIdentity.Contains(ch)) continue;
+            if (n == 0) first = ch;
+            else second = ch;
+            n++;
+            if (n == 2) break;
         }
 
-        // Single color
-        if (w && !u && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('W'));
-        if (u && !w && !b && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('U'));
-        if (b && !w && !u && !r && !g) return new SolidColorBrush(StripColorForWubrgLetter('B'));
-        if (r && !w && !u && !b && !g) return new SolidColorBrush(StripColorForWubrgLetter('R'));
-        if (g && !w && !u && !b && !r) return new SolidColorBrush(StripColorForWubrgLetter('G'));
+        return $"{first}{second}";
+    }
 
-        return new SolidColorBrush(Color.FromArgb("#2A2A33"));
+    private static Color ResolveColorForKey(string key)
+    {
+        if (string.IsNullOrEmpty(key) || key is "0" or "  ")
+            return Color.FromArgb("#2A2A33");
+        if (key == "M")
+            return Color.FromArgb("#3B2C0A");
+        if (key.Length == 1 && key[0] is 'W' or 'U' or 'B' or 'R' or 'G')
+            return StripColorForWubrgLetter(key[0]);
+        if (key.Length == 2
+            && key[0] is 'W' or 'U' or 'B' or 'R' or 'G'
+            && key[1] is 'W' or 'U' or 'B' or 'R' or 'G')
+        {
+            return AverageColors(StripColorForWubrgLetter(key[0]), StripColorForWubrgLetter(key[1]));
+        }
+
+        return Color.FromArgb("#2A2A33");
     }
 }

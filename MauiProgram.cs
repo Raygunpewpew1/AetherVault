@@ -7,7 +7,6 @@ using AetherVault.Services.ImportExport;
 using AetherVault.ViewModels;
 using AppoMobi.Maui.Gestures;
 using CommunityToolkit.Maui;
-using Plugin.Maui.Audio;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 
@@ -31,7 +30,6 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .AddAudio()
             .UseSkiaSharp()
             .UseUraniumUI()
             .UseUraniumUIMaterial()
@@ -81,7 +79,6 @@ public static class MauiProgram
         builder.Services.AddSingleton<DeckSynergyNavigationContext>();
         builder.Services.AddSingleton<IToastService, ToastService>();
         builder.Services.AddSingleton<ICardImageSaveService, CardImageSaveService>();
-        builder.Services.AddSingleton<IEasterEggSoundService, EasterEggSoundService>();
         builder.Services.AddSingleton<IGridPriceLoadService, GridPriceLoadService>();
         // ── ViewModels (singleton = shared state e.g. search; transient = new instance per navigation) ──
         builder.Services.AddSingleton<SearchViewModel>();
@@ -108,6 +105,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CardDetailPage>();
         builder.Services.AddTransient<DeckDetailPage>();
         builder.Services.AddTransient<SearchFiltersPage>();
+        builder.Services.AddSingleton<DeckBrowseListResultCache>();
         builder.Services.AddTransient<DeckAddCardsViewModel>();
         builder.Services.AddTransient<DeckAddCardsPage>();
         builder.Services.AddTransient<CardSearchPickerPage>();

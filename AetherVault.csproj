@@ -81,15 +81,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0f0028" />
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D0B12" BaseSize="512,512" />
 		<MauiImage Include="Resources\Images\*" />
-		<!-- Easter egg: add your MP3 as Resources/Raw/hehe.mp3 (required for build) -->
-		<MauiAsset Include="Resources\Raw\hehe.mp3" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -633,6 +633,9 @@ public static class SqlQueries
     public const string CountWrapper = "SELECT COUNT(*) as cnt FROM (";
     public const string CountField = "cnt";
 
+    /// <summary>Extra column for <c>COUNT(*) OVER()</c> in paged search (same total as <see cref="CountWrapper"/>, one round trip).</summary>
+    public const string ResultTotalCountColumnName = "av_result_total";
+
     public const string BaseCards =
         """
         SELECT

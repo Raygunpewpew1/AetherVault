@@ -291,6 +291,53 @@ public class CardRepository : ICardRepository
         return [.. cards];
     }
 
+    public async Task<(Card[] cards, int totalCount)> SearchAdvancedWithResultTotalAsync(MtgSearchHelper searchHelper)
+    {
+        var cards = new List<Card>();
+        var (sql, parameters) = searchHelper.BuildWithResultTotal();
+
+        var dynamicParams = new DynamicParameters();
+        foreach (var (name, value) in parameters)
+        {
+            dynamicParams.Add(name, value);
+        }
+
+        return await WithMtgReaderAsync<(Card[] cards, int totalCount)>(
+            sql,
+            dynamicParams,
+            async reader =>
+            {
+                var o = new CardMapper.CardOrdinals(reader);
+                int totalIdx = -1;
+                for (int col = 0; col < reader.FieldCount; col++)
+                {
+                    if (string.Equals(reader.GetName(col), SqlQueries.ResultTotalCountColumnName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        totalIdx = col;
+                        break;
+                    }
+                }
+
+                int totalCount = 0;
+                bool gotTotal = false;
+                while (await reader.ReadAsync())
+                {
+                    if (!gotTotal && totalIdx >= 0)
+                    {
+                        totalCount = Convert.ToInt32(reader.GetInt64(totalIdx));
+                        gotTotal = true;
+                    }
+
+                    cards.Add(CardMapper.MapCard(reader, o));
+                }
+
+                if (!gotTotal)
+                    totalCount = cards.Count;
+
+                return (cards: [.. cards], totalCount: totalCount);
+            });
+    }
+
     public async Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper)
     {
         var (sql, parameters) = searchHelper.BuildCount();

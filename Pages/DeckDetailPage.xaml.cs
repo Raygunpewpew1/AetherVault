@@ -502,23 +502,10 @@ public partial class DeckDetailPage : ContentPage
             }
 
             var colorIdentity = _viewModel.Deck?.ColorIdentity ?? "";
-            var (topColor, bottomColor) = GetGradientColors(colorIdentity);
-
-            using var gradPaint = new SKPaint();
-            gradPaint.Shader = SKShader.CreateLinearGradient(
-                new SKPoint(0, 0),
-                new SKPoint(w, h),
-                [topColor.WithAlpha(102), bottomColor.WithAlpha(102)],
-                SKShaderTileMode.Clamp);
-            canvas.DrawRect(0, 0, w, h, gradPaint);
-
-            using var overlayPaint = new SKPaint();
-            overlayPaint.Shader = SKShader.CreateLinearGradient(
-                new SKPoint(0, h * 0.4f),
-                new SKPoint(0, h),
-                [SKColors.Transparent, new SKColor(0x12, 0x12, 0x12, 230)],
-                SKShaderTileMode.Clamp);
-            canvas.DrawRect(0, 0, w, h, overlayPaint);
+            // Single solid overlay: identity-tinted darkening + text legibility (replaces two gradient passes).
+            var tint = GetCommanderIdentityOverlayColor(colorIdentity);
+            using (var paint = new SKPaint { Color = tint })
+                canvas.DrawRect(0, 0, w, h, paint);
 
             string headline = _viewModel.Deck?.CommanderName is { Length: > 0 } cn
                 ? cn
@@ -539,37 +526,24 @@ public partial class DeckDetailPage : ContentPage
         }
     }
 
-    private static (SKColor top, SKColor bottom) GetGradientColors(string colorIdentity)
+    private static SKColor GetCommanderIdentityOverlayColor(string colorIdentity)
     {
-        // Pick colors based on first 1-2 color identity chars
         bool w = colorIdentity.Contains('W');
         bool u = colorIdentity.Contains('U');
         bool b = colorIdentity.Contains('B');
         bool r = colorIdentity.Contains('R');
         bool g = colorIdentity.Contains('G');
-
         int count = (w ? 1 : 0) + (u ? 1 : 0) + (b ? 1 : 0) + (r ? 1 : 0) + (g ? 1 : 0);
 
-        if (count == 0) return (new SKColor(0x44, 0x44, 0x55), new SKColor(0x22, 0x22, 0x33));
-        if (count >= 3) return (new SKColor(0x8B, 0x6C, 0x1A), new SKColor(0x3B, 0x2C, 0x0A)); // gold/multicolor
+        if (count == 0) return new SKColor(0x12, 0x12, 0x1A, 0x9A);
+        if (count >= 3) return new SKColor(0x3B, 0x2C, 0x0A, 0xA0);
 
-        // Single or dual color
-        SKColor primary = u ? new SKColor(0x1A, 0x5C, 0x9E)
-                        : g ? new SKColor(0x1A, 0x6B, 0x3A)
-                        : r ? new SKColor(0x9E, 0x1A, 0x1A)
-                        : b ? new SKColor(0x3A, 0x2A, 0x6B)
-                        : new SKColor(0x7A, 0x6A, 0x4A); // white -> tan
-
-        SKColor secondary = count == 1 ? Darken(primary) :
-                            u ? new SKColor(0x1A, 0x5C, 0x9E)
-                              : g ? new SKColor(0x1A, 0x6B, 0x3A)
-                              : r ? new SKColor(0x9E, 0x1A, 0x1A)
-                              : b ? new SKColor(0x3A, 0x2A, 0x6B)
-                              : new SKColor(0x7A, 0x6A, 0x4A);
-
-        return (primary, Darken(secondary));
+        var primary = u ? new SKColor(0x1A, 0x5C, 0x9E)
+            : g ? new SKColor(0x1A, 0x6B, 0x3A)
+            : r ? new SKColor(0x9E, 0x1A, 0x1A)
+            : b ? new SKColor(0x3A, 0x2A, 0x6B)
+            : new SKColor(0x7A, 0x6A, 0x4A);
+        // Uniform tint + alpha; no shaders.
+        return new SKColor((byte)(primary.Red * 0.35f + 0x12 * 0.65f), (byte)(primary.Green * 0.35f + 0x12 * 0.65f), (byte)(primary.Blue * 0.35f + 0x1A * 0.65f), 0x9A);
     }
-
-    private static SKColor Darken(SKColor c) =>
-        new SKColor((byte)(c.Red / 2), (byte)(c.Green / 2), (byte)(c.Blue / 2));
 }

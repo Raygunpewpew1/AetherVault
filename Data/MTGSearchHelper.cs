@@ -62,6 +62,55 @@ public class MtgSearchHelper
         return (countSql, paramList);
     }
 
+    /// <summary>
+    /// Like <see cref="Build"/>, but appends <c>COUNT(*) OVER() AS av_result_total</c> to the select list
+    /// so one query can return a page and the full match count (no separate <see cref="BuildCount"/> round trip).
+    /// Only valid after <see cref="SearchCards"/> (with or without tokens), not collection or set search.
+    /// </summary>
+    public (string sql, List<(string name, object value)> parameters) BuildWithResultTotal()
+    {
+        if (_baseKind is not (MtgSearchQueryBaseKind.Cards or MtgSearchQueryBaseKind.CardsWithTokens))
+            throw new InvalidOperationException("BuildWithResultTotal requires SearchCards (or cards+tokens).");
+
+        EnsureSideFilter();
+        var withTotal = InsertResultTotalWindowColumn(GetBaseWhereSql());
+        var sql = withTotal;
+        if (!string.IsNullOrEmpty(_orderByClause))
+            sql += " " + _orderByClause;
+        if (!string.IsNullOrEmpty(_limitClause))
+            sql += " " + _limitClause;
+        if (!string.IsNullOrEmpty(_offsetClause))
+            sql += _offsetClause;
+
+        var paramList = _params.Select(kv => (kv.Key, kv.Value)).ToList();
+        return (sql, paramList);
+    }
+
+    private static string InsertResultTotalWindowColumn(string baseWhereSql)
+    {
+        const string unionMark = "SELECT * FROM (";
+        int u = baseWhereSql.IndexOf(unionMark, StringComparison.Ordinal);
+        if (u >= 0)
+        {
+            return string.Concat(
+                baseWhereSql.AsSpan(0, u),
+                "SELECT c.*, COUNT(*) OVER() AS " + SqlQueries.ResultTotalCountColumnName + " FROM (",
+                baseWhereSql.AsSpan(u + unionMark.Length));
+        }
+
+        int fromIdx = baseWhereSql.IndexOf("FROM cards c", StringComparison.Ordinal);
+        if (fromIdx >= 0)
+        {
+            int nlBeforeFrom = baseWhereSql.LastIndexOf('\n', fromIdx);
+            if (nlBeforeFrom >= 0)
+                return baseWhereSql.Insert(
+                    nlBeforeFrom,
+                    ", COUNT(*) OVER() AS " + SqlQueries.ResultTotalCountColumnName);
+        }
+
+        throw new InvalidOperationException("Could not insert result total window column; unexpected card search SQL shape.");
+    }
+
     // ════════════════════════════════════════════════════════════════
     // Base Query Selection
     // ════════════════════════════════════════════════════════════════
@@ -142,21 +191,26 @@ public class MtgSearchHelper
         if (exactNames == null || exactNames.Count == 0)
             return this;
 
-        var parts = new List<string>();
+        var namePlaceholders = new List<string>();
+        var facePlaceholders = new List<string>();
         foreach (var raw in exactNames)
         {
             if (string.IsNullOrWhiteSpace(raw))
                 continue;
             var name = raw.Trim();
-            var param = NextParam("NameIn");
-            parts.Add($"((c.name = @{param}) OR (c.faceName = @{param}))");
-            _params.Add(param, name);
+            var pName = NextParam("NameIn");
+            var pFace = NextParam("FaceIn");
+            namePlaceholders.Add("@" + pName);
+            facePlaceholders.Add("@" + pFace);
+            _params.Add(pName, name);
+            _params.Add(pFace, name);
         }
 
-        if (parts.Count == 0)
+        if (namePlaceholders.Count == 0)
             return this;
 
-        _whereConditions.Add("(" + string.Join(" OR ", parts) + ")");
+        _whereConditions.Add(
+            $"((c.name IN ({string.Join(",", namePlaceholders)})) OR (c.faceName IN ({string.Join(",", facePlaceholders)})))");
         return this;
     }
 

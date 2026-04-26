@@ -430,6 +430,10 @@ public class CardManager : IDisposable
         return await _cardRepository.SearchAdvancedAsync(searchHelper);
     }
 
+    /// <summary>Runs a paged card search and returns the full match count without a second COUNT query (window column).</summary>
+    public Task<(Card[] results, int totalCount)> ExecuteSearchWithResultTotalAsync(MtgSearchHelper searchHelper) =>
+        _cardRepository.SearchAdvancedWithResultTotalAsync(searchHelper);
+
     public async Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper)
     {
         return await _cardRepository.CountAdvancedAsync(searchHelper);

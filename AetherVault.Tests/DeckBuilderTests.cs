@@ -960,6 +960,12 @@ public class MockCardRepository : ICardRepository
         return Task.FromResult(query.Take(1).ToArray());
     }
 
+    public async Task<(Card[] cards, int totalCount)> SearchAdvancedWithResultTotalAsync(MtgSearchHelper searchHelper)
+    {
+        var cards = await SearchAdvancedAsync(searchHelper);
+        return (cards, cards.Length);
+    }
+
     public Task<int> CountAdvancedAsync(MtgSearchHelper searchHelper) => throw new NotImplementedException();
     public MtgSearchHelper CreateSearchHelper() => new();
     public Task<IReadOnlyList<ImportLookupRow>> GetImportLookupRowsAsync() => Task.FromResult<IReadOnlyList<ImportLookupRow>>([]);

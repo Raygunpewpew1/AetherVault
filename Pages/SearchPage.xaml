@@ -122,20 +122,6 @@
                                      SecondaryMessage="Try a different search or adjust your filters" />
 
         </Grid>
-
-        <!-- Easter egg hit target: bottom-right so it does not cover the Clear button / filter row -->
-        <Border x:Name="EasterEggTapArea"
-                VerticalOptions="End"
-                HorizontalOptions="End"
-                Margin="0,0,16,88"
-                WidthRequest="96"
-                HeightRequest="96"
-                BackgroundColor="#01000000"
-                InputTransparent="False">
-            <Border.GestureRecognizers>
-                <TapGestureRecognizer Tapped="OnEasterEggTap" NumberOfTapsRequired="1" />
-            </Border.GestureRecognizers>
-        </Border>
     </Grid>
 
 </ContentPage>

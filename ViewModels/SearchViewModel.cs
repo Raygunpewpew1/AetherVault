@@ -155,6 +155,8 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         _searchDebounceCts?.Cancel();
         _searchDebounceCts = null;
         SearchText = query.Trim();
+        // Setting SearchText schedules a debounced search; cancel that — we run immediately below.
+        _searchDebounceCts?.Cancel();
         await PerformSearchAsync();
     }
 
@@ -183,6 +185,8 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
     public async Task ApplyFiltersAndSearchAsync(SearchOptions options)
     {
+        // SearchFiltersViewModel sets SearchText first, which schedules a debounced search — cancel it.
+        _searchDebounceCts?.Cancel();
         await PerformSearchAsync(options);
     }
 
@@ -228,21 +232,9 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             SearchOptionsApplier.Apply(helper, CurrentOptions);
             helper.OrderBy("c.name").Limit(PageSize).Offset(0);
 
-            var results = await Task.Run(() => _cardManager.ExecuteSearchAsync(helper));
-
-            if (results.Length < PageSize)
-            {
-                TotalResults = results.Length;
-                HasMorePages = false;
-            }
-            else
-            {
-                var countHelper = _cardManager.CreateSearchHelper();
-                countHelper.SearchCards(CurrentOptions.IncludeTokens);
-                SearchOptionsApplier.Apply(countHelper, CurrentOptions);
-                TotalResults = await _cardManager.CountAdvancedAsync(countHelper);
-                HasMorePages = TotalResults > results.Length;
-            }
+            var (results, totalCount) = await Task.Run(() => _cardManager.ExecuteSearchWithResultTotalAsync(helper));
+            TotalResults = totalCount;
+            HasMorePages = totalCount > results.Length;
 
             IsEmpty = TotalResults == 0;
             _grid?.SetCards(results);
