@@ -440,14 +440,37 @@ public class CollectionRepository : ICollectionRepository
 
     public async Task ReorderAsync(IList<string> orderedUuids)
     {
+        if (orderedUuids == null || orderedUuids.Count == 0)
+            return;
+
+        // One UPDATE per chunk (CASE … END) instead of N round trips; stay under SQLite max_variable_number.
+        const int chunk = 450;
+
         await WithCollectionTransactionAsync(async (conn, trans) =>
         {
-            for (int i = 0; i < orderedUuids.Count; i++)
+            for (int offset = 0; offset < orderedUuids.Count; offset += chunk)
             {
-                await conn.ExecuteAsync(
-                    SqlQueries.CollectionReorderItem,
-                    new { sortOrder = i, uuid = orderedUuids[i] },
-                    trans);
+                var take = Math.Min(chunk, orderedUuids.Count - offset);
+                var sb = new StringBuilder(128 + take * 64);
+                sb.Append("UPDATE my_collection SET sort_order = CASE card_uuid");
+                var dp = new DynamicParameters();
+                var inList = new List<string>(take);
+
+                for (int i = 0; i < take; i++)
+                {
+                    var sortOrder = offset + i;
+                    var uuid = orderedUuids[sortOrder];
+                    var p = "r" + sortOrder.ToString(CultureInfo.InvariantCulture);
+                    sb.Append(" WHEN @").Append(p).Append(" THEN ").Append(sortOrder.ToString(CultureInfo.InvariantCulture));
+                    dp.Add(p, uuid);
+                    inList.Add('@' + p);
+                }
+
+                sb.Append(" END WHERE card_uuid IN (");
+                sb.Append(string.Join(",", inList));
+                sb.Append(')');
+
+                await conn.ExecuteAsync(sb.ToString(), dp, trans);
             }
         });
     }

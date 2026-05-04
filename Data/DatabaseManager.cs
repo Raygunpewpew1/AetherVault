@@ -74,7 +74,7 @@ public sealed class DatabaseManager : IDisposable
 
                         // Attach collection DB as "col" so queries on MTG connection can reference col.my_collection, col.Decks, etc.
                         var escapedCollPath = collectionDbPath.Replace("'", "''");
-                        await ExecuteNonQueryAsync(_mtgConnection, $"ATTACH DATABASE '{escapedCollPath}' AS col");
+                        await AttachCollectionSchemaAsync(_mtgConnection, escapedCollPath);
                     }
 
                     _isConnected = true;
@@ -177,10 +177,14 @@ public sealed class DatabaseManager : IDisposable
 
     private static SqliteConnection CreateConnection(string dbPath, bool readOnly)
     {
+        // Pooling must be off: pooled MTG handles can retain an ATTACH AS col across "dispose",
+        // so the next open + ATTACH fails with "database col is already in use" (common after
+        // disconnect → download → reconnect). Matches CardPriceDatabase / CardPriceSQLiteSync.
         var builder = new SqliteConnectionStringBuilder
         {
             DataSource = dbPath,
-            Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate
+            Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
+            Pooling = false
         };
         return new SqliteConnection(builder.ConnectionString);
     }
@@ -211,6 +215,8 @@ public sealed class DatabaseManager : IDisposable
                 PRAGMA synchronous = OFF;
                 PRAGMA temp_store = MEMORY;
                 PRAGMA journal_mode = MEMORY;
+                PRAGMA cache_size = -32768;
+                PRAGMA mmap_size = 268435456;
                 """);
 
             Logger.LogStuff("Configured MTG master database PRAGMAs for read-optimized access.", LogLevel.Debug);
@@ -285,27 +291,22 @@ public sealed class DatabaseManager : IDisposable
             await ExecuteNonQueryAsync(conn, SqlQueries.CollectionAddReferenceCapturedAt);
         }
 
-        // Migrate Decks table — add CommanderName if missing
+        // Migrate Decks table — add CommanderName / CommanderArchetype if missing (single PRAGMA round trip).
         bool hasCommanderName = false;
+        bool hasCommanderArchetype = false;
         var deckColumns = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.DecksTableInfo);
         foreach (var col in deckColumns)
         {
             if (col.Name == "CommanderName")
                 hasCommanderName = true;
+            if (col.Name == "CommanderArchetype")
+                hasCommanderArchetype = true;
         }
 
         if (!hasCommanderName)
         {
             Logger.LogStuff("Migrating decks table: adding CommanderName column.", LogLevel.Info);
             await ExecuteNonQueryAsync(conn, SqlQueries.DecksAddCommanderName);
-        }
-
-        bool hasCommanderArchetype = false;
-        var deckColumns2 = await conn.QueryAsync<PragmaTableInfo>(SqlQueries.DecksTableInfo);
-        foreach (var col in deckColumns2)
-        {
-            if (col.Name == "CommanderArchetype")
-                hasCommanderArchetype = true;
         }
 
         if (!hasCommanderArchetype)
@@ -320,6 +321,31 @@ public sealed class DatabaseManager : IDisposable
     private static async Task ExecuteNonQueryAsync(SqliteConnection connection, string sql)
     {
         await connection.ExecuteAsync(sql);
+    }
+
+    /// <summary>
+    /// Ensures the collection file is attached as schema <c>col</c> on the MTG connection.
+    /// Detaches first if a stale <c>col</c> is present (e.g. pooled handle) so ATTACH never throws
+    /// "database col is already in use".
+    /// </summary>
+    private static async Task AttachCollectionSchemaAsync(SqliteConnection mtgConnection, string escapedCollectionPath)
+    {
+        var existing = await mtgConnection.ExecuteScalarAsync<string?>(
+            "SELECT name FROM pragma_database_list WHERE name = 'col' LIMIT 1");
+
+        if (string.Equals(existing, "col", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await ExecuteNonQueryAsync(mtgConnection, "DETACH DATABASE col");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogStuff($"Could not DETACH stale schema col before ATTACH: {ex.Message}", LogLevel.Warning);
+            }
+        }
+
+        await ExecuteNonQueryAsync(mtgConnection, $"ATTACH DATABASE '{escapedCollectionPath}' AS col");
     }
 
     private void DisconnectInternal()

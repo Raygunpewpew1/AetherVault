@@ -33,8 +33,8 @@ public class PriceDisplayHelperTests
     public void GetDeckLinePriceDisplay_MultipliesQuantity()
     {
         var data = TcgNormalAndFoil(2.5, 0);
-        Assert.Equal("$7.50", PriceDisplayHelper.GetDeckLinePriceDisplay(data, 3));
-        Assert.Equal("$2.50", PriceDisplayHelper.GetDeckUnitPriceDisplay(data));
+        Assert.Equal("$7.50", PriceDisplayHelper.GetDeckLinePriceDisplay(data, 3, DefaultVendorOrder));
+        Assert.Equal("$2.50", PriceDisplayHelper.GetDeckUnitPriceDisplay(data, DefaultVendorOrder));
     }
 
     [Fact]

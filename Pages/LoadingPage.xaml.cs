@@ -33,6 +33,13 @@ public partial class LoadingPage : ContentPage
         if (_initTask is { IsCompleted: false })
             return;
 
+        // If a previous init finished but we are still the window root (shell swap did not happen),
+        // allow a second OnAppearing to run startup again instead of stranding on the splash.
+        if (_initTask is { IsCompleted: true } &&
+            Application.Current?.Windows.Count > 0 &&
+            ReferenceEquals(Application.Current.Windows[0].Page, this))
+            Interlocked.Exchange(ref _initSingleFlight, 0);
+
         if (Interlocked.CompareExchange(ref _initSingleFlight, 1, 0) != 0)
             return;
 
@@ -72,6 +79,11 @@ public partial class LoadingPage : ContentPage
             _ = FadeInProgressSectionAsync();
     }
 
+    /// <summary>
+    /// After <see cref="OnDisappearing"/>, MAUI can still run pending animation continuations; touching views then crashes on Android.
+    /// </summary>
+    private bool SplashViewsAreLive => Handler is not null;
+
     private async Task RunEntranceAnimationsAsync()
     {
         if (_entranceDone) return;
@@ -80,37 +92,57 @@ public partial class LoadingPage : ContentPage
         const uint titleDuration = 350;
         const uint taglineDuration = 300;
 
-        LogoBorder.Opacity = 0;
-        LogoBorder.Scale = 0.85;
-        TitleLabel.Opacity = 0;
-        TitleLabel.TranslationY = 12;
-        TaglineLabel.Opacity = 0;
-        TaglineLabel.TranslationY = 8;
+        try
+        {
+            LogoBorder.Opacity = 0;
+            LogoBorder.Scale = 0.85;
+            TitleLabel.Opacity = 0;
+            TitleLabel.TranslationY = 12;
+            TaglineLabel.Opacity = 0;
+            TaglineLabel.TranslationY = 8;
 
-        await Task.Delay(100);
+            await Task.Delay(100);
 
-        await LogoBorder.FadeToAsync(1, logoDuration, Easing.CubicOut);
-        await LogoBorder.ScaleToAsync(1, 250, Easing.CubicOut);
+            if (!SplashViewsAreLive) return;
 
-        await Task.WhenAll(
-            TitleLabel.FadeToAsync(1, titleDuration, Easing.CubicOut),
-            TitleLabel.TranslateToAsync(0, 0, titleDuration, Easing.CubicOut)
-        );
+            await LogoBorder.FadeToAsync(1, logoDuration, Easing.CubicOut);
+            await LogoBorder.ScaleToAsync(1, 250, Easing.CubicOut);
 
-        await Task.WhenAll(
-            TaglineLabel.FadeToAsync(1, taglineDuration, Easing.CubicOut),
-            TaglineLabel.TranslateToAsync(0, 0, taglineDuration, Easing.CubicOut)
-        );
+            await Task.WhenAll(
+                TitleLabel.FadeToAsync(1, titleDuration, Easing.CubicOut),
+                TitleLabel.TranslateToAsync(0, 0, titleDuration, Easing.CubicOut)
+            );
 
-        _entranceDone = true;
+            await Task.WhenAll(
+                TaglineLabel.FadeToAsync(1, taglineDuration, Easing.CubicOut),
+                TaglineLabel.TranslateToAsync(0, 0, taglineDuration, Easing.CubicOut)
+            );
 
-        if (_viewModel.IsBusy)
-            await FadeInProgressSectionAsync();
+            _entranceDone = true;
+
+            if (_viewModel.IsBusy && SplashViewsAreLive)
+                await FadeInProgressSectionAsync();
+        }
+        catch (Exception ex) when (IsBenignSplashTearDown(ex))
+        {
+            Logger.LogStuff($"[Loading] Entrance animations stopped (page torn down): {ex.GetType().Name}", LogLevel.Debug);
+        }
     }
 
     private async Task FadeInProgressSectionAsync()
     {
-        ProgressSection.Opacity = 0;
-        await ProgressSection.FadeToAsync(1, 280, Easing.CubicOut);
+        try
+        {
+            if (!SplashViewsAreLive) return;
+            ProgressSection.Opacity = 0;
+            await ProgressSection.FadeToAsync(1, 280, Easing.CubicOut);
+        }
+        catch (Exception ex) when (IsBenignSplashTearDown(ex))
+        {
+            Logger.LogStuff($"[Loading] Progress fade skipped (page torn down): {ex.GetType().Name}", LogLevel.Debug);
+        }
     }
+
+    private static bool IsBenignSplashTearDown(Exception ex) =>
+        ex is ObjectDisposedException or TaskCanceledException;
 }

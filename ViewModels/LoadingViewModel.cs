@@ -101,7 +101,9 @@ public partial class LoadingViewModel : BaseViewModel
             // init), navigate straight to the shell — no re-initialization needed.
             if (_cardManager.DatabaseManager.IsConnected)
             {
-                MainThread.BeginInvokeOnMainThread(() => SwitchToShellWithToastOverlay());
+                // Await the shell swap so EndStartup() does not run first and so failures surface
+                // to LoadingPage.OnAppearing (same pattern as FinalizeStartupAsync).
+                await MainThread.InvokeOnMainThreadAsync(SwitchToShellWithToastOverlay);
                 return;
             }
 
@@ -338,11 +340,22 @@ public partial class LoadingViewModel : BaseViewModel
         var minDisplay = _minimumDisplayTask ?? Task.CompletedTask;
         if (!minDisplay.IsCompleted)
         {
-            var finished = await Task.WhenAny(minDisplay, Task.Delay(MinimumDisplayWaitCap)).ConfigureAwait(false);
+            // Do not ConfigureAwait(false) here: staying on the UI sync context keeps the rest of
+            // this method (including SwitchToShell) ordered predictably with the MAUI dispatcher
+            // on Android after a long DB download / in-app update.
+            var finished = await Task.WhenAny(minDisplay, Task.Delay(MinimumDisplayWaitCap));
             if (finished != minDisplay)
                 Logger.LogStuff(
                     $"Splash entrance animation wait exceeded {MinimumDisplayWaitCap.TotalSeconds:F0}s; continuing startup.",
                     LogLevel.Warning);
+        }
+
+        if (minDisplay.IsFaulted)
+        {
+            var inner = minDisplay.Exception?.GetBaseException();
+            Logger.LogStuff(
+                $"Splash entrance animation task faulted (non-fatal): {inner?.GetType().Name}: {inner?.Message}",
+                LogLevel.Warning);
         }
 
         // Connect to the DB
@@ -370,7 +383,7 @@ public partial class LoadingViewModel : BaseViewModel
             StatusIsError = false;
             try
             {
-                await _cardManager.WarmCollectionPriceCachesAsync().ConfigureAwait(false);
+                await _cardManager.WarmCollectionPriceCachesAsync();
             }
             catch (Exception ex)
             {

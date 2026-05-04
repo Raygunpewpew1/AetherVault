@@ -116,33 +116,35 @@ public static class PriceDisplayHelper
     }
 
     /// <summary>Preferred retail unit price for deck rows (non-foil); used for line totals and deck sum.</summary>
+    /// <param name="vendorPriorityOverride">When non-null, used instead of app preferences (e.g. unit tests).</param>
     public static bool TryGetPreferredUnitPrice(
         CardPriceData? data,
         bool isFoil,
         bool isEtched,
         out double unitPrice,
-        out PriceCurrency currency)
+        out PriceCurrency currency,
+        PriceVendor[]? vendorPriorityOverride = null)
     {
         unitPrice = 0;
         currency = PriceCurrency.Usd;
         if (data == null) return false;
-        var (price, _, _, cur) = GetNumericPriceAndFinish(data, isFoil, isEtched, vendorPriorityOverride: null);
+        var (price, _, _, cur) = GetNumericPriceAndFinish(data, isFoil, isEtched, vendorPriorityOverride);
         if (price <= 0) return false;
         unitPrice = price;
         currency = cur;
         return true;
     }
 
-    public static string GetDeckUnitPriceDisplay(CardPriceData? data)
+    public static string GetDeckUnitPriceDisplay(CardPriceData? data, PriceVendor[]? vendorPriorityOverride = null)
     {
-        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur)) return "";
+        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur, vendorPriorityOverride)) return "";
         return cur == PriceCurrency.Eur ? $"€{unit:F2}" : $"${unit:F2}";
     }
 
-    public static string GetDeckLinePriceDisplay(CardPriceData? data, int quantity)
+    public static string GetDeckLinePriceDisplay(CardPriceData? data, int quantity, PriceVendor[]? vendorPriorityOverride = null)
     {
         if (quantity <= 0) return "";
-        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur)) return "";
+        if (!TryGetPreferredUnitPrice(data, false, false, out var unit, out var cur, vendorPriorityOverride)) return "";
         double line = unit * quantity;
         return cur == PriceCurrency.Eur ? $"€{line:F2}" : $"${line:F2}";
     }

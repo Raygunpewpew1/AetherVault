@@ -257,26 +257,26 @@
                            FontSize="12"
                            FontAttributes="Bold"
                            TextColor="{StaticResource TextSecondary}" />
-                    <CollectionView ItemsSource="{Binding QuickBrowseListChips}"
-                                    SelectionMode="None"
-                                    HeightRequest="40"
-                                    HorizontalScrollBarVisibility="Never">
-                        <CollectionView.ItemsLayout>
-                            <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
-                        </CollectionView.ItemsLayout>
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="deckbrowse:DeckBrowseListChipItem">
-                                <Button Text="{Binding DisplayText}"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.OpenAddCardsFromQuickListCommand}"
-                                        CommandParameter="{Binding .}"
-                                        FontSize="11"
-                                        Padding="10,6"
-                                        CornerRadius="14"
-                                        BackgroundColor="{StaticResource CardBackground}"
-                                        TextColor="{StaticResource TextPrimary}" />
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
+                    <ScrollView Orientation="Horizontal"
+                                HeightRequest="40"
+                                HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout Spacing="8"
+                                               VerticalOptions="Center"
+                                               BindableLayout.ItemsSource="{Binding QuickBrowseListChips}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="deckbrowse:DeckBrowseListChipItem">
+                                    <Button Text="{Binding DisplayText}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.OpenAddCardsFromQuickListCommand}"
+                                            CommandParameter="{Binding .}"
+                                            FontSize="11"
+                                            Padding="10,6"
+                                            CornerRadius="14"
+                                            BackgroundColor="{StaticResource CardBackground}"
+                                            TextColor="{StaticResource TextPrimary}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </Border>

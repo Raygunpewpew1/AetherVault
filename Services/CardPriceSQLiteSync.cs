@@ -108,6 +108,9 @@ public class CardPriceSqLiteSync
             Logger.LogStuff("[PriceSync] Committing transaction...", LogLevel.Info);
             await trans.CommitAsync();
             Logger.LogStuff("[PriceSync] Commit successful.", LogLevel.Info);
+
+            // Mark DB as using normalized lowercase text columns (skips one-time UPDATE on next open).
+            await ExecuteAsync(conn, "PRAGMA user_version = 1");
         }
         catch (Exception ex)
         {

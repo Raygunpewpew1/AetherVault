@@ -35,16 +35,37 @@ public class CardPriceDatabase : IDisposable
         _connection = new SqliteConnection(connStr);
         await _connection.OpenAsync();
 
-        await ExecuteAsync("PRAGMA journal_mode=WAL");
-        await ExecuteAsync("PRAGMA busy_timeout=30000");
-        await ExecuteAsync("PRAGMA temp_store=MEMORY");
-        await ExecuteAsync("PRAGMA synchronous=OFF");
+        await _connection.ExecuteAsync(
+            """
+            PRAGMA journal_mode=WAL;
+            PRAGMA busy_timeout=30000;
+            PRAGMA temp_store=MEMORY;
+            PRAGMA synchronous=OFF;
+            """);
 
         // Create schema (no-ops if already correct; migration handled by sync)
         await ExecuteAsync(SqlQueries.CreatePricesTable);
         await ExecuteAsync(SqlQueries.CreatePricesIndex);
         await ExecuteAsync(SqlQueries.CreatePricesUuidSourceIndex);
         await ExecuteAsync(SqlQueries.CreatePricesPaperRetailIndex);
+
+        await NormalizeLegacyPriceRowsIfNeededAsync();
+    }
+
+    /// <summary>
+    /// Pre-sync rows may have mixed-case text; normalize once so WHERE clauses match partial indexes (user_version tracks this).
+    /// </summary>
+    private async Task NormalizeLegacyPriceRowsIfNeededAsync()
+    {
+        var ver = await _connection!.ExecuteScalarAsync<long>("PRAGMA user_version");
+        if (ver >= 1)
+            return;
+
+        var rowCount = await _connection.ExecuteScalarAsync<long>(SqlQueries.PricesCount);
+        if (rowCount > 0)
+            await _connection.ExecuteAsync(SqlQueries.PricesNormalizeTextColumns);
+
+        await _connection.ExecuteAsync("PRAGMA user_version = 1");
     }
 
     /// <summary>

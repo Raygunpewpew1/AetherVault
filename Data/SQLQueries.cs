@@ -138,13 +138,32 @@ public static class SqlQueries
     public const string PricesSyncFromAttached =
         """
         INSERT OR REPLACE INTO card_prices (uuid, source, provider, price_type, finish, currency, price)
-        SELECT uuid, source, provider, priceType, finish, currency, price
+        SELECT uuid,
+               lower(source),
+               lower(provider),
+               lower(priceType),
+               lower(finish),
+               lower(currency),
+               price
         FROM today.prices
         WHERE price IS NOT NULL AND price > 0
           AND lower(source) = 'paper'
           AND lower(provider) IN ('tcgplayer', 'cardmarket', 'cardkingdom', 'manapool')
           AND lower(priceType) = 'retail'
           AND lower(finish) IN ('normal', 'foil', 'etched')
+        """;
+
+    /// <summary>
+    /// One-time migration: normalize text columns so reads match partial indexes (see PRAGMA user_version on prices DB).
+    /// </summary>
+    public const string PricesNormalizeTextColumns =
+        """
+        UPDATE card_prices SET
+            source = lower(source),
+            provider = lower(provider),
+            price_type = lower(price_type),
+            finish = lower(finish),
+            currency = lower(currency)
         """;
 
     /// <summary>Diagnostic count against attached <c>today</c>; must match <see cref="PricesSyncFromAttached"/> filter.</summary>
@@ -179,8 +198,8 @@ public static class SqlQueries
         """
         SELECT p.uuid, p.provider, p.price_type AS PriceType, p.finish, p.currency, p.price
         FROM card_prices p
-        WHERE lower(p.source) = 'paper'
-          AND lower(p.price_type) = 'retail'
+        WHERE p.source = 'paper'
+          AND p.price_type = 'retail'
           AND p.uuid IN (SELECT DISTINCT card_uuid FROM col.my_collection)
         """;
 
@@ -197,23 +216,23 @@ public static class SqlQueries
         price_agg AS (
             SELECT
                 cu.card_uuid,
-                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v1_normal,
-                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v1_foil,
-                MAX(CASE WHEN lower(p.provider) = @v1 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v1_etched,
-                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v2_normal,
-                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v2_foil,
-                MAX(CASE WHEN lower(p.provider) = @v2 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v2_etched,
-                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v3_normal,
-                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v3_foil,
-                MAX(CASE WHEN lower(p.provider) = @v3 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v3_etched,
-                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'normal' THEN p.price ELSE 0 END) AS v4_normal,
-                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'foil' THEN p.price ELSE 0 END) AS v4_foil,
-                MAX(CASE WHEN lower(p.provider) = @v4 AND lower(p.finish) = 'etched' THEN p.price ELSE 0 END) AS v4_etched
+                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v1_normal,
+                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v1_foil,
+                MAX(CASE WHEN p.provider = @v1 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v1_etched,
+                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v2_normal,
+                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v2_foil,
+                MAX(CASE WHEN p.provider = @v2 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v2_etched,
+                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v3_normal,
+                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v3_foil,
+                MAX(CASE WHEN p.provider = @v3 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v3_etched,
+                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'normal' THEN p.price ELSE 0 END) AS v4_normal,
+                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'foil' THEN p.price ELSE 0 END) AS v4_foil,
+                MAX(CASE WHEN p.provider = @v4 AND p.finish = 'etched' THEN p.price ELSE 0 END) AS v4_etched
             FROM coll_uuids cu
             LEFT JOIN card_prices p
                 ON p.uuid = cu.card_uuid
-               AND lower(p.source) = 'paper'
-               AND lower(p.price_type) = 'retail'
+               AND p.source = 'paper'
+               AND p.price_type = 'retail'
             GROUP BY cu.card_uuid
         ),
         line_values AS (
