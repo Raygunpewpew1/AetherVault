@@ -28,7 +28,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Assets/SVGSets/*.svg
+          # Directory add (not a shell glob) so gitignored names like con.svg are skipped quietly.
+          # con.svg is ignored on purpose: Windows cannot store a file named CON.*
+          git add Assets/SVGSets/
           if git diff --staged --quiet; then
             echo "No new set SVGs."
             exit 0

@@ -53,8 +53,9 @@ internal static class Program
             }
 
             string code = set.Code.Trim().ToLowerInvariant();
-            if (code is "fallback")
+            if (code is "fallback" || IsWindowsReservedFileStem(code))
             {
+                // CON/PRN/AUX/… cannot be created as files on Windows; Assets/SVGSets/con.svg is gitignored.
                 skipped++;
                 continue;
             }
@@ -153,6 +154,20 @@ internal static class Program
         }
 
         return null;
+    }
+
+    /// <summary>Windows device names that cannot be used as a file stem (e.g. con.svg).</summary>
+    private static bool IsWindowsReservedFileStem(string stem)
+    {
+        if (stem is "con" or "prn" or "aux" or "nul")
+            return true;
+
+        if (stem.Length is 4
+            && (stem.StartsWith("com", StringComparison.Ordinal) || stem.StartsWith("lpt", StringComparison.Ordinal))
+            && stem[3] is >= '1' and <= '9')
+            return true;
+
+        return false;
     }
 }
 
