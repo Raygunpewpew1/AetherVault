@@ -53,9 +53,16 @@ internal static class Program
             }
 
             string code = set.Code.Trim().ToLowerInvariant();
-            if (code is "fallback" || IsWindowsReservedFileStem(code))
+            if (code is "fallback")
             {
-                // CON/PRN/AUX/… cannot be created as files on Windows; Assets/SVGSets/con.svg is gitignored.
+                skipped++;
+                continue;
+            }
+
+            if (IsWindowsReservedFileStem(code))
+            {
+                // CON/PRN/AUX/… cannot be stored as files on Windows; do not download or commit them.
+                Console.WriteLine($"Skipped reserved name '{code}.svg' ({set.Name}) — uses fallback icon.");
                 skipped++;
                 continue;
             }
