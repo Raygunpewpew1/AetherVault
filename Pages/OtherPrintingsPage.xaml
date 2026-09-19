@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             xmlns:models="clr-namespace:AetherVault.Models"
+             xmlns:viewmodels="clr-namespace:AetherVault.ViewModels"
+             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             x:Class="AetherVault.Pages.OtherPrintingsPage"
+             x:DataType="viewmodels:OtherPrintingsViewModel"
+             Title="Other printings"
+             BackgroundColor="{StaticResource Background}">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <Grid Grid.Row="0"
+              ColumnDefinitions="Auto,*,Auto"
+              ColumnSpacing="12"
+              Padding="8,44,16,12"
+              BackgroundColor="{StaticResource Surface}">
+            <Button Grid.Column="0"
+                    FontFamily="FASolid"
+                    Text="{x:Static fa:Solid.Xmark}"
+                    Command="{Binding CancelCommand}"
+                    BackgroundColor="Transparent"
+                    TextColor="{StaticResource TextPrimary}"
+                    FontSize="18"
+                    WidthRequest="48"
+                    HeightRequest="48"
+                    Padding="0"
+                    CornerRadius="0" />
+            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                <Label Text="Other printings"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextPrimary}" />
+                <Label Text="{Binding HeaderSubtitle}"
+                       FontSize="12"
+                       TextColor="{StaticResource TextSecondary}" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <material:TextField Grid.Row="1"
+                            Title="Search sets"
+                            Text="{Binding SearchQuery}"
+                            Margin="16,0,16,8"
+                            ReturnType="Search" />
+
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding FilteredPrintings}"
+                        SelectionMode="None"
+                        Margin="16,0,16,16">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:OtherPrintingSummary">
+                    <Border Margin="0,0,0,8"
+                            Padding="12,10"
+                            Stroke="{StaticResource FilterHairline}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 8"
+                            BackgroundColor="{StaticResource Surface}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:OtherPrintingsViewModel}}, Path=SelectPrintingCommand}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{Binding TitleText}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{StaticResource TextPrimary}" />
+                                <Label Text="{Binding DetailText}"
+                                       FontSize="12"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{StaticResource TextSecondary}" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="1"
+                                   Text="{Binding OwnershipBadge}"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   TextColor="{StaticResource Accent}"
+                                   IsVisible="{Binding ShowOwnershipBadge}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

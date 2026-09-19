@@ -96,6 +96,7 @@
     <Compile Include="..\Services\DeckBuilder\DeckBrowseListCatalog.cs" Link="Services\DeckBuilder\DeckBrowseListCatalog.cs" />
     <Compile Include="..\Services\DeckBuilder\DeckBrowseListNameCollapse.cs" Link="Services\DeckBuilder\DeckBrowseListNameCollapse.cs" />
     <Compile Include="..\Services\OracleReprintCollapse.cs" Link="Services\OracleReprintCollapse.cs" />
+    <Compile Include="..\Services\OtherPrintingDisplay.cs" Link="Services\OtherPrintingDisplay.cs" />
     <Compile Include="..\Models\OtherPrintingSummary.cs" Link="Models\OtherPrintingSummary.cs" />
     <Compile Include="..\Services\ImportExport\DeckCsvV1.cs" Link="Services\ImportExport\DeckCsvV1.cs" />
     <Compile Include="..\Services\ImportExport\CsvImportHelpers.cs" Link="Services\ImportExport\CsvImportHelpers.cs" />

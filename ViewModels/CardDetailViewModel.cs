@@ -36,6 +36,8 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     private readonly DeckSynergyNavigationContext _deckSynergyNavigationContext;
     private readonly ICardImageSaveService _cardImageSave;
     private readonly IToastService _toast;
+    private readonly IOtherPrintingsOpener _otherPrintingsOpener;
+    private List<OtherPrintingSummary> _allOtherPrintings = [];
 
     // ── Bindable properties (detail UI binds to these) ──
 
@@ -102,9 +104,28 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOtherPrintings))]
+    [NotifyPropertyChangedFor(nameof(ShowOtherPrintingsSection))]
+    [NotifyPropertyChangedFor(nameof(ShowSeeAllPrintings))]
+    [NotifyPropertyChangedFor(nameof(SeeAllPrintingsLabel))]
     public partial List<OtherPrintingSummary> OtherPrintings { get; set; } = [];
 
     public bool HasOtherPrintings => OtherPrintings.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowOtherPrintingsSection))]
+    [NotifyPropertyChangedFor(nameof(ShowSeeAllPrintings))]
+    [NotifyPropertyChangedFor(nameof(SeeAllPrintingsLabel))]
+    public partial int OtherPrintingsTotalCount { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowOtherPrintingsSection))]
+    public partial bool IsOtherPrintingsLoading { get; set; }
+
+    public bool ShowOtherPrintingsSection => IsOtherPrintingsLoading || OtherPrintingsTotalCount > 0;
+
+    public bool ShowSeeAllPrintings => OtherPrintingDisplay.ShouldOfferSeeAll(OtherPrintingsTotalCount);
+
+    public string SeeAllPrintingsLabel => $"See all ({OtherPrintingsTotalCount})";
 
     [ObservableProperty]
     public partial bool IsArtistVisible { get; set; }
@@ -159,13 +180,15 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         CardGalleryContext galleryContext,
         DeckSynergyNavigationContext deckSynergyNavigationContext,
         ICardImageSaveService cardImageSave,
-        IToastService toast)
+        IToastService toast,
+        IOtherPrintingsOpener otherPrintingsOpener)
     {
         _cardManager = cardManager;
         _galleryContext = galleryContext;
         _deckSynergyNavigationContext = deckSynergyNavigationContext;
         _cardImageSave = cardImageSave;
         _toast = toast;
+        _otherPrintingsOpener = otherPrintingsOpener;
         _cardManager.OnPricesUpdated += HandlePricesUpdated;
     }
 
@@ -205,6 +228,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         if (!await _cardManager.EnsureInitializedAsync()) return;
 
         IsBusy = true;
+        var loadSucceeded = false;
 
         try
         {
@@ -273,7 +297,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
 
             UpdateGalleryState();
 
-            await LoadOtherPrintingsAsync(uuid);
+            loadSucceeded = true;
         }
         catch (Exception ex)
         {
@@ -283,6 +307,9 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         {
             IsBusy = false;
         }
+
+        if (loadSucceeded)
+            _ = LoadOtherPrintingsAsync(uuid);
     }
 
     private void UpdateCardDetails()
@@ -354,22 +381,56 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     private async Task LoadOtherPrintingsAsync(string currentUuid)
     {
         var oracleId = Card.ScryfallOracleId;
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            IsOtherPrintingsLoading = true;
+            OtherPrintings = [];
+            OtherPrintingsTotalCount = 0;
+            _allOtherPrintings = [];
+        });
+
         if (string.IsNullOrWhiteSpace(oracleId))
         {
-            OtherPrintings = [];
+            await MainThread.InvokeOnMainThreadAsync(() => IsOtherPrintingsLoading = false);
             return;
         }
 
         try
         {
             var rows = await _cardManager.GetOtherPrintingsAsync(oracleId, currentUuid);
-            OtherPrintings = rows.Count > 0 ? [.. rows] : [];
+            var all = rows.Count > 0 ? rows.ToList() : [];
+            var strip = OtherPrintingDisplay.BuildStrip(all);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                _allOtherPrintings = all;
+                OtherPrintingsTotalCount = all.Count;
+                OtherPrintings = strip;
+                IsOtherPrintingsLoading = false;
+            });
         }
         catch (Exception ex)
         {
             Logger.LogStuff($"Other printings load failed: {ex.Message}", LogLevel.Warning);
-            OtherPrintings = [];
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                OtherPrintings = [];
+                OtherPrintingsTotalCount = 0;
+                _allOtherPrintings = [];
+                IsOtherPrintingsLoading = false;
+            });
         }
+    }
+
+    [RelayCommand]
+    private async Task OpenSeeAllPrintings()
+    {
+        if (_allOtherPrintings.Count == 0)
+            return;
+
+        var uuid = await _otherPrintingsOpener.PickAsync(_allOtherPrintings);
+        if (!string.IsNullOrEmpty(uuid))
+            await LoadCardAsync(uuid);
     }
 
     [RelayCommand]
@@ -684,6 +745,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         await _cardManager.AddCardToCollectionAsync(Card.Uuid, quantity);
         IsInCollection = true;
         AddedToCollection?.Invoke(Card.Uuid);
+        _ = LoadOtherPrintingsAsync(Card.Uuid);
     }
 
     public async Task AddToCollectionWithFinishAsync(int quantity, bool isFoil, bool isEtched)
@@ -691,6 +753,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
         await _cardManager.UpdateCardQuantityAsync(Card.Uuid, quantity, isFoil, isEtched);
         IsInCollection = quantity > 0;
         AddedToCollection?.Invoke(Card.Uuid);
+        _ = LoadOtherPrintingsAsync(Card.Uuid);
     }
 
     [RelayCommand]
@@ -698,6 +761,7 @@ public partial class CardDetailViewModel : BaseViewModel, IDisposable
     {
         await _cardManager.RemoveCardFromCollectionAsync(Card.Uuid);
         IsInCollection = false;
+        _ = LoadOtherPrintingsAsync(Card.Uuid);
     }
 
     public List<PurchaseLink> GetPurchaseLinks()

@@ -379,7 +379,10 @@ public class CardRepository : ICardRepository
                     Number = row.Number ?? "",
                     Rarity = EnumExtensions.ParseCardRarity(row.Rarity),
                     SetReleaseDate = row.SetReleaseDate ?? "",
-                    IsCurrent = false
+                    IsCurrent = false,
+                    CollectionQuantity = row.CollectionQuantity,
+                    IsFoilOwned = row.IsFoilOwned != 0,
+                    IsEtchedOwned = row.IsEtchedOwned != 0
                 });
             }
 
@@ -395,6 +398,9 @@ public class CardRepository : ICardRepository
         public string? Number { get; set; }
         public string? Rarity { get; set; }
         public string? SetReleaseDate { get; set; }
+        public int CollectionQuantity { get; set; }
+        public int IsFoilOwned { get; set; }
+        public int IsEtchedOwned { get; set; }
     }
 
     // ── Private helpers ─────────────────────────────────────────────

@@ -74,6 +74,7 @@ jobs:
           CREATE INDEX IF NOT EXISTS idx_cards_rarity ON cards(rarity);
           CREATE INDEX IF NOT EXISTS idx_cards_side ON cards(side);
           CREATE INDEX IF NOT EXISTS idx_cardIdentifiers_scryfallId ON cardIdentifiers(scryfallId);
+          CREATE INDEX IF NOT EXISTS idx_cardIdentifiers_scryfallOracleId ON cardIdentifiers(scryfallOracleId);
           CREATE INDEX IF NOT EXISTS idx_cardLegalities_uuid ON cardLegalities(uuid);
           CREATE INDEX IF NOT EXISTS idx_tokens_setCode ON tokens(setCode);
           CREATE INDEX IF NOT EXISTS idx_tokens_uuid ON tokens(uuid);

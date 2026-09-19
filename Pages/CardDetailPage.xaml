@@ -109,6 +109,70 @@
                        TextColor="{StaticResource TextSecondary}" />
 
                 <Border Style="{StaticResource CardStyle}"
+                        IsVisible="{Binding ShowOtherPrintingsSection}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="Other printings"
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource TextPrimary}"
+                                   VerticalOptions="Center" />
+                            <Button Grid.Column="1"
+                                    Text="{Binding SeeAllPrintingsLabel}"
+                                    Command="{Binding OpenSeeAllPrintingsCommand}"
+                                    IsVisible="{Binding ShowSeeAllPrintings}"
+                                    BackgroundColor="Transparent"
+                                    TextColor="{StaticResource Accent}"
+                                    FontSize="13"
+                                    Padding="8,0"
+                                    HeightRequest="32" />
+                        </Grid>
+                        <ActivityIndicator IsRunning="{Binding IsOtherPrintingsLoading}"
+                                           IsVisible="{Binding IsOtherPrintingsLoading}"
+                                           Color="{StaticResource Primary}" />
+                        <ScrollView Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    IsVisible="{Binding HasOtherPrintings}">
+                            <HorizontalStackLayout Spacing="8"
+                                                   BindableLayout.ItemsSource="{Binding OtherPrintings}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:OtherPrintingSummary">
+                                        <Border Padding="10,8"
+                                                Stroke="{StaticResource FilterHairline}"
+                                                StrokeThickness="1"
+                                                StrokeShape="RoundRectangle 8"
+                                                BackgroundColor="{StaticResource Surface}">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}, Path=OpenOtherPrintingCommand}"
+                                                                      CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <VerticalStackLayout Spacing="2">
+                                                <Label Text="{Binding OwnershipBadge}"
+                                                       FontSize="10"
+                                                       FontAttributes="Bold"
+                                                       TextColor="{StaticResource Accent}"
+                                                       IsVisible="{Binding ShowOwnershipBadge}" />
+                                                <Label Text="{Binding TitleText}"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold"
+                                                       LineBreakMode="TailTruncation"
+                                                       MaximumWidthRequest="180"
+                                                       TextColor="{StaticResource TextPrimary}" />
+                                                <Label Text="{Binding DetailText}"
+                                                       FontSize="11"
+                                                       LineBreakMode="TailTruncation"
+                                                       MaximumWidthRequest="180"
+                                                       TextColor="{StaticResource TextSecondary}" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}"
                         Margin="0,8,0,0">
                     <VerticalStackLayout Spacing="4">
                         <Grid ColumnDefinitions="*,Auto">
@@ -163,47 +227,6 @@
                                FontSize="14"
                                TextColor="{StaticResource TextPrimary}"
                                IsVisible="{Binding IsPtVisible}" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <Border Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding HasOtherPrintings}">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="Other printings"
-                               FontSize="16"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource TextPrimary}" />
-                        <ScrollView Orientation="Horizontal"
-                                    HorizontalScrollBarVisibility="Never">
-                            <HorizontalStackLayout Spacing="8"
-                                                   BindableLayout.ItemsSource="{Binding OtherPrintings}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="models:OtherPrintingSummary">
-                                        <Border Padding="10,8"
-                                                Stroke="{StaticResource FilterHairline}"
-                                                StrokeThickness="1"
-                                                StrokeShape="RoundRectangle 8"
-                                                BackgroundColor="{StaticResource Surface}">
-                                            <Border.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}, Path=OpenOtherPrintingCommand}"
-                                                                      CommandParameter="{Binding .}" />
-                                            </Border.GestureRecognizers>
-                                            <VerticalStackLayout Spacing="2">
-                                                <Label Text="{Binding DisplayLabel}"
-                                                       FontSize="13"
-                                                       FontAttributes="Bold"
-                                                       TextColor="{StaticResource TextPrimary}" />
-                                                <Label Text="{Binding SetName}"
-                                                       FontSize="11"
-                                                       LineBreakMode="TailTruncation"
-                                                       MaximumWidthRequest="140"
-                                                       TextColor="{StaticResource TextSecondary}" />
-                                            </VerticalStackLayout>
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </HorizontalStackLayout>
-                        </ScrollView>
                     </VerticalStackLayout>
                 </Border>
 

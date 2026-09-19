@@ -828,13 +828,21 @@ public static class SqlQueries
             s.name AS SetName,
             c.number AS Number,
             c.rarity AS Rarity,
-            s.releaseDate AS SetReleaseDate
+            s.releaseDate AS SetReleaseDate,
+            COALESCE(mc.quantity, 0) AS CollectionQuantity,
+            COALESCE(mc.is_foil, 0) AS IsFoilOwned,
+            COALESCE(mc.is_etched, 0) AS IsEtchedOwned
         FROM cards c
         INNER JOIN cardIdentifiers ci ON c.uuid = ci.uuid
         LEFT JOIN sets s ON c.setCode = s.code
+        LEFT JOIN col.my_collection mc ON mc.card_uuid = c.uuid
         WHERE ci.scryfallOracleId = @OracleId
           AND (c.side = 'a' OR c.side IS NULL OR TRIM(c.side) = '')
-        ORDER BY s.releaseDate DESC NULLS LAST, c.setCode COLLATE NOCASE, c.number
+        ORDER BY
+            CASE WHEN COALESCE(mc.quantity, 0) > 0 THEN 0 ELSE 1 END,
+            s.releaseDate DESC NULLS LAST,
+            c.setCode COLLATE NOCASE,
+            c.number
         LIMIT 200
         """;
 }
