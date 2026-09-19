@@ -41,9 +41,17 @@ public partial class CardDetailPage : ContentPage
         SwipeContainer.SwipedLeft += () => _ = HandleSwipeAsync(isNext: true);
         SwipeContainer.SwipedRight += () => _ = HandleSwipeAsync(isNext: false);
 
-        Unloaded += (s, e) => _viewModel.Dispose();
+        SetSvgCache.SymbolsUpdated += OnSetSymbolsUpdated;
+        Unloaded += (s, e) =>
+        {
+            SetSvgCache.SymbolsUpdated -= OnSetSymbolsUpdated;
+            _viewModel.Dispose();
+        };
         //   _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
+
+    private void OnSetSymbolsUpdated() =>
+        MainThread.BeginInvokeOnMainThread(() => SetSymbolView.InvalidateSurface());
 
     /// <summary>Back button returns to the deck editor via modal pop instead of Shell routes.</summary>
     public void PrepareAsDeckChildModal(Func<Task> dismissModalAsync)

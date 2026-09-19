@@ -489,7 +489,3 @@ delete-merged-branches.ps1
 # Qodana local cache / IDE artifacts (keep root qodana.yaml in git)
 .qodana/
 /.tmp-gestures-nupkg
-
-# Windows reserved device name (CON) — cannot exist as a normal file on Windows checkouts.
-# Conspiracy (Scryfall code "con") uses SetSvgCache fallback instead.
-Assets/SVGSets/con.svg

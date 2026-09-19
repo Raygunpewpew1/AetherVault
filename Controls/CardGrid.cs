@@ -176,6 +176,7 @@ public class CardGrid : ContentView
 
         _renderer.EnsureResources();
         MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
+        SetSvgCache.SymbolsUpdated += OnSetSymbolsUpdated;
 
 #if ANDROID
         // Subscribe here rather than in the constructor so we only listen while
@@ -184,9 +185,16 @@ public class CardGrid : ContentView
 #endif
     }
 
+    private void OnSetSymbolsUpdated()
+    {
+        if (_isLoaded)
+            MainThread.BeginInvokeOnMainThread(() => _canvas.InvalidateSurface());
+    }
+
     private void OnUnloaded(object? sender, EventArgs e)
     {
         _isLoaded = false;
+        SetSvgCache.SymbolsUpdated -= OnSetSymbolsUpdated;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;
