@@ -60,7 +60,7 @@
 
             <Style TargetType="Button">
                 <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
-                <Setter Property="TextColor" Value="White" />
+                <Setter Property="TextColor" Value="{StaticResource OnPrimary}" />
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="FontSize">
                     <Setter.Value>
@@ -74,8 +74,8 @@
             </Style>
 
             <Style x:Key="FloatingActionButtonStyle" TargetType="Button">
-                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                <Setter Property="TextColor" Value="White" />
+                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
+                <Setter Property="TextColor" Value="{StaticResource OnPrimary}" />
                 <Setter Property="WidthRequest" Value="56" />
                 <Setter Property="HeightRequest" Value="56" />
                 <Setter Property="CornerRadius" Value="28" />

@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
-    <Color x:Key="Primary">#6200EE</Color>
-    <Color x:Key="PrimaryDark">#3700B3</Color>
+    <Color x:Key="Primary">#03DAC5</Color>
+    <!-- Darker teal for pressed/hover — NOT Uranium's "Primary in dark theme". Revisit if StyleResource/ColorsOverride is added. -->
+    <Color x:Key="PrimaryDark">#018786</Color>
+    <!-- Alias of Primary; migrate call sites to Primary in step 4, then delete. -->
     <Color x:Key="Accent">#03DAC5</Color>
+    <Color x:Key="OnPrimary">#121212</Color>
     <Color x:Key="Background">#121212</Color>
     <Color x:Key="Surface">#1E1E1E</Color>
     <Color x:Key="CardBackground">#252525</Color>
@@ -17,4 +20,16 @@
     <Color x:Key="RarityUncommon">#B0C4DE</Color>
     <Color x:Key="RarityRare">#FFD700</Color>
     <Color x:Key="RarityMythic">#FF8C00</Color>
+
+    <!-- Chart series: avoid teal next to green; Primary reserved for UI accents. -->
+    <x:Array x:Key="ChartPalette" Type="{x:Type Color}">
+        <Color>#7C4DFF</Color>
+        <Color>#FF8A65</Color>
+        <Color>#42A5F5</Color>
+        <Color>#FFD54F</Color>
+        <Color>#EC407A</Color>
+        <Color>#AB47BC</Color>
+        <Color>#8D6E63</Color>
+        <Color>#26C6DA</Color>
+    </x:Array>
 </ResourceDictionary>
