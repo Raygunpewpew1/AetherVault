@@ -1,3 +1,4 @@
+using AppoMobi.Gestures;
 using AppoMobi.Maui.Gestures;
 
 namespace AetherVault.Controls;

@@ -32,7 +32,7 @@
                                            TitleColor="{StaticResource TextSecondary}"
                                            AccentColor="{StaticResource Accent}" />
 
-                        <material:PickerField x:Name="FormatPicker"
+                        <material:SelectField x:Name="FormatPicker"
                                               Title="Format"
                                               TextColor="{StaticResource TextPrimary}"
                                               TitleColor="{StaticResource TextSecondary}"

@@ -340,7 +340,7 @@ internal sealed class CardGridRenderer : IDisposable
         float x = rightEdge - bw;
         float radius = height / 2f;
         canvas.DrawRoundRect(x, top, bw, height, radius, radius, _badgeBgPaint!);
-        canvas.DrawText(qtyStr, x + (bw - tw) / 2f, top + height - 5f, _badgeFont, _badgeTextPaint!);
+        canvas.DrawText(qtyStr, x + (bw - tw) / 2f, top + height - 5f, SKTextAlign.Left, _badgeFont, _badgeTextPaint!);
     }
 
     private void RenderCard(SKCanvas canvas, DrawCardCommand cmd)

@@ -1,6 +1,7 @@
 using AetherVault.Core.Layout;
 using AetherVault.Models;
 using AetherVault.Services;
+using AppoMobi.Gestures;
 using AppoMobi.Maui.Gestures;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;

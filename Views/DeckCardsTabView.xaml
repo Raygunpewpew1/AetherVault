@@ -79,7 +79,8 @@
                             TextColor="{StaticResource TextPrimary}"
                             TitleColor="{StaticResource TextSecondary}"
                             AccentColor="{StaticResource Primary}"
-                            AllowClear="True" />
+                            AllowClear="True"
+                            IsSpellCheckEnabled="False" />
 
         <!-- Unified deck list: Commander → main type groups → Sideboard. -->
         <Grid Grid.Row="2">

@@ -5,8 +5,10 @@ using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using AetherVault.Services.ImportExport;
 using AetherVault.ViewModels;
+using AppoMobi.Gestures;
 using AppoMobi.Maui.Gestures;
 using CommunityToolkit.Maui;
+using Microcharts.Maui;
 using SkiaSharp.Views.Maui.Controls.Hosting;
 using UraniumUI;
 
@@ -31,6 +33,7 @@ public static class MauiProgram
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
             .UseSkiaSharp()
+            .UseMicrocharts()
             .UseUraniumUI()
             .UseUraniumUIMaterial()
             .UseGestures()

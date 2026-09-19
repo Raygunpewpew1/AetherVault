@@ -47,6 +47,7 @@
                                         TitleColor="{StaticResource TextSecondary}"
                                         AccentColor="{StaticResource Primary}"
                                         AllowClear="True"
+                                        IsSpellCheckEnabled="False"
                                         VerticalOptions="Center" />
                     <ActivityIndicator Grid.Column="2"
                                        IsRunning="{Binding IsAnyAddCardWorkBusy}"

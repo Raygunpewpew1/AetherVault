@@ -13,7 +13,8 @@
                            TextColor="{StaticResource TextPrimary}"
                            TitleColor="{StaticResource TextSecondary}"
                            AccentColor="{StaticResource Primary}"
-                           AllowClear="True" />
+                           AllowClear="True"
+                           IsSpellCheckEnabled="False" />
         <Button x:Name="FiltersButton"
                 Grid.Column="1"
                 Text="{Binding FiltersButtonText}"

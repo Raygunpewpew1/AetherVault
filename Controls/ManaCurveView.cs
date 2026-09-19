@@ -61,9 +61,9 @@ public class ManaCurveView : SKCanvasView
         float chartH = h - labelH;
 
         using var barPaint = new SKPaint { IsAntialias = true };
-        using var labelFont = new SKFont { Size = Math.Max(8f, h * 0.13f) };
+        using var labelFont = new SKFont(SKTypeface.Default, Math.Max(8f, h * 0.13f));
         using var labelPaint = new SKPaint { IsAntialias = true, Color = new SKColor(0x99, 0x99, 0x99) };
-        using var countFont = new SKFont { Size = Math.Max(7f, h * 0.11f) };
+        using var countFont = new SKFont(SKTypeface.Default, Math.Max(7f, h * 0.11f));
         using var countPaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
 
         for (int i = 0; i < slotCount; i++)

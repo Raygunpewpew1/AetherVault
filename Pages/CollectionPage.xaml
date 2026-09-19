@@ -28,7 +28,8 @@
                                         Text="{Binding SearchText, Mode=TwoWay}"
                                         TitleColor="{StaticResource TextSecondary}"
                                         AccentColor="{StaticResource Primary}"
-                                        AllowClear="True" />
+                                        AllowClear="True"
+                                        IsSpellCheckEnabled="False" />
                     <Button Grid.Column="1"
                             Text="{Binding FiltersButtonText}"
                             Command="{Binding OpenFiltersCommand}"

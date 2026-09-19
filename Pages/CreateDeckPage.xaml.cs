@@ -7,6 +7,7 @@ public partial class CreateDeckPage : ContentPage
 {
     private readonly DeckBuilderService _deckService;
     private readonly TaskCompletionSource<int?> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly List<string> _formatLabels;
 
     private static readonly DeckFormat[] Formats =
     [
@@ -29,18 +30,28 @@ public partial class CreateDeckPage : ContentPage
         InitializeComponent();
         _deckService = deckService;
 
-        FormatPicker.ItemsSource = Formats.Select(f => f.ToDisplayName()).ToList();
-        FormatPicker.SelectedIndex = 0; // Commander pre-selected
-        FormatPicker.SelectedValueChanged += (_, _) => UpdateFormatDescription();
+        _formatLabels = Formats.Select(f => f.ToDisplayName()).ToList();
+        FormatPicker.ItemsSource = _formatLabels;
+        FormatPicker.SelectedItem = _formatLabels[0]; // Commander pre-selected
+        FormatPicker.SelectedItemChanged += (_, _) => UpdateFormatDescription();
         UpdateFormatDescription();
     }
 
     private void UpdateFormatDescription()
     {
-        var format = FormatPicker.SelectedIndex >= 0 && FormatPicker.SelectedIndex < Formats.Length
-            ? Formats[FormatPicker.SelectedIndex]
-            : DeckFormat.Commander;
-        FormatDescriptionLabel.Text = GetFormatDescription(format);
+        FormatDescriptionLabel.Text = GetFormatDescription(GetSelectedFormat());
+    }
+
+    private DeckFormat GetSelectedFormat()
+    {
+        if (FormatPicker.SelectedItem is string label)
+        {
+            int index = _formatLabels.IndexOf(label);
+            if (index >= 0)
+                return Formats[index];
+        }
+
+        return DeckFormat.Commander;
     }
 
     /// <summary>Short, friendly primer per format so first-time builders know what they're signing up for.</summary>
@@ -90,10 +101,7 @@ public partial class CreateDeckPage : ContentPage
 
         try
         {
-            var format = FormatPicker.SelectedIndex >= 0
-                ? Formats[FormatPicker.SelectedIndex]
-                : DeckFormat.Commander;
-
+            var format = GetSelectedFormat();
             var description = DescriptionEntry.Text?.Trim() ?? "";
             int newId = await _deckService.CreateDeckAsync(name, format, description);
             _tcs.TrySetResult(newId);

@@ -73,6 +73,7 @@
                                         AccentColor="{StaticResource Primary}"
                                         TextColor="{StaticResource TextPrimary}"
                                         AllowClear="True"
+                                        IsSpellCheckEnabled="False"
                                         MinimumHeightRequest="56" />
                 </Grid>
                 <BoxView HeightRequest="1" Color="{StaticResource FilterHairline}" />

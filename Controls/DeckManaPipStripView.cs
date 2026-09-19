@@ -62,7 +62,7 @@ public class DeckManaPipStripView : SKCanvasView
         float colW = (w - gap * (ManaCostPipAnalyzer.SlotCount - 1)) / ManaCostPipAnalyzer.SlotCount;
 
         using var paint = new SKPaint { IsAntialias = true };
-        using var font = new SKFont { Size = Math.Max(8f, h * 0.2f) };
+        using var font = new SKFont(SKTypeface.Default, Math.Max(8f, h * 0.2f));
         using var letterPaint = new SKPaint { IsAntialias = true, Color = new SKColor(0xBB, 0xBB, 0xBB) };
         using var countPaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
 

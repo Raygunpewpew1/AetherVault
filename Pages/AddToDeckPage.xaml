@@ -56,7 +56,7 @@
                 <VerticalStackLayout x:Name="DeckPickerPanel" Spacing="20">
 
                     <Border Style="{StaticResource CardStyle}" Padding="16">
-                        <material:PickerField x:Name="DeckPicker"
+                        <material:SelectField x:Name="DeckPicker"
                                               Title="Choose a deck..."
                                               TextColor="{StaticResource TextPrimary}"
                                               TitleColor="{StaticResource TextSecondary}"
@@ -64,7 +64,7 @@
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}" Padding="16">
-                        <material:PickerField x:Name="SectionPicker"
+                        <material:SelectField x:Name="SectionPicker"
                                               Title="Section"
                                               TextColor="{StaticResource TextPrimary}"
                                               TitleColor="{StaticResource TextSecondary}"

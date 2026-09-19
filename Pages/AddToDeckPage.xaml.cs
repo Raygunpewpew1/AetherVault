@@ -7,10 +7,13 @@ public record AddToDeckResult(int DeckId, string DeckName, string Section, int Q
 
 public partial class AddToDeckPage : ContentPage
 {
+    private static readonly string[] SectionOptions = ["Main", "Sideboard", "Commander"];
+
     private readonly DeckBuilderService _deckService;
     private readonly IServiceProvider _serviceProvider;
     private int _quantity = 1;
     private List<DeckEntity> _decks = [];
+    private List<string> _deckLabels = [];
     private readonly TaskCompletionSource<AddToDeckResult?> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>Set by caller after resolving from DI; used when opening for a specific card.</summary>
@@ -32,10 +35,10 @@ public partial class AddToDeckPage : ContentPage
         InitializeComponent();
         _deckService = deckService;
         _serviceProvider = serviceProvider;
-        SectionPicker.ItemsSource = new[] { "Main", "Sideboard", "Commander" };
-        SectionPicker.SelectedIndex = 0;
-        SectionPicker.SelectedValueChanged += (_, _) => UpdateConfirmText();
-        DeckPicker.SelectedValueChanged += (_, _) => UpdateConfirmText();
+        SectionPicker.ItemsSource = SectionOptions;
+        SectionPicker.SelectedItem = SectionOptions[0];
+        SectionPicker.SelectedItemChanged += (_, _) => UpdateConfirmText();
+        DeckPicker.SelectedItemChanged += (_, _) => UpdateConfirmText();
     }
 
     protected override async void OnAppearing()
@@ -82,15 +85,17 @@ public partial class AddToDeckPage : ContentPage
     private async Task LoadDecksAsync()
     {
         _decks = await _deckService.GetDecksAsync();
+        _deckLabels = _decks.Select(d => $"{d.Name} ({d.FormatDisplay})").ToList();
 
         bool hasDecks = _decks.Count > 0;
         NoDeckPanel.IsVisible = !hasDecks;
         DeckPickerPanel.IsVisible = hasDecks;
 
-        DeckPicker.ItemsSource = _decks.Select(d => $"{d.Name} ({d.FormatDisplay})").ToList();
+        DeckPicker.ItemsSource = _deckLabels;
 
         if (!hasDecks)
         {
+            DeckPicker.SelectedItem = null;
             UpdateConfirmText();
             return;
         }
@@ -114,7 +119,7 @@ public partial class AddToDeckPage : ContentPage
             }
         }
 
-        DeckPicker.SelectedIndex = indexToSelect;
+        DeckPicker.SelectedItem = _deckLabels[indexToSelect];
 
         string? section = string.IsNullOrWhiteSpace(InitialSection) ? null : InitialSection;
         if (string.IsNullOrWhiteSpace(section))
@@ -123,20 +128,16 @@ public partial class AddToDeckPage : ContentPage
             section = lastSection;
         }
 
-        if (!string.IsNullOrWhiteSpace(section) && SectionPicker.ItemsSource is IList<string> sections)
+        if (!string.IsNullOrWhiteSpace(section))
         {
-            for (int i = 0; i < sections.Count; i++)
-            {
-                if (string.Equals(sections[i], section, StringComparison.OrdinalIgnoreCase))
-                {
-                    SectionPicker.SelectedIndex = i;
-                    break;
-                }
-            }
+            string? match = SectionOptions.FirstOrDefault(s =>
+                string.Equals(s, section, StringComparison.OrdinalIgnoreCase));
+            SectionPicker.SelectedItem = match ?? SectionOptions[0];
         }
-
-        if (SectionPicker.SelectedIndex < 0)
-            SectionPicker.SelectedIndex = 0;
+        else if (SectionPicker.SelectedItem is null)
+        {
+            SectionPicker.SelectedItem = SectionOptions[0];
+        }
 
         UpdateConfirmText();
     }
@@ -161,15 +162,8 @@ public partial class AddToDeckPage : ContentPage
         ConfirmButton.Text = $"Add to {section}";
     }
 
-    private string GetSelectedSection()
-    {
-        if (SectionPicker.ItemsSource is IList<string> sections)
-            return SectionPicker.SelectedIndex >= 0 && SectionPicker.SelectedIndex < sections.Count
-                ? sections[SectionPicker.SelectedIndex]
-                : "Main";
-
-        return "Main";
-    }
+    private string GetSelectedSection() =>
+        SectionPicker.SelectedItem as string ?? "Main";
 
     private void OnQuickAddOneClicked(object? sender, EventArgs e)
     {
@@ -203,13 +197,20 @@ public partial class AddToDeckPage : ContentPage
 
     private async void OnConfirmClicked(object? sender, EventArgs e)
     {
-        if (DeckPicker.SelectedIndex < 0)
+        if (DeckPicker.SelectedItem is not string label)
         {
             await DisplayAlertAsync(UserMessages.NoDeckTitle, UserMessages.PleaseSelectDeck, "OK");
             return;
         }
 
-        var deck = _decks[DeckPicker.SelectedIndex];
+        int index = _deckLabels.IndexOf(label);
+        if (index < 0 || index >= _decks.Count)
+        {
+            await DisplayAlertAsync(UserMessages.NoDeckTitle, UserMessages.PleaseSelectDeck, "OK");
+            return;
+        }
+
+        var deck = _decks[index];
         string section = GetSelectedSection();
         _tcs.TrySetResult(new AddToDeckResult(deck.Id, deck.Name, section, QuantitySelector.Quantity));
         await Navigation.PopModalAsync();
