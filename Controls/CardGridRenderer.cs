@@ -310,7 +310,7 @@ internal sealed class CardGridRenderer : IDisposable
             canvas.Save();
             _imageRoundRect!.SetRect(imageRect, cornerRadius, cornerRadius);
             canvas.ClipRoundRect(_imageRoundRect, antialias: true);
-            canvas.DrawImage(image, imageRect);
+            canvas.DrawImage(image, imageRect, new SKSamplingOptions(SKFilterMode.Linear), null);
             canvas.Restore();
         }
         else

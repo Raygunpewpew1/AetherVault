@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="AetherVault.Controls.EmptyState"
+             x:Name="Root">
+    <VerticalStackLayout VerticalOptions="Center"
+                         HorizontalOptions="Center"
+                         Spacing="{StaticResource Spacing8}"
+                         Padding="{StaticResource Spacing16}">
+        <Image Source="{Binding IconGlyph, Source={x:Reference Root}}"
+               WidthRequest="{StaticResource FontSizeDisplay}"
+               HeightRequest="{StaticResource FontSizeDisplay}"
+               Aspect="AspectFit"
+               HorizontalOptions="Center"
+               IsVisible="{Binding HasIcon, Source={x:Reference Root}}">
+            <Image.Behaviors>
+                <toolkit:IconTintColorBehavior TintColor="{StaticResource TextSecondary}" />
+            </Image.Behaviors>
+        </Image>
+        <Label Text="{Binding Message, Source={x:Reference Root}}"
+               FontSize="{StaticResource FontSizeBodyLargeIdiom}"
+               TextColor="{StaticResource TextSecondary}"
+               HorizontalOptions="Center"
+               HorizontalTextAlignment="Center" />
+    </VerticalStackLayout>
+</ContentView>

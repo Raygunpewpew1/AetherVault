@@ -6,7 +6,7 @@
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:pages="clr-namespace:AetherVault.Pages"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              x:Class="AetherVault.Pages.CardSearchPickerPage"
              Title="Select a Card"
              BackgroundColor="{StaticResource Background}">
@@ -80,7 +80,7 @@
         <!-- Empty State -->
         <controls:EmptyStateView Grid.Row="2"
                                  IsVisible="{Binding IsEmpty}"
-                                 IconGlyph="{x:Static fa:Solid.MagnifyingGlass}"
+                                 IconGlyph="{x:Static icons:Icons.Search}"
                                  Message="No cards found"
                                  SecondaryMessage="Try a different search or adjust your filters" />
     </Grid>

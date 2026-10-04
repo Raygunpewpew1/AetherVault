@@ -1,10 +1,10 @@
+using AetherVault.Core;
 using AetherVault.Models;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using UraniumUI.Icons.FontAwesome;
 
 namespace AetherVault.ViewModels;
 
@@ -157,13 +157,13 @@ public sealed class DeckNextStepItem(DeckNextStep step)
 
     public string Glyph => Step.Kind switch
     {
-        DeckNextStepKind.ChooseCommander => Solid.Crown,
-        DeckNextStepKind.AddCards => Solid.Plus,
-        DeckNextStepKind.AddLands => Solid.Mountain,
-        DeckNextStepKind.RoleGap => Solid.WandMagicSparkles,
-        DeckNextStepKind.TrimMain or DeckNextStepKind.TrimSideboard => Solid.Minus,
-        DeckNextStepKind.Ready => Solid.Trophy,
-        _ => Solid.CircleInfo
+        DeckNextStepKind.ChooseCommander => Icons.Crown,
+        DeckNextStepKind.AddCards => Icons.Add,
+        DeckNextStepKind.AddLands => Icons.Landscape,
+        DeckNextStepKind.RoleGap => Icons.AutoAwesome,
+        DeckNextStepKind.TrimMain or DeckNextStepKind.TrimSideboard => Icons.Remove,
+        DeckNextStepKind.Ready => Icons.Trophy,
+        _ => Icons.Info
     };
 }
 

@@ -5,8 +5,9 @@
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:pages="clr-namespace:AetherVault.Pages"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:constants="clr-namespace:AetherVault.Constants"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Views.DeckCardsTabView"
              x:DataType="vm:DeckDetailViewModel">
     <Grid RowDefinitions="Auto,Auto,*"
@@ -37,19 +38,18 @@
                                                       CommandParameter="{Binding .}" />
                             </Border.GestureRecognizers>
                             <HorizontalStackLayout Spacing="6">
-                                <Label FontFamily="FASolid"
-                                       Text="{Binding Glyph}"
-                                       FontSize="12"
-                                       TextColor="{StaticResource Accent}"
-                                       VerticalOptions="Center">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label"
+                                <controls:TintedIcon Glyph="{Binding Glyph}"
+                                                     Size="12"
+                                                     TintColor="{StaticResource Accent}"
+                                                     VerticalOptions="Center">
+                                    <controls:TintedIcon.Triggers>
+                                        <DataTrigger TargetType="controls:TintedIcon"
                                                      Binding="{Binding IsReady}"
                                                      Value="True">
-                                            <Setter Property="TextColor" Value="Black" />
+                                            <Setter Property="TintColor" Value="Black" />
                                         </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
+                                    </controls:TintedIcon.Triggers>
+                                </controls:TintedIcon>
                                 <Label Text="{Binding Title}"
                                        FontSize="12"
                                        FontAttributes="Bold"
@@ -136,24 +136,23 @@
                                                                       InputTransparent="True"
                                                                       HorizontalOptions="Fill"
                                                                       VerticalOptions="Fill" />
-                                            <Button HorizontalOptions="Start"
+                                            <ImageButton HorizontalOptions="Start"
                                                     VerticalOptions="Start"
                                                     Margin="1"
                                                     WidthRequest="24"
                                                     HeightRequest="24"
-                                                    Padding="0"
+                                                    Padding="4"
                                                     CornerRadius="12"
                                                     BackgroundColor="#99000000"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.RequestDeckRowMenuCommand}"
                                                     CommandParameter="{Binding .}"
+                                                    Source="{x:Static icons:Icons.Overflow}"
+                                                    Aspect="AspectFit"
                                                     SemanticProperties.Hint="Move, remove, or card details">
-                                                <Button.ImageSource>
-                                                    <FontImageSource FontFamily="FASolid"
-                                                                     Glyph="{x:Static fa:Solid.EllipsisVertical}"
-                                                                     Size="10"
-                                                                     Color="White" />
-                                                </Button.ImageSource>
-                                            </Button>
+                                                <ImageButton.Behaviors>
+                                                    <toolkit:IconTintColorBehavior TintColor="White" />
+                                                </ImageButton.Behaviors>
+                                            </ImageButton>
                                         </Grid>
                                     </Border>
                                 </Grid>
@@ -202,21 +201,20 @@
                                                        Spacing="6"
                                                        VerticalOptions="Center"
                                                        IsVisible="{Binding ShowQuantityControls}">
-                                    <Button Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
+                                    <ImageButton Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.DecrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Surface}"
-                                            TextColor="{StaticResource TextPrimary}"
                                             WidthRequest="38"
                                             HeightRequest="38"
-                                            Padding="0"
-                                            CornerRadius="8">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="FASolid"
-                                                             Glyph="{x:Static fa:Solid.Minus}"
-                                                             Size="13"
-                                                             Color="{StaticResource TextPrimary}" />
-                                        </Button.ImageSource>
-                                    </Button>
+                                            Padding="10"
+                                            CornerRadius="8"
+                                            Source="{x:Static icons:Icons.Remove}"
+                                            Aspect="AspectFit"
+                                            SemanticProperties.Description="Decrease quantity">
+                                        <ImageButton.Behaviors>
+                                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                                        </ImageButton.Behaviors>
+                                    </ImageButton>
                                     <Border BackgroundColor="{StaticResource Surface}"
                                             Padding="6,3"
                                             StrokeShape="RoundRectangle 6"
@@ -229,21 +227,20 @@
                                                FontAttributes="Bold"
                                                HorizontalOptions="Center" />
                                     </Border>
-                                    <Button Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
+                                    <ImageButton Command="{Binding Source={RelativeSource AncestorType={x:Type pages:DeckDetailPage}}, Path=BindingContext.IncrementCardCommand}"
                                             CommandParameter="{Binding .}"
                                             BackgroundColor="{StaticResource Accent}"
-                                            TextColor="Black"
                                             WidthRequest="38"
                                             HeightRequest="38"
-                                            Padding="0"
-                                            CornerRadius="8">
-                                        <Button.ImageSource>
-                                            <FontImageSource FontFamily="FASolid"
-                                                             Glyph="{x:Static fa:Solid.Plus}"
-                                                             Size="13"
-                                                             Color="Black" />
-                                        </Button.ImageSource>
-                                    </Button>
+                                            Padding="10"
+                                            CornerRadius="8"
+                                            Source="{x:Static icons:Icons.Add}"
+                                            Aspect="AspectFit"
+                                            SemanticProperties.Description="Increase quantity">
+                                        <ImageButton.Behaviors>
+                                            <toolkit:IconTintColorBehavior TintColor="Black" />
+                                        </ImageButton.Behaviors>
+                                    </ImageButton>
                                 </HorizontalStackLayout>
 
                                 <!-- Commander badge instead of stepper -->
@@ -254,11 +251,10 @@
                                         Stroke="Transparent"
                                         VerticalOptions="Center"
                                         IsVisible="{Binding ShowQuantityControls, Converter={StaticResource InvertedBool}}">
-                                    <Label FontFamily="FASolid"
-                                           Text="{x:Static fa:Solid.Crown}"
-                                           FontSize="13"
-                                           TextColor="Black"
-                                           HorizontalOptions="Center" />
+                                    <controls:TintedIcon Glyph="{x:Static icons:Icons.Crown}"
+                                                         Size="13"
+                                                         TintColor="Black"
+                                                         HorizontalOptions="Center" />
                                 </Border>
                             </Grid>
                         </Border>
@@ -276,12 +272,11 @@
                                  HorizontalOptions="Center"
                                  Spacing="14"
                                  Padding="32">
-                <Label FontFamily="FASolid"
-                       Text="{x:Static fa:Solid.LayerGroup}"
-                       FontSize="40"
-                       TextColor="{StaticResource TextSecondary}"
-                       HorizontalOptions="Center"
-                       Opacity="0.6" />
+                <controls:TintedIcon Glyph="{x:Static icons:Icons.Decks}"
+                                     Size="40"
+                                     TintColor="{StaticResource TextSecondary}"
+                                     HorizontalOptions="Center"
+                                     Opacity="0.6" />
                 <Label Text="Let's build this deck"
                        FontSize="18"
                        FontAttributes="Bold"

@@ -1,4 +1,5 @@
 using AetherVault.Core.Layout;
+using AetherVault.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -43,6 +44,7 @@ public abstract partial class BaseViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ViewModeButtonText))]
     [NotifyPropertyChangedFor(nameof(ViewModeToolTip))]
+    [NotifyPropertyChangedFor(nameof(ViewModeIconGlyph))]
     public partial ViewMode ViewMode { get; set; } = ViewMode.Grid;
 
     /// <summary>Label for the view-mode toggle button: current mode so users know what it does.</summary>
@@ -51,6 +53,14 @@ public abstract partial class BaseViewModel : ObservableObject
         ViewMode.Grid => "Grid",
         ViewMode.List => "List",
         _ => "Text"
+    };
+
+    /// <summary>Material Symbols glyph for the mode the toggle will switch <em>to</em> (not current).</summary>
+    public string ViewModeIconGlyph => ViewMode switch
+    {
+        ViewMode.Grid => Icons.List,
+        ViewMode.List => Icons.Notes,
+        _ => Icons.Grid
     };
 
     /// <summary>Tooltip / accessibility description for the view-mode button (e.g. long-press on Android).</summary>

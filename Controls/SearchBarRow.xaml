@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             x:Class="AetherVault.Controls.SearchBarRow"
+             x:Name="Root">
+    <Grid ColumnDefinitions="*,Auto"
+          ColumnSpacing="{StaticResource Spacing8}"
+          BackgroundColor="Transparent"
+          VerticalOptions="Center">
+        <material:TextField x:Name="SearchEntry"
+                            Title="{Binding Placeholder, Source={x:Reference Root}}"
+                            Text="{Binding Text, Source={x:Reference Root}, Mode=TwoWay}"
+                            ReturnCommand="{Binding ReturnCommand, Source={x:Reference Root}}"
+                            BackgroundColor="Transparent"
+                            TextColor="{StaticResource TextPrimary}"
+                            TitleColor="{StaticResource TextSecondary}"
+                            AccentColor="{StaticResource Primary}"
+                            AllowClear="True"
+                            IsSpellCheckEnabled="False"
+                            VerticalOptions="Center" />
+        <ContentView x:Name="ActionsHost"
+                     Grid.Column="1"
+                     VerticalOptions="Center" />
+    </Grid>
+</ContentView>

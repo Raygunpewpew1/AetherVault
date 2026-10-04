@@ -4,7 +4,8 @@
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:viewmodels="clr-namespace:AetherVault.ViewModels"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
+             xmlns:controls="clr-namespace:AetherVault.Controls"
              x:Class="AetherVault.Pages.OtherPrintingsPage"
              x:DataType="viewmodels:OtherPrintingsViewModel"
              Title="Other printings"
@@ -17,17 +18,10 @@
               ColumnSpacing="12"
               Padding="8,44,16,12"
               BackgroundColor="{StaticResource Surface}">
-            <Button Grid.Column="0"
-                    FontFamily="FASolid"
-                    Text="{x:Static fa:Solid.Xmark}"
-                    Command="{Binding CancelCommand}"
-                    BackgroundColor="Transparent"
-                    TextColor="{StaticResource TextPrimary}"
-                    FontSize="18"
-                    WidthRequest="48"
-                    HeightRequest="48"
-                    Padding="0"
-                    CornerRadius="0" />
+            <controls:IconButton Grid.Column="0"
+                                 Glyph="{x:Static icons:Icons.Close}"
+                                 Command="{Binding CancelCommand}"
+                                 ToolTip="Close" />
             <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
                 <Label Text="Other printings"
                        FontSize="18"

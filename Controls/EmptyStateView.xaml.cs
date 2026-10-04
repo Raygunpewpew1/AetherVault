@@ -1,8 +1,7 @@
 namespace AetherVault.Controls;
 
 /// <summary>
-/// Reusable empty state: icon (FontAwesome glyph character) + message + optional secondary message.
-/// Set IconGlyph from XAML with {x:Static fa:Solid.MagnifyingGlass} (and xmlns:fa).
+/// Reusable empty state: tinted SVG icon (<see cref="Core.Icons"/>) + message + optional secondary.
 /// </summary>
 public partial class EmptyStateView : ContentView
 {
@@ -14,7 +13,7 @@ public partial class EmptyStateView : ContentView
 
     public static readonly BindableProperty IconGlyphProperty = BindableProperty.Create(
         nameof(IconGlyph), typeof(string), typeof(EmptyStateView), string.Empty,
-        propertyChanged: (b, _, newVal) => ((EmptyStateView)b).UpdateIconVisibility());
+        propertyChanged: (b, _, _) => ((EmptyStateView)b).UpdateIconVisibility());
 
     public string Message
     {
@@ -28,7 +27,7 @@ public partial class EmptyStateView : ContentView
         set => SetValue(SecondaryMessageProperty, value);
     }
 
-    /// <summary>FontAwesome Solid glyph character (e.g. from x:Static fa:Solid.MagnifyingGlass).</summary>
+    /// <summary>MauiImage SVG name from <see cref="Core.Icons"/>.</summary>
     public string IconGlyph
     {
         get => (string)GetValue(IconGlyphProperty);
@@ -42,8 +41,8 @@ public partial class EmptyStateView : ContentView
 
     private void UpdateIconVisibility()
     {
-        if (IconLabel != null)
-            IconLabel.IsVisible = !string.IsNullOrEmpty(IconGlyph);
+        if (IconImage != null)
+            IconImage.IsVisible = !string.IsNullOrEmpty(IconGlyph);
     }
 
     protected override void OnParentSet()

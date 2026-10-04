@@ -87,6 +87,21 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
         }
     }
 
+    public int ActiveFilterCount
+    {
+        get
+        {
+            var merged = CurrentOptions.Clone();
+            merged.NameFilter = SearchText?.Trim() ?? "";
+            return merged.ActiveFilterCount;
+        }
+    }
+
+    public bool HasActiveFilters => ActiveFilterCount > 0;
+
+    /// <summary>Status row collapses when false.</summary>
+    public bool ShowStatusLine => HasStatusMessage;
+
     /// <summary>Labels for the sort-mode picker (must match <see cref="CollectionSortMode"/> order).</summary>
     public List<string> SortModeOptions { get; } =
     [
@@ -156,6 +171,12 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
         OpenFiltersCommand = new AsyncRelayCommand(OpenFiltersAsync);
         ClearCollectionFiltersCommand = new AsyncRelayCommand(ClearCollectionFiltersAsync);
         RecapturePriceBaselinesCommand = new AsyncRelayCommand(RecapturePriceBaselinesAsync);
+
+        PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(StatusMessage) or nameof(HasStatusMessage))
+                OnPropertyChanged(nameof(ShowStatusLine));
+        };
 
         _cardManager.OnPriceSyncProgress += (msg, pct) =>
         {
@@ -269,6 +290,8 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
     partial void OnSearchTextChanged(string value)
     {
         OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
         _ = ApplyFilterAndSortAfterDebounceAsync();
     }
 
@@ -293,6 +316,8 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
         CollectionFilterEtchedOnly = false;
         CollectionFilterMinQtyPickerIndex = 0;
         OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
         await ApplyFilterAndSortAsync(immediate: true);
     }
 
@@ -300,6 +325,8 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
     {
         CurrentOptions = options;
         OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
         await ApplyFilterAndSortAsync(immediate: true);
     }
 
@@ -833,6 +860,8 @@ public partial class CollectionViewModel : BaseViewModel, ISearchFilterTarget
                 CollectionFilterEtchedOnly = false;
                 CollectionFilterMinQtyPickerIndex = 0;
                 OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
             }
         }
         catch (Exception ex)

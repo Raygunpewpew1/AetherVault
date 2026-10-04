@@ -33,6 +33,10 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
     public string FiltersButtonText =>
         CurrentOptions.ActiveFilterCount > 0 ? $"Filters ({CurrentOptions.ActiveFilterCount})" : "Filters";
 
+    public int ActiveFilterCount => CurrentOptions.ActiveFilterCount;
+
+    public bool HasActiveFilters => CurrentOptions.HasActiveFilters;
+
     public event Action<Card>? CardSelected;
 
     public CardSearchPickerViewModel(CardManager cardManager)
@@ -44,6 +48,8 @@ public partial class CardSearchPickerViewModel : BaseViewModel, ISearchFilterTar
     {
         CurrentOptions = options;
         OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
         await ExecuteSearchAsync();
     }
 

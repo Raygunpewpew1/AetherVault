@@ -32,4 +32,10 @@
         <Color>#8D6E63</Color>
         <Color>#26C6DA</Color>
     </x:Array>
+
+    <LinearGradientBrush x:Key="SplashGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#0D0B12" Offset="0" />
+        <GradientStop Color="#121212" Offset="0.4" />
+        <GradientStop Color="#1A1628" Offset="1" />
+    </LinearGradientBrush>
 </ResourceDictionary>

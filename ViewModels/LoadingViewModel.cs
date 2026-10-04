@@ -416,6 +416,17 @@ public partial class LoadingViewModel : BaseViewModel
             await collectionVm.LoadCollectionAsync();
             LogStartupPhase("collection_warmup");
 
+            try
+            {
+                var searchVm = _serviceProvider.GetRequiredService<SearchViewModel>();
+                await searchVm.PreloadSetsBrowseAsync();
+                LogStartupPhase("sets_browse_warmup");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogStuff($"Sets browse preload failed: {ex.Message}", LogLevel.Warning);
+            }
+
             if (PricePreferences.PricesDataEnabled && PricePreferences.CollectionPriceDisplayEnabled)
             {
                 try

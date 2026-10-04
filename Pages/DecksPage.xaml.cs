@@ -42,7 +42,13 @@ public partial class DecksPage : ContentPage
 
     private async void OnDeckTileOverflowClicked(object? sender, EventArgs e)
     {
-        if (sender is Button btn && btn.CommandParameter is DeckEntity deck)
+        DeckEntity? deck = sender switch
+        {
+            ImageButton ib when ib.CommandParameter is DeckEntity d => d,
+            Button btn when btn.CommandParameter is DeckEntity d => d,
+            _ => null
+        };
+        if (deck != null)
             await ShowDeckOverflowMenuAsync(deck);
     }
 

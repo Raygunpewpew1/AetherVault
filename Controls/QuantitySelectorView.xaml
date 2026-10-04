@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Controls.QuantitySelectorView"
              x:Name="QuantitySelectorRoot">
     <VerticalStackLayout Spacing="6" BindingContext="{x:Reference QuantitySelectorRoot}">
@@ -11,21 +12,19 @@
                TextColor="{StaticResource TextSecondary}"
                HorizontalTextAlignment="Center" />
         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20" HorizontalOptions="Center" WidthRequest="260">
-            <Button x:Name="MinusBtn"
-                    Clicked="OnMinusClicked"
-                    FontSize="24"
-                    WidthRequest="56"
-                    HeightRequest="56"
-                    CornerRadius="28"
-                    BackgroundColor="{StaticResource CardBackground}"
-                    TextColor="{StaticResource TextPrimary}">
-                <Button.ImageSource>
-                    <FontImageSource FontFamily="FASolid"
-                                     Glyph="{x:Static fa:Solid.Minus}"
-                                     Size="18"
-                                     Color="{StaticResource TextPrimary}" />
-                </Button.ImageSource>
-            </Button>
+            <ImageButton x:Name="MinusBtn"
+                         Clicked="OnMinusClicked"
+                         WidthRequest="56"
+                         HeightRequest="56"
+                         CornerRadius="28"
+                         Padding="16"
+                         BackgroundColor="{StaticResource CardBackground}"
+                         Source="{x:Static icons:Icons.Remove}"
+                         Aspect="AspectFit">
+                <ImageButton.Behaviors>
+                    <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                </ImageButton.Behaviors>
+            </ImageButton>
             <Label x:Name="QuantityLabel"
                    Grid.Column="1"
                    Text="{Binding Quantity}"
@@ -38,22 +37,20 @@
                     <TapGestureRecognizer Tapped="OnQuantityLabelTapped" />
                 </Label.GestureRecognizers>
             </Label>
-            <Button x:Name="PlusBtn"
-                    Grid.Column="2"
-                    Clicked="OnPlusClicked"
-                    FontSize="24"
-                    WidthRequest="56"
-                    HeightRequest="56"
-                    CornerRadius="28"
-                    BackgroundColor="{StaticResource CardBackground}"
-                    TextColor="{StaticResource TextPrimary}">
-                <Button.ImageSource>
-                    <FontImageSource FontFamily="FASolid"
-                                     Glyph="{x:Static fa:Solid.Plus}"
-                                     Size="18"
-                                     Color="{StaticResource TextPrimary}" />
-                </Button.ImageSource>
-            </Button>
+            <ImageButton x:Name="PlusBtn"
+                         Grid.Column="2"
+                         Clicked="OnPlusClicked"
+                         WidthRequest="56"
+                         HeightRequest="56"
+                         CornerRadius="28"
+                         Padding="16"
+                         BackgroundColor="{StaticResource CardBackground}"
+                         Source="{x:Static icons:Icons.Add}"
+                         Aspect="AspectFit">
+                <ImageButton.Behaviors>
+                    <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                </ImageButton.Behaviors>
+            </ImageButton>
         </Grid>
     </VerticalStackLayout>
 </ContentView>

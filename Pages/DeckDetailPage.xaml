@@ -4,8 +4,9 @@
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:views="clr-namespace:AetherVault.Views"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:constants="clr-namespace:AetherVault.Constants"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Pages.DeckDetailPage"
              Title="{Binding Deck.Name}"
              BackgroundColor="{StaticResource Background}"
@@ -57,14 +58,13 @@
                                                   HorizontalOptions="Fill"
                                                   VerticalOptions="Fill"
                                                   IsVisible="{Binding HasNoCommander, Converter={StaticResource InvertedBool}}" />
-                        <Label FontFamily="FASolid"
-                               Text="{x:Static fa:Solid.Crown}"
-                               FontSize="18"
-                               TextColor="{StaticResource TextSecondary}"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               InputTransparent="True"
-                               IsVisible="{Binding HasNoCommander}" />
+                        <controls:TintedIcon Glyph="{x:Static icons:Icons.Crown}"
+                                             Size="18"
+                                             TintColor="{StaticResource TextSecondary}"
+                                             HorizontalOptions="Center"
+                                             VerticalOptions="Center"
+                                             InputTransparent="True"
+                                             IsVisible="{Binding HasNoCommander}" />
                     </Grid>
                 </Border>
 
@@ -113,23 +113,27 @@
                 </VerticalStackLayout>
 
                 <!-- Validation chip -->
-                <Button Grid.Column="2"
-                        Text="{x:Static constants:UserMessages.ValidationDetailsButton}"
-                        Command="{Binding ShowValidationDetailsCommand}"
-                        IsVisible="{Binding ShowValidationDetailsEntry}"
+                <Border Grid.Column="2"
                         BackgroundColor="{StaticResource CardBackground}"
-                        TextColor="#FFB74D"
-                        FontSize="12"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 10"
                         Padding="10,6"
-                        CornerRadius="10"
-                        VerticalOptions="Center">
-                    <Button.ImageSource>
-                        <FontImageSource FontFamily="FASolid"
-                                         Glyph="{x:Static fa:Solid.TriangleExclamation}"
-                                         Size="12"
-                                         Color="#FFB74D" />
-                    </Button.ImageSource>
-                </Button>
+                        VerticalOptions="Center"
+                        IsVisible="{Binding ShowValidationDetailsEntry}">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ShowValidationDetailsCommand}" />
+                    </Border.GestureRecognizers>
+                    <HorizontalStackLayout Spacing="6">
+                        <controls:TintedIcon Glyph="{x:Static icons:Icons.Warning}"
+                                             Size="12"
+                                             TintColor="#FFB74D"
+                                             VerticalOptions="Center" />
+                        <Label Text="{x:Static constants:UserMessages.ValidationDetailsButton}"
+                               FontSize="12"
+                               TextColor="#FFB74D"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                </Border>
             </Grid>
         </Border>
 
@@ -145,7 +149,7 @@
                 </Border.GestureRecognizers>
                 <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                     <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                        <Label FontFamily="FASolid" Text="{x:Static fa:Solid.List}" FontSize="13" TextColor="{Binding Tab0Color}" VerticalOptions="Center" />
+                        <controls:TintedIcon Glyph="{x:Static icons:Icons.List}" Size="13" TintColor="{Binding Tab0Color}" VerticalOptions="Center" />
                         <Label Text="Cards" FontSize="13" FontAttributes="{Binding Tab0Font}" TextColor="{Binding Tab0Color}" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <BoxView HeightRequest="2" Color="{Binding Tab0Color}" Opacity="{Binding Tab0Indicator}" HorizontalOptions="Fill" />
@@ -157,7 +161,7 @@
                 </Border.GestureRecognizers>
                 <VerticalStackLayout Spacing="2" HorizontalOptions="Center" VerticalOptions="Center">
                     <HorizontalStackLayout Spacing="6" HorizontalOptions="Center">
-                        <Label FontFamily="FASolid" Text="{x:Static fa:Solid.ChartColumn}" FontSize="13" TextColor="{Binding Tab1Color}" VerticalOptions="Center" />
+                        <controls:TintedIcon Glyph="{x:Static icons:Icons.Stats}" Size="13" TintColor="{Binding Tab1Color}" VerticalOptions="Center" />
                         <Label Text="Insights" FontSize="13" FontAttributes="{Binding Tab1Font}" TextColor="{Binding Tab1Color}" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <BoxView HeightRequest="2" Color="{Binding Tab1Color}" Opacity="{Binding Tab1Indicator}" HorizontalOptions="Fill" />
@@ -182,62 +186,54 @@
                            VerticalTextAlignment="Center"
                            Margin="0,0,4,0"
                            MinimumWidthRequest="72" />
-                    <Button Command="{Binding SelectAllInCurrentSectionCommand}"
-                            Text="{OnIdiom Phone='', Default='All'}"
-                            Padding="10,6"
-                            FontSize="12"
+                    <ImageButton Command="{Binding SelectAllInCurrentSectionCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="{StaticResource CardBackground}"
-                            TextColor="{StaticResource TextPrimary}"
+                            Source="{x:Static icons:Icons.DoneAll}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Select all">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.CheckDouble}"
-                                             Size="12"
-                                             Color="{StaticResource TextPrimary}" />
-                        </Button.ImageSource>
-                    </Button>
-                    <Button Command="{Binding ClearDeckSelectionCommand}"
-                            Text="{OnIdiom Phone='', Default='None'}"
-                            Padding="10,6"
-                            FontSize="12"
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
+                    <ImageButton Command="{Binding ClearDeckSelectionCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="{StaticResource CardBackground}"
-                            TextColor="{StaticResource TextPrimary}"
+                            Source="{x:Static icons:Icons.InkEraser}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Clear selection">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.Eraser}"
-                                             Size="12"
-                                             Color="{StaticResource TextPrimary}" />
-                        </Button.ImageSource>
-                    </Button>
-                    <Button Command="{Binding BulkDecrementSelectionCommand}"
-                            Text="{OnIdiom Phone='', Default='-1'}"
-                            Padding="10,6"
-                            FontSize="12"
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
+                    <ImageButton Command="{Binding BulkDecrementSelectionCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="{StaticResource CardBackground}"
-                            TextColor="{StaticResource TextPrimary}"
+                            Source="{x:Static icons:Icons.Remove}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Decrease selected by 1">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.Minus}"
-                                             Size="12"
-                                             Color="{StaticResource TextPrimary}" />
-                        </Button.ImageSource>
-                    </Button>
-                    <Button Command="{Binding BulkIncrementSelectionCommand}"
-                            Text="{OnIdiom Phone='', Default='+1'}"
-                            Padding="10,6"
-                            FontSize="12"
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
+                    <ImageButton Command="{Binding BulkIncrementSelectionCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="{StaticResource Accent}"
-                            TextColor="Black"
+                            Source="{x:Static icons:Icons.Add}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Increase selected by 1">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.Plus}"
-                                             Size="12"
-                                             Color="Black" />
-                        </Button.ImageSource>
-                    </Button>
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="Black" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
                     <Button Text="{OnIdiom Phone='Main', Default='To Main'}"
                             Command="{Binding BulkMoveSelectionToMainCommand}"
                             Padding="10,6"
@@ -250,34 +246,30 @@
                             FontSize="12"
                             BackgroundColor="{StaticResource CardBackground}"
                             TextColor="{StaticResource TextPrimary}" />
-                    <Button Command="{Binding BulkRemoveSelectionCommand}"
-                            Text="{OnIdiom Phone='', Default='Remove'}"
-                            Padding="10,6"
-                            FontSize="12"
+                    <ImageButton Command="{Binding BulkRemoveSelectionCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="#B00020"
-                            TextColor="White"
+                            Source="{x:Static icons:Icons.Delete}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Remove selected">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.TrashCan}"
-                                             Size="12"
-                                             Color="White" />
-                        </Button.ImageSource>
-                    </Button>
-                    <Button Command="{Binding ToggleSelectionModeCommand}"
-                            Text="{OnIdiom Phone='', Default='Done'}"
-                            Padding="10,6"
-                            FontSize="12"
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="White" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
+                    <ImageButton Command="{Binding ToggleSelectionModeCommand}"
+                            Padding="8"
+                            WidthRequest="40"
+                            HeightRequest="36"
                             BackgroundColor="{StaticResource Primary}"
-                            TextColor="White"
+                            Source="{x:Static icons:Icons.Check}"
+                            Aspect="AspectFit"
                             SemanticProperties.Description="Exit selection mode">
-                        <Button.ImageSource>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.Check}"
-                                             Size="12"
-                                             Color="White" />
-                        </Button.ImageSource>
-                    </Button>
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="White" />
+                        </ImageButton.Behaviors>
+                    </ImageButton>
                 </HorizontalStackLayout>
             </ScrollView>
         </Border>
@@ -306,23 +298,21 @@
                     BackgroundColor="{StaticResource Accent}"
                     Shadow="{Shadow Brush=Black, Offset='0,2', Radius=8, Opacity=0.22}"
                     IsVisible="{Binding IsCardsTab}">
-                <Button Clicked="OnAddCardsClicked"
+                <ImageButton Clicked="OnAddCardsClicked"
                         BackgroundColor="Transparent"
-                        Padding="0"
+                        Padding="12"
                         WidthRequest="52"
                         HeightRequest="52"
                         CornerRadius="26"
                         BorderWidth="0"
-                        BorderColor="Transparent"
+                        Source="{x:Static icons:Icons.Add}"
+                        Aspect="AspectFit"
                         SemanticProperties.Description="{x:Static constants:UserMessages.DeckDetailFabAddCards}"
                         SemanticProperties.Hint="Search and add cards to this deck">
-                    <Button.ImageSource>
-                        <FontImageSource FontFamily="FASolid"
-                                         Glyph="{x:Static fa:Solid.Plus}"
-                                         Size="22"
-                                         Color="Black" />
-                    </Button.ImageSource>
-                </Button>
+                    <ImageButton.Behaviors>
+                        <toolkit:IconTintColorBehavior TintColor="Black" />
+                    </ImageButton.Behaviors>
+                </ImageButton>
             </Border>
         </Grid>
 

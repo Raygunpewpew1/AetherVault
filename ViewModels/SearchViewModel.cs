@@ -54,8 +54,41 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     /// <summary>Card grid visible on the Cards tab when a search returned at least one card.</summary>
     public bool ShowCardGridResults => !IsSetsSearchTab && TotalResults > 0;
 
-    /// <summary>Empty state on the Cards tab when there are no recents to show instead.</summary>
-    public bool ShowCardGridEmptyState => !IsSetsSearchTab && IsEmpty && TotalResults == 0 && !ShowRecentSearchesPanel;
+    /// <summary>Empty / idle prompt on the Cards tab when there are no recents to show instead.</summary>
+    public bool ShowCardGridEmptyState =>
+        !IsSetsSearchTab
+        && !ShowRecentSearchesPanel
+        && TotalResults == 0
+        && !IsBusy
+        && (HasExecutedSearch ? IsEmpty : true);
+
+    public string CardsEmptyMessage =>
+        HasExecutedSearch ? "No cards found" : "Search for a card by name";
+
+    /// <summary>True after at least one card search has completed (including zero hits).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowCardGridEmptyState))]
+    [NotifyPropertyChangedFor(nameof(CardsEmptyMessage))]
+    public partial bool HasExecutedSearch { get; set; }
+
+    /// <summary>Status row collapses when false (no leftover height).</summary>
+    public bool ShowStatusLine =>
+        HasStatusMessage
+        && (IsSetsSearchTab || !StatusMessage.Contains("sets loaded", StringComparison.OrdinalIgnoreCase));
+
+    public IReadOnlyList<string> SearchTabLabels { get; } = ["Cards", "Sets"];
+
+    public int SearchTabIndex
+    {
+        get => IsSetsSearchTab ? 1 : 0;
+        set
+        {
+            var toSets = value == 1;
+            if (toSets == IsSetsSearchTab)
+                return;
+            _ = SwitchSearchTabAsync(toSets ? "sets" : "cards");
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowRecentSearchesPanel))]
@@ -107,6 +140,10 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             return count > 0 ? $"Filters ({count})" : "Filters";
         }
     }
+
+    public int ActiveFilterCount => CurrentOptions.ActiveFilterCount;
+
+    public bool HasActiveFilters => CurrentOptions.HasActiveFilters;
 
     public bool HasNonTextFilters
     {
@@ -164,7 +201,12 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(IsBusy))
+            {
                 OnPropertyChanged(nameof(ShowRecentSearchesPanel));
+                OnPropertyChanged(nameof(ShowCardGridEmptyState));
+            }
+            if (e.PropertyName is nameof(StatusMessage) or nameof(HasStatusMessage))
+                OnPropertyChanged(nameof(ShowStatusLine));
         };
     }
 
@@ -223,11 +265,14 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         if (value && _setsBrowseCache.Count > 0)
             ApplySetListFilter();
+        OnPropertyChanged(nameof(SearchTabIndex));
         OnPropertyChanged(nameof(ShowRecentSearchesPanel));
         OnPropertyChanged(nameof(ShowRecentSearchesShortcut));
         OnPropertyChanged(nameof(ShowFiltersSummaryStrip));
         OnPropertyChanged(nameof(ShowCardGridEmptyState));
         OnPropertyChanged(nameof(ShowCardGridResults));
+        OnPropertyChanged(nameof(ShowStatusLine));
+        OnPropertyChanged(nameof(CardsEmptyMessage));
     }
 
     protected override void OnViewModeUpdated(ViewMode value)
@@ -272,10 +317,13 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         TotalResults = 0;
         HasMorePages = false;
         IsEmpty = false;
+        HasExecutedSearch = false;
         StatusIsError = false;
         StatusMessage = UserMessages.StatusClear;
         UpdateFilterState();
         SearchCompleted?.Invoke();
+        OnPropertyChanged(nameof(ShowStatusLine));
+        OnPropertyChanged(nameof(CardsEmptyMessage));
     }
 
     /// <summary>Opens the full-screen filters page.</summary>
@@ -326,7 +374,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
         await PerformSearchAsync(o);
     }
 
-    private async Task EnsureSetsListLoadedAsync()
+    private async Task EnsureSetsListLoadedAsync(bool silent = false)
     {
         if (_setsBrowseCache.Count > 0)
         {
@@ -336,31 +384,44 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
 
         if (!await _cardManager.EnsureInitializedAsync())
         {
-            StatusMessage = UserMessages.DatabaseNotFound;
+            if (!silent)
+                StatusMessage = UserMessages.DatabaseNotFound;
             return;
         }
 
-        IsLoadingSets = true;
-        StatusIsError = false;
-        StatusMessage = UserMessages.Searching;
+        if (!silent)
+        {
+            IsLoadingSets = true;
+            StatusIsError = false;
+            StatusMessage = UserMessages.Searching;
+        }
+
         try
         {
             var list = await _cardManager.GetSetsBrowseAsync();
             _setsBrowseCache = [.. list];
             ApplySetListFilter();
-            StatusMessage = $"{_setsBrowseCache.Count} sets loaded";
+            if (!silent)
+                StatusMessage = $"{_setsBrowseCache.Count} sets loaded";
         }
         catch (Exception ex)
         {
-            StatusIsError = true;
-            StatusMessage = UserMessages.SearchFailed(ex.Message);
+            if (!silent)
+            {
+                StatusIsError = true;
+                StatusMessage = UserMessages.SearchFailed(ex.Message);
+            }
             Logger.LogStuff($"Set browse load error: {ex.Message}", LogLevel.Error);
         }
         finally
         {
-            IsLoadingSets = false;
+            if (!silent)
+                IsLoadingSets = false;
         }
     }
+
+    /// <summary>Warm the sets browse cache after DB init so the Sets tab opens without a hitch.</summary>
+    public Task PreloadSetsBrowseAsync() => EnsureSetsListLoadedAsync(silent: true);
 
     private void ApplySetListFilter()
     {
@@ -446,6 +507,7 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
             HasMorePages = totalCount > results.Length;
 
             IsEmpty = TotalResults == 0;
+            HasExecutedSearch = true;
             _grid?.SetCards(results);
             _cardManager.ImageService.CancelPendingDownloads();
 
@@ -575,6 +637,8 @@ public partial class SearchViewModel : BaseViewModel, ISearchFilterTarget
     {
         FiltersSummaryText = SearchFiltersSummaryBuilder.Build(CurrentOptions);
         OnPropertyChanged(nameof(FiltersButtonText));
+        OnPropertyChanged(nameof(ActiveFilterCount));
+        OnPropertyChanged(nameof(HasActiveFilters));
         OnPropertyChanged(nameof(HasNonTextFilters));
         OnPropertyChanged(nameof(ShowFiltersSummaryStrip));
     }

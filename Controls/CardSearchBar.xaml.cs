@@ -3,7 +3,7 @@ using System.Windows.Input;
 namespace AetherVault.Controls;
 
 /// <summary>
-/// Reusable search bar: TextField + Filters button + ViewMode button.
+/// Reusable search bar: TextField + Filters icon + ViewMode icon.
 /// Bind FiltersCommand to use command (e.g. SearchPage); otherwise subscribe to FiltersTapped (e.g. CardSearchPickerPage).
 /// BindingContext should be the search ViewModel (SearchViewModel / CardSearchPickerViewModel).
 /// </summary>
@@ -24,6 +24,7 @@ public partial class CardSearchBar : ContentView
     public CardSearchBar()
     {
         InitializeComponent();
+        FiltersButton.Command = new Command(OnFiltersInvoked);
     }
 
     /// <summary>Focuses the search entry (e.g. from page OnAppearing).</summary>
@@ -32,15 +33,11 @@ public partial class CardSearchBar : ContentView
         SearchEntry.Focus();
     }
 
-    private void OnFiltersButtonClicked(object? sender, EventArgs e)
+    private void OnFiltersInvoked()
     {
         if (FiltersCommand != null && FiltersCommand.CanExecute(null))
-        {
             FiltersCommand.Execute(null);
-        }
         else
-        {
             FiltersTapped?.Invoke(this, EventArgs.Empty);
-        }
     }
 }

@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:controls="clr-namespace:AetherVault.Controls"
-             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:pages="clr-namespace:AetherVault.Pages"
              xmlns:core="clr-namespace:AetherVault.Core"
              x:Class="AetherVault.Pages.SearchPage"
@@ -12,281 +10,237 @@
              Title="Search"
              BackgroundColor="{StaticResource Background}">
 
-    <Grid>
-        <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*">
 
-            <!-- Search + status + active filters -->
-            <Border Grid.Row="0"
-                    Style="{StaticResource CardStyle}"
-                    Margin="8,8,8,4">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                      ColumnDefinitions="*,Auto,Auto"
-                      ColumnSpacing="8">
+        <!-- Header chrome: no outer card; sits on Background -->
+        <VerticalStackLayout Grid.Row="0"
+                             Padding="{StaticResource ThicknessPageChrome}"
+                             Spacing="{StaticResource Spacing12}">
 
-                    <Grid Grid.Row="0"
-                          Grid.ColumnSpan="3"
-                          ColumnDefinitions="*,*"
-                          ColumnSpacing="8"
-                          Margin="0,0,0,4">
-                        <Button Grid.Column="0"
-                                Text="Cards"
-                                Command="{Binding SwitchSearchTabCommand}"
-                                CommandParameter="cards"
-                                HeightRequest="40"
-                                CornerRadius="10"
-                                BackgroundColor="{StaticResource CardBackground}"
-                                TextColor="{StaticResource TextPrimary}">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button"
-                                             Binding="{Binding IsSetsSearchTab}"
-                                             Value="False">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                    <Setter Property="TextColor" Value="Black" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Button Grid.Column="1"
-                                Text="Sets"
-                                Command="{Binding SwitchSearchTabCommand}"
-                                CommandParameter="sets"
-                                HeightRequest="40"
-                                CornerRadius="10"
-                                BackgroundColor="{StaticResource CardBackground}"
-                                TextColor="{StaticResource TextPrimary}">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button"
-                                             Binding="{Binding IsSetsSearchTab}"
-                                             Value="True">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                    <Setter Property="TextColor" Value="Black" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="1"
-                          Grid.ColumnSpan="3">
-                        <controls:CardSearchBar x:Name="SearchBar"
-                                                FiltersCommand="{Binding GoToFiltersCommand}"
-                                                IsVisible="{Binding IsSetsSearchTab, Converter={StaticResource InvertedBool}}" />
-                        <material:TextField Title="Filter sets"
-                                            TitleColor="{StaticResource TextSecondary}"
-                                            AccentColor="{StaticResource Primary}"
-                                            Text="{Binding SetListFilterText, Mode=TwoWay}"
-                                            AllowClear="True"
-                                            BackgroundColor="{StaticResource Surface}"
-                                            TextColor="{StaticResource TextPrimary}"
-                                            IsVisible="{Binding IsSetsSearchTab}" />
-                    </Grid>
-
-                    <HorizontalStackLayout Grid.Row="2"
-                                           Grid.Column="0"
-                                           Spacing="12"
+            <!-- Cards: search + filter / view icons (Shell tab title is the only "Search" heading) -->
+            <controls:SearchBarRow x:Name="CardsSearchRow"
+                                   Text="{Binding SearchText, Mode=TwoWay}"
+                                   Placeholder="Search cards..."
+                                   ReturnCommand="{Binding SearchCommand}"
+                                   IsVisible="{Binding IsSetsSearchTab, Converter={StaticResource InvertedBool}}">
+                <controls:SearchBarRow.Actions>
+                    <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
                                            VerticalOptions="Center">
-                        <Label x:Name="StatusLabel"
-                               Text="{Binding StatusDisplayText}"
-                               TextColor="{Binding StatusTextColor}"
-                               FontSize="12"
-                               VerticalOptions="Center" />
-                        <Label Text="Recent"
-                               FontSize="12"
-                               TextColor="{StaticResource Primary}"
-                               TextDecorations="Underline"
-                               VerticalOptions="Center"
-                               IsVisible="{Binding ShowRecentSearchesShortcut}">
-                            <Label.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnRecentSearchesTapped" />
-                            </Label.GestureRecognizers>
-                        </Label>
+                        <controls:IconButton Glyph="{x:Static icons:Icons.Filter}"
+                                             Command="{Binding GoToFiltersCommand}"
+                                             IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBool}}"
+                                             IsActive="{Binding HasActiveFilters}"
+                                             BadgeCount="{Binding ActiveFilterCount}"
+                                             ToolTip="{Binding FiltersButtonText}" />
+                        <controls:IconButton Glyph="{Binding ViewModeIconGlyph}"
+                                             Command="{Binding ToggleViewModeCommand}"
+                                             ToolTip="{Binding ViewModeToolTip}" />
                     </HorizontalStackLayout>
+                </controls:SearchBarRow.Actions>
+            </controls:SearchBarRow>
 
-                    <HorizontalStackLayout Grid.Row="2"
-                                           Grid.Column="1"
-                                           IsVisible="{Binding IsImportingPrices}"
-                                           Spacing="4"
-                                           VerticalOptions="Center"
-                                           Margin="0,0,8,0">
-                        <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
-                                           HeightRequest="12"
-                                           WidthRequest="12"
-                                           Color="{StaticResource TextSecondary}" />
-                        <Label Text="Syncing Prices..."
-                               TextColor="{StaticResource TextSecondary}"
-                               FontSize="10"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
+            <!-- Sets: filter field only -->
+            <controls:SearchBarRow Text="{Binding SetListFilterText, Mode=TwoWay}"
+                                   Placeholder="Filter sets"
+                                   IsVisible="{Binding IsSetsSearchTab}" />
 
-                    <ActivityIndicator Grid.Row="2"
-                                       Grid.Column="2"
-                                       x:Name="LoadingIndicator"
-                                       IsRunning="{Binding IsBusy}"
-                                       IsVisible="{Binding IsBusy}"
-                                       HeightRequest="20"
-                                       WidthRequest="20"
-                                       Color="{StaticResource Primary}" />
+            <controls:SegmentedControl ItemsSource="{Binding SearchTabLabels}"
+                                       SelectedIndex="{Binding SearchTabIndex, Mode=TwoWay}" />
 
-                    <Grid Grid.Row="3"
-                          Grid.ColumnSpan="3"
-                          ColumnDefinitions="*,Auto"
-                          ColumnSpacing="10"
-                          Margin="0,6,0,0"
-                          IsVisible="{Binding ShowFiltersSummaryStrip}">
-                        <Label Text="{Binding FiltersSummaryText}"
-                               FontSize="11"
-                               TextColor="{StaticResource TextSecondary}"
-                               VerticalOptions="Center"
-                               LineBreakMode="TailTruncation" />
-                        <Button Grid.Column="1"
-                                Text="Clear"
-                                Command="{Binding ClearCommand}"
-                                BackgroundColor="{StaticResource Surface}"
-                                TextColor="{StaticResource TextSecondary}"
-                                Padding="12,6"
-                                FontSize="12"
-                                CornerRadius="8" />
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <controls:CardGrid Grid.Row="1"
-                               x:Name="CardGrid"
-                               IsVisible="{Binding ShowCardGridResults}"
-                               Scrolled="OnGridScrolled"
-                               IsDragEnabled="False" />
-
-            <controls:EmptyStateView Grid.Row="1"
-                                     IsVisible="{Binding ShowCardGridEmptyState}"
-                                     IconGlyph="{x:Static fa:Solid.MagnifyingGlass}"
-                                     Message="No cards found"
-                                     SecondaryMessage="Try a different search or adjust your filters" />
-
-            <CollectionView Grid.Row="1"
-                            ItemsSource="{Binding RecentSearches}"
-                            SelectionMode="None"
-                            IsVisible="{Binding ShowRecentSearchesPanel}"
-                            Margin="8,0,8,8">
-                <CollectionView.Header>
-                    <Label Text="Recent searches"
-                           FontSize="13"
+            <!-- Status row: fully collapsed when empty -->
+            <Grid IsVisible="{Binding ShowStatusLine}"
+                  ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="{StaticResource Spacing8}">
+                <HorizontalStackLayout Spacing="{StaticResource Spacing12}"
+                                       VerticalOptions="Center">
+                    <Label x:Name="StatusLabel"
+                           Text="{Binding StatusDisplayText}"
+                           TextColor="{Binding StatusTextColor}"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           VerticalOptions="Center" />
+                    <Label Text="Recent"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{StaticResource Primary}"
+                           TextDecorations="Underline"
+                           VerticalOptions="Center"
+                           IsVisible="{Binding ShowRecentSearchesShortcut}">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnRecentSearchesTapped" />
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="1"
+                                       IsVisible="{Binding IsImportingPrices}"
+                                       Spacing="{StaticResource Spacing4}"
+                                       VerticalOptions="Center">
+                    <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
+                                       HeightRequest="{StaticResource Spacing12}"
+                                       WidthRequest="{StaticResource Spacing12}"
+                                       Color="{StaticResource TextSecondary}" />
+                    <Label Text="Syncing Prices..."
                            TextColor="{StaticResource TextSecondary}"
-                           Margin="0,12,0,4" />
-                </CollectionView.Header>
+                           FontSize="{StaticResource FontSizeCaption}"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <ActivityIndicator Grid.Column="2"
+                                   x:Name="LoadingIndicator"
+                                   IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   HeightRequest="{StaticResource Spacing16}"
+                                   WidthRequest="{StaticResource Spacing16}"
+                                   Color="{StaticResource Primary}" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,Auto"
+                  ColumnSpacing="{StaticResource Spacing8}"
+                  IsVisible="{Binding ShowFiltersSummaryStrip}">
+                <Label Text="{Binding FiltersSummaryText}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{StaticResource TextSecondary}"
+                       VerticalOptions="Center"
+                       LineBreakMode="TailTruncation" />
+                <Button Grid.Column="1"
+                        Text="Clear"
+                        Command="{Binding ClearCommand}"
+                        Style="{StaticResource TextButton}"
+                        FontSize="{StaticResource FontSizeCaption}" />
+            </Grid>
+        </VerticalStackLayout>
+
+        <controls:CardGrid Grid.Row="1"
+                           x:Name="CardGrid"
+                           IsVisible="{Binding ShowCardGridResults}"
+                           Scrolled="OnGridScrolled"
+                           IsDragEnabled="False" />
+
+        <controls:EmptyState Grid.Row="1"
+                             IsVisible="{Binding ShowCardGridEmptyState}"
+                             IconGlyph="{x:Static icons:Icons.Search}"
+                             Message="{Binding CardsEmptyMessage}" />
+
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding RecentSearches}"
+                        SelectionMode="None"
+                        IsVisible="{Binding ShowRecentSearchesPanel}"
+                        Margin="{StaticResource ThicknessContentInset}">
+            <CollectionView.Header>
+                <Label Text="Recent searches"
+                       FontSize="{StaticResource FontSizeBody}"
+                       TextColor="{StaticResource TextSecondary}"
+                       Margin="0,12,0,4" />
+            </CollectionView.Header>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                    <Border BackgroundColor="{StaticResource Surface}"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 8"
+                            Margin="0,0,0,4"
+                            Padding="{StaticResource ThicknessItemPad}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:SearchPage}}, Path=BindingContext.ApplyRecentSearchCommand}"
+                                                  CommandParameter="{Binding .}" />
+                        </Border.GestureRecognizers>
+                        <Label Text="{Binding .}"
+                               FontSize="{StaticResource FontSizeBody}"
+                               TextColor="{StaticResource TextPrimary}"
+                               LineBreakMode="TailTruncation" />
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="1"
+              IsVisible="{Binding IsSetsSearchTab}"
+              RowDefinitions="*,Auto"
+              Margin="{StaticResource ThicknessContentInset}">
+            <ActivityIndicator Grid.Row="0"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Center"
+                               IsRunning="{Binding IsLoadingSets}"
+                               IsVisible="{Binding IsLoadingSets}"
+                               Color="{StaticResource Primary}"
+                               HeightRequest="{StaticResource TouchTargetSize}"
+                               WidthRequest="{StaticResource TouchTargetSize}" />
+            <CollectionView Grid.Row="0"
+                            ItemsSource="{Binding FilteredSets}"
+                            SelectionMode="None"
+                            IsVisible="{Binding IsLoadingSets, Converter={StaticResource InvertedBool}}">
+                <CollectionView.EmptyView>
+                    <controls:EmptyState Message="No sets match this filter"
+                                         IconGlyph="{x:Static icons:Icons.Decks}" />
+                </CollectionView.EmptyView>
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                        <Border BackgroundColor="{StaticResource Surface}"
-                                StrokeThickness="0"
-                                StrokeShape="RoundRectangle 8"
-                                Margin="0,0,0,4"
-                                Padding="12,10">
+                    <DataTemplate x:DataType="core:SetBrowseRow">
+                        <Border Style="{StaticResource CardStyle}"
+                                Margin="0,0,0,8"
+                                Padding="{StaticResource ThicknessItemPad}">
                             <Border.GestureRecognizers>
-                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:SearchPage}}, Path=BindingContext.ApplyRecentSearchCommand}"
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:SearchPage}}, Path=BindingContext.OpenSetFromBrowseCommand}"
                                                       CommandParameter="{Binding .}" />
                             </Border.GestureRecognizers>
-                            <Label Text="{Binding .}"
-                                   FontSize="14"
-                                   TextColor="{StaticResource TextPrimary}"
-                                   LineBreakMode="TailTruncation" />
+                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                  ColumnSpacing="{StaticResource Spacing12}"
+                                  RowDefinitions="Auto,Auto,Auto">
+                                <Border Grid.RowSpan="3"
+                                        Grid.Column="0"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 8"
+                                        BackgroundColor="{StaticResource Surface}"
+                                        Padding="{StaticResource Spacing4}"
+                                        VerticalOptions="Start">
+                                    <Label Text="{Binding Code}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource TextSecondary}"
+                                           MaxLines="1"
+                                           LineBreakMode="MiddleTruncation"
+                                           WidthRequest="{StaticResource TouchTargetSize}"
+                                           HorizontalTextAlignment="Center" />
+                                </Border>
+                                <Label Grid.Row="0"
+                                       Grid.Column="1"
+                                       Text="{Binding Name}"
+                                       FontSize="{StaticResource FontSizeBodyLarge}"
+                                       FontAttributes="Bold"
+                                       TextColor="{StaticResource TextPrimary}"
+                                       LineBreakMode="TailTruncation" />
+                                <Label Grid.Row="0"
+                                       Grid.Column="2"
+                                       Text="{Binding ReleaseDisplay}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       VerticalOptions="Start"
+                                       HorizontalTextAlignment="End" />
+                                <HorizontalStackLayout Grid.Row="1"
+                                                       Grid.Column="1"
+                                                       Grid.ColumnSpan="2"
+                                                       Spacing="{StaticResource Spacing8}">
+                                    <Label Text="{Binding CardCountLabel}"
+                                           FontSize="{StaticResource FontSizeCaption}"
+                                           TextColor="{StaticResource TextSecondary}" />
+                                    <Border StrokeThickness="0"
+                                            BackgroundColor="{StaticResource CardBackground}"
+                                            Padding="{StaticResource ThicknessChipPad}"
+                                            IsVisible="{Binding IsPreviewSet}">
+                                        <Label Text="Preview"
+                                               FontSize="{StaticResource FontSizeCaption}"
+                                               TextColor="{StaticResource TextSecondary}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+                                <Label Grid.Row="2"
+                                       Grid.Column="1"
+                                       Grid.ColumnSpan="2"
+                                       Text="{Binding ParentHint}"
+                                       FontSize="{StaticResource FontSizeCaption}"
+                                       TextColor="{StaticResource TextSecondary}"
+                                       LineBreakMode="TailTruncation" />
+                            </Grid>
                         </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-
-            <Grid Grid.Row="1"
-                  IsVisible="{Binding IsSetsSearchTab}"
-                  RowDefinitions="*,Auto"
-                  Margin="8,0,8,8">
-                <ActivityIndicator Grid.Row="0"
-                                     VerticalOptions="Center"
-                                     HorizontalOptions="Center"
-                                     IsRunning="{Binding IsLoadingSets}"
-                                     IsVisible="{Binding IsLoadingSets}"
-                                     Color="{StaticResource Primary}"
-                                     HeightRequest="48"
-                                     WidthRequest="48" />
-                <CollectionView Grid.Row="0"
-                                ItemsSource="{Binding FilteredSets}"
-                                SelectionMode="None"
-                                IsVisible="{Binding IsLoadingSets, Converter={StaticResource InvertedBool}}">
-                    <CollectionView.EmptyView>
-                        <Label Text="No sets match this filter"
-                               TextColor="{StaticResource TextSecondary}"
-                               HorizontalOptions="Center"
-                               VerticalOptions="Center"
-                               Margin="0,24,0,0" />
-                    </CollectionView.EmptyView>
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate x:DataType="core:SetBrowseRow">
-                            <Border Style="{StaticResource CardStyle}"
-                                    Margin="0,0,0,6"
-                                    Padding="12,10">
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:SearchPage}}, Path=BindingContext.OpenSetFromBrowseCommand}"
-                                                          CommandParameter="{Binding .}" />
-                                </Border.GestureRecognizers>
-                                <Grid ColumnDefinitions="Auto,*,Auto"
-                                      ColumnSpacing="12"
-                                      RowDefinitions="Auto,Auto,Auto">
-                                    <Border Grid.RowSpan="3"
-                                            Grid.Column="0"
-                                            StrokeThickness="0"
-                                            StrokeShape="RoundRectangle 8"
-                                            BackgroundColor="{StaticResource Surface}"
-                                            Padding="6"
-                                            VerticalOptions="Start">
-                                        <Label Text="{Binding Code}"
-                                               FontSize="11"
-                                               FontAttributes="Bold"
-                                               TextColor="{StaticResource TextSecondary}"
-                                               MaxLines="1"
-                                               LineBreakMode="MiddleTruncation"
-                                               WidthRequest="44"
-                                               HorizontalTextAlignment="Center" />
-                                    </Border>
-                                    <Label Grid.Row="0"
-                                           Grid.Column="1"
-                                           Text="{Binding Name}"
-                                           FontSize="15"
-                                           FontAttributes="Bold"
-                                           TextColor="{StaticResource TextPrimary}"
-                                           LineBreakMode="TailTruncation" />
-                                    <Label Grid.Row="0"
-                                           Grid.Column="2"
-                                           Text="{Binding ReleaseDisplay}"
-                                           FontSize="11"
-                                           TextColor="{StaticResource TextSecondary}"
-                                           VerticalOptions="Start"
-                                           HorizontalTextAlignment="End" />
-                                    <HorizontalStackLayout Grid.Row="1"
-                                                             Grid.Column="1"
-                                                             Grid.ColumnSpan="2"
-                                                             Spacing="8">
-                                        <Label Text="{Binding CardCountLabel}"
-                                               FontSize="12"
-                                               TextColor="{StaticResource TextSecondary}" />
-                                        <Border StrokeThickness="0"
-                                                BackgroundColor="{StaticResource CardBackground}"
-                                                Padding="6,2"
-                                                IsVisible="{Binding IsPreviewSet}">
-                                            <Label Text="Preview"
-                                                   FontSize="10"
-                                                   TextColor="{StaticResource TextSecondary}" />
-                                        </Border>
-                                    </HorizontalStackLayout>
-                                    <Label Grid.Row="2"
-                                           Grid.Column="1"
-                                           Grid.ColumnSpan="2"
-                                           Text="{Binding ParentHint}"
-                                           FontSize="11"
-                                           TextColor="{StaticResource TextSecondary}"
-                                           LineBreakMode="TailTruncation" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </Grid>
-
         </Grid>
+
     </Grid>
 
 </ContentPage>

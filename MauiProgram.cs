@@ -51,7 +51,6 @@ public static class MauiProgram
                 fonts.AddFont("CrimsonText-Regular.ttf", "SerifFont");
                 fonts.AddFont("CrimsonText-Bold.ttf", "SerifFontBold");
                 fonts.AddFont("CrimsonText-Italic.ttf", "SerifFontItalic");
-                fonts.AddFontAwesomeIconFonts();
             });
 
         // ── Services (singleton = one instance for the whole app) ─────

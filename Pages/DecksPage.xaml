@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:constants="clr-namespace:AetherVault.Constants"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Pages.DecksPage"
              Title="Decks"
              BackgroundColor="{StaticResource Background}"
@@ -40,46 +41,46 @@
                 <HorizontalStackLayout Grid.Column="1"
                                        Spacing="4"
                                        VerticalOptions="Center">
-                    <Button Command="{Binding SelectDeckHubLayoutListCommand}"
-                            WidthRequest="40"
-                            HeightRequest="40"
-                            Padding="0"
-                            CornerRadius="10"
-                            FontFamily="FASolid"
-                            FontSize="16"
-                            Text="{x:Static fa:Solid.List}"
-                            TextColor="{StaticResource TextPrimary}"
-                            BackgroundColor="{StaticResource CardBackground}"
-                            SemanticProperties.Description="List layout">
-                        <Button.Triggers>
-                            <DataTrigger TargetType="Button"
+                    <ImageButton Command="{Binding SelectDeckHubLayoutListCommand}"
+                                 WidthRequest="40"
+                                 HeightRequest="40"
+                                 Padding="8"
+                                 CornerRadius="10"
+                                 Source="{x:Static icons:Icons.List}"
+                                 BackgroundColor="{StaticResource CardBackground}"
+                                 Aspect="AspectFit"
+                                 SemanticProperties.Description="List layout">
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                        </ImageButton.Behaviors>
+                        <ImageButton.Triggers>
+                            <DataTrigger TargetType="ImageButton"
                                          Binding="{Binding IsDeckHubLayoutList}"
                                          Value="True">
                                 <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                <Setter Property="TextColor" Value="Black" />
                             </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
-                    <Button Command="{Binding SelectDeckHubLayoutTilesCommand}"
-                            WidthRequest="40"
-                            HeightRequest="40"
-                            Padding="0"
-                            CornerRadius="10"
-                            FontFamily="FASolid"
-                            FontSize="16"
-                            Text="{x:Static fa:Solid.TableCells}"
-                            TextColor="{StaticResource TextPrimary}"
-                            BackgroundColor="{StaticResource CardBackground}"
-                            SemanticProperties.Description="Tile layout">
-                        <Button.Triggers>
-                            <DataTrigger TargetType="Button"
+                        </ImageButton.Triggers>
+                    </ImageButton>
+                    <ImageButton Command="{Binding SelectDeckHubLayoutTilesCommand}"
+                                 WidthRequest="40"
+                                 HeightRequest="40"
+                                 Padding="8"
+                                 CornerRadius="10"
+                                 Source="{x:Static icons:Icons.Grid}"
+                                 BackgroundColor="{StaticResource CardBackground}"
+                                 Aspect="AspectFit"
+                                 SemanticProperties.Description="Tile layout">
+                        <ImageButton.Behaviors>
+                            <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                        </ImageButton.Behaviors>
+                        <ImageButton.Triggers>
+                            <DataTrigger TargetType="ImageButton"
                                          Binding="{Binding IsDeckHubLayoutTiles}"
                                          Value="True">
                                 <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
-                                <Setter Property="TextColor" Value="Black" />
                             </DataTrigger>
-                        </Button.Triggers>
-                    </Button>
+                        </ImageButton.Triggers>
+                    </ImageButton>
                 </HorizontalStackLayout>
             </Grid>
         </Border>
@@ -97,14 +98,8 @@
                     CornerRadius="12"
                     HeightRequest="52"
                     HorizontalOptions="Fill"
-                    BorderWidth="0">
-                <Button.ImageSource>
-                    <FontImageSource FontFamily="FASolid"
-                                     Glyph="{x:Static fa:Solid.Plus}"
-                                     Size="18"
-                                     Color="Black" />
-                </Button.ImageSource>
-            </Button>
+                    BorderWidth="0"
+                    ImageSource="{x:Static icons:Icons.Add}" />
             <Button Clicked="OnDeckToolsClicked"
                     Text="Deck tools"
                     BackgroundColor="{StaticResource Surface}"
@@ -164,13 +159,12 @@
                                 <Grid IsVisible="{Binding HasPreviewImage, Converter={StaticResource InvertedBool}}">
                                     <Border BackgroundColor="#2C2C36"
                                             StrokeThickness="0" />
-                                    <Label FontFamily="FASolid"
-                                           Text="{x:Static fa:Solid.LayerGroup}"
-                                           FontSize="36"
-                                           TextColor="#555560"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"
-                                           InputTransparent="True" />
+                                    <controls:TintedIcon Glyph="{x:Static icons:Icons.Decks}"
+                                                         Size="36"
+                                                         TintColor="#555560"
+                                                         HorizontalOptions="Center"
+                                                         VerticalOptions="Center"
+                                                         InputTransparent="True" />
                                 </Grid>
                                 <Border InputTransparent="True"
                                         StrokeThickness="0"
@@ -191,22 +185,21 @@
                                                FontSize="14"
                                                FontAttributes="Bold"
                                                VerticalOptions="Start" />
-                                        <Button Grid.Column="1"
+                                        <ImageButton Grid.Column="1"
                                                 Clicked="OnDeckTileOverflowClicked"
                                                 BackgroundColor="#99000000"
-                                                Padding="6"
+                                                Padding="8"
                                                 HeightRequest="36"
                                                 WidthRequest="36"
                                                 CornerRadius="18"
                                                 CommandParameter="{Binding .}"
+                                                Source="{x:Static icons:Icons.Overflow}"
+                                                Aspect="AspectFit"
                                                 SemanticProperties.Hint="Deck actions">
-                                            <Button.ImageSource>
-                                                <FontImageSource FontFamily="FASolid"
-                                                                 Glyph="{x:Static fa:Solid.EllipsisVertical}"
-                                                                 Size="14"
-                                                                 Color="White" />
-                                            </Button.ImageSource>
-                                        </Button>
+                                            <ImageButton.Behaviors>
+                                                <toolkit:IconTintColorBehavior TintColor="White" />
+                                            </ImageButton.Behaviors>
+                                        </ImageButton>
                                     </Grid>
                                     <Grid Grid.Row="2"
                                           ColumnDefinitions="*,Auto"
@@ -254,7 +247,7 @@
                                      VerticalOptions="Center"
                                      HorizontalOptions="Center"
                                      Margin="32"
-                                     IconGlyph="{x:Static fa:Solid.LayerGroup}"
+                                     IconGlyph="{x:Static icons:Icons.Decks}"
                                      Message="No decks yet"
                                      SecondaryMessage="Tap &quot;New deck&quot; above to create your first deck, then add cards from Search or your Collection." />
         </Grid>

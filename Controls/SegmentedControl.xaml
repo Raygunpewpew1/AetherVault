@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AetherVault.Controls.SegmentedControl">
+    <Border x:Name="Chrome"
+            BackgroundColor="{StaticResource CardBackground}"
+            StrokeThickness="0"
+            HeightRequest="{StaticResource SegmentedHeight}"
+            Padding="{StaticResource Spacing4}"
+            StrokeShape="RoundRectangle 999">
+        <Grid x:Name="SegmentsHost"
+              ColumnSpacing="{StaticResource Spacing4}" />
+    </Border>
+</ContentView>

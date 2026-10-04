@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              x:Class="AetherVault.Controls.DeckListItem"
@@ -27,13 +28,7 @@
                                                IsVisible="{Binding HasPreviewImage}"
                                                HorizontalOptions="Fill"
                                                VerticalOptions="Fill" />
-                    <Label FontFamily="FASolid"
-                           Text="{x:Static fa:Solid.LayerGroup}"
-                           FontSize="20"
-                           TextColor="#555560"
-                           HorizontalOptions="Center"
-                           VerticalOptions="Center"
-                           IsVisible="{Binding HasPreviewImage, Converter={StaticResource InvertedBool}}" />
+                    <controls:TintedIcon Glyph="{x:Static icons:Icons.Decks}" Size="20" TintColor="#555560" HorizontalOptions="Center" VerticalOptions="Center" IsVisible="{Binding HasPreviewImage, Converter={StaticResource InvertedBool}}" />
                 </Grid>
             </Border>
 
@@ -84,22 +79,21 @@
                                        SymbolSize="16"
                                        IsVisible="{Binding HasColorIdentity}"
                                        HorizontalOptions="End" />
-                <Button x:Name="OverflowButton"
+                <ImageButton x:Name="OverflowButton"
                         Clicked="OnOverflowClicked"
                         BackgroundColor="{StaticResource Surface}"
                         WidthRequest="36"
                         HeightRequest="36"
-                        Padding="0"
+                        Padding="8"
                         CornerRadius="18"
                         HorizontalOptions="End"
+                        Source="{x:Static icons:Icons.Overflow}"
+                        Aspect="AspectFit"
                         SemanticProperties.Hint="Deck actions">
-                    <Button.ImageSource>
-                        <FontImageSource FontFamily="FASolid"
-                                         Glyph="{x:Static fa:Solid.EllipsisVertical}"
-                                         Size="14"
-                                         Color="{StaticResource TextPrimary}" />
-                    </Button.ImageSource>
-                </Button>
+                    <ImageButton.Behaviors>
+                        <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                    </ImageButton.Behaviors>
+                </ImageButton>
             </VerticalStackLayout>
         </Grid>
     </Border>

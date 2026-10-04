@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:models="clr-namespace:AetherVault.Models"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Pages.MtgJsonDecksPage"
              Title="Sample Decks"
              BackgroundColor="{StaticResource Background}"
@@ -23,20 +24,20 @@
                        TextColor="{StaticResource TextPrimary}"
                        VerticalOptions="Center" />
             </HorizontalStackLayout>
-            <Button Grid.Column="1"
+            <ImageButton Grid.Column="1"
                     Command="{Binding RefreshCommand}"
                     BackgroundColor="{StaticResource Surface}"
-                    TextColor="{StaticResource TextPrimary}"
-                    FontSize="14"
-                    Padding="16,8"
-                    VerticalOptions="Center">
-                <Button.ImageSource>
-                    <FontImageSource FontFamily="FASolid"
-                                     Glyph="{x:Static fa:Solid.ArrowsRotate}"
-                                     Size="14"
-                                     Color="{StaticResource TextPrimary}" />
-                </Button.ImageSource>
-            </Button>
+                    Padding="12"
+                    WidthRequest="48"
+                    HeightRequest="40"
+                    VerticalOptions="Center"
+                    Source="{x:Static icons:Icons.Refresh}"
+                    Aspect="AspectFit"
+                    SemanticProperties.Description="Refresh">
+                <ImageButton.Behaviors>
+                    <toolkit:IconTintColorBehavior TintColor="{StaticResource TextPrimary}" />
+                </ImageButton.Behaviors>
+            </ImageButton>
         </Grid>
 
         <!-- Type filter + Search + Status -->

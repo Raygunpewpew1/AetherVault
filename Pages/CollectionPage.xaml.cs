@@ -1,5 +1,7 @@
+using System.Windows.Input;
 using AetherVault.Services;
 using AetherVault.ViewModels;
+using CommunityToolkit.Mvvm.Input;
 
 namespace AetherVault.Pages;
 
@@ -16,8 +18,13 @@ public partial class CollectionPage : ContentPage
     /// <summary>When true, OnAppearing skips LoadCollectionAsync so we don't reload when coming back from card detail.</summary>
     private bool _skipNextReload;
 
+    public ICommand MoreCommand { get; }
+
     public CollectionPage(CollectionViewModel viewModel, CardGalleryContext galleryContext, DeckSynergyNavigationContext deckSynergyNavigationContext, IServiceProvider serviceProvider)
     {
+        // Must exist before InitializeComponent so IconButton Command bindings resolve (not INotifyPropertyChanged).
+        MoreCommand = new AsyncRelayCommand(OnCollectionMoreClicked);
+
         InitializeComponent();
         _viewModel = viewModel;
         _galleryContext = galleryContext;
@@ -140,7 +147,11 @@ public partial class CollectionPage : ContentPage
         await _viewModel.ReorderCollectionAsync(fromIndex, toIndex);
     }
 
-    private async void OnCollectionMoreClicked(object? sender, EventArgs e)
+    /// <summary>
+    /// Overflow (⋯) menu — same actions as pre–shared-controls <c>OnCollectionMoreClicked</c>
+    /// (<see cref="DisplayActionSheetAsync"/>).
+    /// </summary>
+    private async Task OnCollectionMoreClicked()
     {
         const string layout = "Switch card layout";
         const string import = "Import";

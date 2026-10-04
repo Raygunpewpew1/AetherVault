@@ -6,7 +6,7 @@
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              xmlns:pages="clr-namespace:AetherVault.Pages"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:constants="clr-namespace:AetherVault.Constants"
              xmlns:deckbrowse="clr-namespace:AetherVault.Services.DeckBuilder;assembly=AetherVault"
              x:Class="AetherVault.Pages.DeckAddCardsPage"
@@ -32,10 +32,8 @@
                     <Button Grid.Column="0"
                             Text="Done"
                             Clicked="OnDoneClicked"
-                            BackgroundColor="Transparent"
-                            TextColor="{StaticResource Primary}"
+                            Style="{StaticResource TextButton}"
                             FontAttributes="Bold"
-                            Padding="8,4"
                             MinimumWidthRequest="56"
                             VerticalOptions="Center" />
                     <material:TextField Grid.Column="1"
@@ -72,14 +70,8 @@
                                 Padding="12,8"
                                 CornerRadius="16"
                                 BackgroundColor="{StaticResource Accent}"
-                                TextColor="Black">
-                            <Button.ImageSource>
-                                <FontImageSource FontFamily="FASolid"
-                                                 Glyph="{x:Static fa:Solid.WandMagicSparkles}"
-                                                 Size="11"
-                                                 Color="Black" />
-                            </Button.ImageSource>
-                        </Button>
+                                TextColor="Black"
+                                ImageSource="{x:Static icons:Icons.AutoAwesome}" />
                         <Button Text="{Binding StrategyChipText}"
                                 Clicked="OnStrategyChipClicked"
                                 IsVisible="{Binding ShowDeckSuggestionUi}"
@@ -164,10 +156,8 @@
                         <Button Grid.Column="1"
                                 Text="{x:Static constants:UserMessages.DeckAddClearThemeFilter}"
                                 Command="{Binding ClearAddCardSynergyPresetCommand}"
-                                BackgroundColor="Transparent"
-                                TextColor="{StaticResource Accent}"
+                                Style="{StaticResource TextButton}"
                                 FontSize="12"
-                                Padding="8,4"
                                 VerticalOptions="Center" />
                     </Grid>
                 </Border>

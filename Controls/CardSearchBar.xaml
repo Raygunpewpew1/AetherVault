@@ -2,7 +2,10 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
-             x:Class="AetherVault.Controls.CardSearchBar">
+             xmlns:icons="clr-namespace:AetherVault.Core"
+             xmlns:controls="clr-namespace:AetherVault.Controls"
+             x:Class="AetherVault.Controls.CardSearchBar"
+             x:Name="CardSearchBarRoot">
     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
         <material:TextField x:Name="SearchEntry"
                            Grid.Column="0"
@@ -15,23 +18,23 @@
                            AccentColor="{StaticResource Primary}"
                            AllowClear="True"
                            IsSpellCheckEnabled="False" />
-        <Button x:Name="FiltersButton"
-                Grid.Column="1"
-                Text="{Binding FiltersButtonText}"
-                Clicked="OnFiltersButtonClicked"
-                IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBool}}"
-                BackgroundColor="{StaticResource CardBackground}"
-                HeightRequest="44"
-                Padding="12,0"
-                StyleClass="ElevatedButton" />
-        <Button Grid.Column="2"
-                Text="{Binding ViewModeButtonText}"
-                Command="{Binding ToggleViewModeCommand}"
-                BackgroundColor="{StaticResource CardBackground}"
-                HeightRequest="44"
-                Padding="12,0"
-                FontSize="14"
-                StyleClass="ElevatedButton"
-                ToolTipProperties.Text="{Binding ViewModeToolTip}" />
+
+        <Grid Grid.Column="1"
+              WidthRequest="{StaticResource TouchTargetSize}"
+              HeightRequest="{StaticResource TouchTargetSize}"
+              VerticalOptions="Center">
+            <controls:IconButton x:Name="FiltersButton"
+                                 Glyph="{x:Static icons:Icons.Filter}"
+                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBool}}"
+                                 IsActive="{Binding HasActiveFilters}"
+                                 BadgeCount="{Binding ActiveFilterCount}"
+                                 ToolTip="{Binding FiltersButtonText}" />
+            <!-- Clicked wired in code-behind (FiltersCommand / FiltersTapped) -->
+        </Grid>
+
+        <controls:IconButton Grid.Column="2"
+                             Glyph="{Binding ViewModeIconGlyph}"
+                             Command="{Binding ToggleViewModeCommand}"
+                             ToolTip="{Binding ViewModeToolTip}" />
     </Grid>
 </ContentView>

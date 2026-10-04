@@ -4,7 +4,8 @@
              xmlns:constants="clr-namespace:AetherVault.Constants"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+             xmlns:icons="clr-namespace:AetherVault.Core"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Views.DeckStatsTabView"
              x:DataType="vm:DeckDetailViewModel">
     <ScrollView Padding="16,8"
@@ -22,18 +23,20 @@
                                FontAttributes="Bold"
                                TextColor="{StaticResource TextSecondary}"
                                VerticalOptions="Center" />
-                        <Button Grid.Column="1"
+                        <ImageButton Grid.Column="1"
                                 Command="{Binding ShowDeckDataTruthHelpCommand}"
                                 WidthRequest="40"
                                 HeightRequest="36"
-                                Padding="0"
+                                Padding="8"
                                 CornerRadius="10"
-                                FontFamily="FASolid"
-                                FontSize="16"
-                                Text="{x:Static fa:Solid.CircleInfo}"
+                                Source="{x:Static icons:Icons.Info}"
                                 BackgroundColor="{StaticResource CardBackground}"
-                                TextColor="{StaticResource Accent}"
-                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDataTruthHelpTitle}" />
+                                Aspect="AspectFit"
+                                SemanticProperties.Description="{x:Static constants:UserMessages.DeckDataTruthHelpTitle}">
+                            <ImageButton.Behaviors>
+                                <toolkit:IconTintColorBehavior TintColor="{StaticResource Accent}" />
+                            </ImageButton.Behaviors>
+                        </ImageButton>
                     </Grid>
                     <Label Text="{Binding DeckDataTruthCatalogLine}"
                            FontSize="11"

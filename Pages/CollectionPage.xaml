@@ -1,156 +1,136 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
-             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             xmlns:icons="clr-namespace:AetherVault.Core"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:vm="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.CollectionPage"
+             x:Name="CollectionPageRoot"
              x:DataType="vm:CollectionViewModel"
              Title="Collection"
              BackgroundColor="{StaticResource Background}">
 
     <Grid RowDefinitions="Auto,*">
 
-        <Border Grid.Row="0"
-                Style="{StaticResource CardStyle}"
-                Padding="8,6"
-                Margin="6,4,6,4">
-            <Grid RowDefinitions="Auto,Auto,Auto"
-                  RowSpacing="6">
+        <VerticalStackLayout Grid.Row="0"
+                             Padding="{StaticResource ThicknessPageChrome}"
+                             Spacing="{StaticResource Spacing12}">
 
-                <!-- Name / filters / overflow -->
-                <Grid Grid.Row="0"
-                      ColumnDefinitions="*,Auto,Auto"
-                      ColumnSpacing="8">
-                    <material:TextField Grid.Column="0"
-                                        Title="Name"
-                                        Text="{Binding SearchText, Mode=TwoWay}"
-                                        TitleColor="{StaticResource TextSecondary}"
-                                        AccentColor="{StaticResource Primary}"
-                                        AllowClear="True"
-                                        IsSpellCheckEnabled="False" />
-                    <Button Grid.Column="1"
-                            Text="{Binding FiltersButtonText}"
-                            Command="{Binding OpenFiltersCommand}"
-                            FontSize="11"
-                            LineBreakMode="NoWrap"
-                            Padding="10,6"
-                            VerticalOptions="Center"
-                            BackgroundColor="{StaticResource CardBackground}"
-                            TextColor="{StaticResource Primary}" />
-                    <ImageButton Grid.Column="2"
-                                 VerticalOptions="Center"
-                                 BackgroundColor="{StaticResource CardBackground}"
-                                 WidthRequest="44"
-                                 HeightRequest="40"
-                                 Padding="10,8"
-                                 CornerRadius="20"
-                                 ToolTipProperties.Text="More actions"
-                                 Clicked="OnCollectionMoreClicked">
-                        <ImageButton.Source>
-                            <FontImageSource FontFamily="FASolid"
-                                             Glyph="{x:Static fa:Solid.EllipsisVertical}"
-                                             Color="{StaticResource Primary}"
-                                             Size="18" />
-                        </ImageButton.Source>
-                    </ImageButton>
-                </Grid>
+            <controls:PageHeader Title="Collection" />
 
-                <!-- Foil / etched / min qty (collection DB fields only) -->
-                <HorizontalStackLayout Grid.Row="1"
-                                       Spacing="10"
+            <controls:SearchBarRow Text="{Binding SearchText, Mode=TwoWay}"
+                                   Placeholder="Name">
+                <controls:SearchBarRow.Actions>
+                    <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
+                                           VerticalOptions="Center">
+                        <controls:IconButton Glyph="{x:Static icons:Icons.Filter}"
+                                             Command="{Binding OpenFiltersCommand}"
+                                             IsActive="{Binding HasActiveFilters}"
+                                             BadgeCount="{Binding ActiveFilterCount}"
+                                             ToolTip="{Binding FiltersButtonText}" />
+                        <controls:IconButton Glyph="{Binding ViewModeIconGlyph}"
+                                             Command="{Binding ToggleViewModeCommand}"
+                                             ToolTip="{Binding ViewModeToolTip}" />
+                        <controls:IconButton Glyph="{x:Static icons:Icons.Overflow}"
+                                             Command="{Binding MoreCommand, Source={x:Reference CollectionPageRoot}}"
+                                             ToolTip="More actions" />
+                    </HorizontalStackLayout>
+                </controls:SearchBarRow.Actions>
+            </controls:SearchBarRow>
+
+            <!-- Collection-only row filters (moved to sheet in a later step) -->
+            <HorizontalStackLayout Spacing="{StaticResource Spacing8}"
+                                   VerticalOptions="Center">
+                <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
                                        VerticalOptions="Center">
-                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
-                        <CheckBox IsChecked="{Binding CollectionFilterFoilOnly}"
-                                  VerticalOptions="Center" />
-                        <Label Text="Foil only"
-                               FontSize="11"
-                               TextColor="{StaticResource TextSecondary}"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout Spacing="4" VerticalOptions="Center">
-                        <CheckBox IsChecked="{Binding CollectionFilterEtchedOnly}"
-                                  VerticalOptions="Center" />
-                        <Label Text="Etched only"
-                               FontSize="11"
-                               TextColor="{StaticResource TextSecondary}"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-                    <Label Text="Min copies"
-                           FontSize="11"
+                    <CheckBox IsChecked="{Binding CollectionFilterFoilOnly}"
+                              VerticalOptions="Center"
+                              Color="{StaticResource Primary}" />
+                    <Label Text="Foil only"
+                           FontSize="{StaticResource FontSizeCaption}"
                            TextColor="{StaticResource TextSecondary}"
                            VerticalOptions="Center" />
-                    <Picker Title=""
-                            ItemsSource="{Binding CollectionMinQtyPickerOptions}"
-                            SelectedIndex="{Binding CollectionFilterMinQtyPickerIndex, Mode=TwoWay}"
-                            FontSize="11"
-                            TextColor="{StaticResource TextPrimary}"
-                            WidthRequest="92"
-                            VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
+                                       VerticalOptions="Center">
+                    <CheckBox IsChecked="{Binding CollectionFilterEtchedOnly}"
+                              VerticalOptions="Center"
+                              Color="{StaticResource Primary}" />
+                    <Label Text="Etched only"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center" />
+                </HorizontalStackLayout>
+                <Label Text="Min copies"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       TextColor="{StaticResource TextSecondary}"
+                       VerticalOptions="Center" />
+                <Picker Title=""
+                        ItemsSource="{Binding CollectionMinQtyPickerOptions}"
+                        SelectedIndex="{Binding CollectionFilterMinQtyPickerIndex, Mode=TwoWay}"
+                        FontSize="{StaticResource FontSizeCaption}"
+                        TextColor="{StaticResource TextPrimary}"
+                        WidthRequest="92"
+                        VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                  ColumnSpacing="{StaticResource Spacing8}">
+                <Label Grid.Column="0"
+                       Text="{Binding CollectionStatsSummary}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource TextPrimary}"
+                       VerticalOptions="Center"
+                       LineBreakMode="NoWrap" />
+
+                <Label Grid.Column="1"
+                       x:Name="CollectionStatus"
+                       Text="{Binding StatusDisplayText}"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       LineBreakMode="TailTruncation"
+                       MaxLines="1"
+                       VerticalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       TextColor="{Binding StatusTextColor}"
+                       IsVisible="{Binding ShowStatusLine}" />
+
+                <HorizontalStackLayout Grid.Column="2"
+                                       IsVisible="{Binding IsImportingPrices}"
+                                       Spacing="{StaticResource Spacing4}"
+                                       VerticalOptions="Center">
+                    <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
+                                       HeightRequest="{StaticResource Spacing12}"
+                                       WidthRequest="{StaticResource Spacing12}"
+                                       Color="{StaticResource TextSecondary}" />
+                    <Label Text="Prices…"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           TextColor="{StaticResource TextSecondary}"
+                           VerticalOptions="Center" />
                 </HorizontalStackLayout>
 
-                <!-- Stats, status, busy, sort -->
-                <Grid Grid.Row="2"
-                      ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                      ColumnSpacing="6">
-                    <Label Grid.Column="0"
-                           Text="{Binding CollectionStatsSummary}"
-                           FontSize="12"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextPrimary}"
-                           VerticalOptions="Center"
-                           LineBreakMode="NoWrap" />
+                <ActivityIndicator Grid.Column="3"
+                                   x:Name="CollectionLoading"
+                                   IsRunning="{Binding IsBusy}"
+                                   IsVisible="{Binding IsBusy}"
+                                   HeightRequest="{StaticResource Spacing16}"
+                                   WidthRequest="{StaticResource Spacing16}"
+                                   VerticalOptions="Center"
+                                   Color="{StaticResource Primary}" />
 
-                    <Label Grid.Column="1"
-                           x:Name="CollectionStatus"
-                           Text="{Binding StatusDisplayText}"
-                           FontSize="11"
-                           LineBreakMode="TailTruncation"
-                           MaxLines="1"
-                           VerticalOptions="Center"
-                           VerticalTextAlignment="Center"
-                           TextColor="{Binding StatusTextColor}" />
-
-                    <HorizontalStackLayout Grid.Column="2"
-                                           IsVisible="{Binding IsImportingPrices}"
-                                           Spacing="4"
-                                           VerticalOptions="Center">
-                        <ActivityIndicator IsRunning="{Binding IsImportingPrices}"
-                                           HeightRequest="12"
-                                           WidthRequest="12"
-                                           Color="{StaticResource TextSecondary}" />
-                        <Label Text="Prices…"
-                               FontSize="10"
-                               TextColor="{StaticResource TextSecondary}"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-
-                    <ActivityIndicator Grid.Column="3"
-                                       x:Name="CollectionLoading"
-                                       IsRunning="{Binding IsBusy}"
-                                       IsVisible="{Binding IsBusy}"
-                                       HeightRequest="18"
-                                       WidthRequest="18"
-                                       VerticalOptions="Center"
-                                       Color="{StaticResource Primary}" />
-
-                    <Picker Grid.Column="4"
-                            ItemsSource="{Binding SortModeOptions}"
-                            SelectedIndex="{Binding SortModeIndex, Mode=TwoWay}"
-                            Title="Sort"
-                            FontSize="11"
-                            TextColor="{StaticResource TextPrimary}"
-                            WidthRequest="158"
-                            VerticalOptions="Center" />
-                </Grid>
-
+                <Picker Grid.Column="4"
+                        ItemsSource="{Binding SortModeOptions}"
+                        SelectedIndex="{Binding SortModeIndex, Mode=TwoWay}"
+                        Title="Sort"
+                        FontSize="{StaticResource FontSizeCaption}"
+                        TextColor="{StaticResource TextPrimary}"
+                        WidthRequest="158"
+                        VerticalOptions="Center" />
             </Grid>
-        </Border>
+        </VerticalStackLayout>
 
         <Grid x:Name="CollectionContentArea"
               Grid.Row="1"
-              Margin="0,0,0,2"
               BackgroundColor="{StaticResource Background}">
             <Grid x:Name="CollectionEmptyState"
                   IsVisible="{Binding IsCollectionEmpty}"
@@ -158,9 +138,8 @@
                   VerticalOptions="Fill"
                   HorizontalOptions="Fill"
                   MinimumHeightRequest="200">
-                <controls:EmptyStateView IconGlyph="{x:Static fa:Solid.BoxArchive}"
-                                         Message="Your collection is empty"
-                                         SecondaryMessage="Search for cards and long-press to add them" />
+                <controls:EmptyState IconGlyph="{x:Static icons:Icons.Collection}"
+                                     Message="Your collection is empty" />
             </Grid>
             <controls:CardGrid x:Name="CollectionGrid"
                                IsVisible="{Binding IsCollectionEmpty, Converter={StaticResource InvertedBool}}"

@@ -121,10 +121,8 @@
                                     Text="{Binding SeeAllPrintingsLabel}"
                                     Command="{Binding OpenSeeAllPrintingsCommand}"
                                     IsVisible="{Binding ShowSeeAllPrintings}"
-                                    BackgroundColor="Transparent"
-                                    TextColor="{StaticResource Accent}"
+                                    Style="{StaticResource TextButton}"
                                     FontSize="13"
-                                    Padding="8,0"
                                     HeightRequest="32" />
                         </Grid>
                         <ActivityIndicator IsRunning="{Binding IsOtherPrintingsLoading}"

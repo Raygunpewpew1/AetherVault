@@ -6,38 +6,26 @@
              x:Name="SplashRoot"
              NavigationPage.HasNavigationBar="False">
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <LinearGradientBrush x:Key="SplashGradient" StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Color="#0D0B12" Offset="0" />
-                <GradientStop Color="#121212" Offset="0.4" />
-                <GradientStop Color="#1A1628" Offset="1" />
-            </LinearGradientBrush>
-            <Color x:Key="SplashAccent">#03DAC5</Color>
-            <Color x:Key="SplashMuted">#6B6580</Color>
-        </ResourceDictionary>
-    </ContentPage.Resources>
-
     <Grid Background="{StaticResource SplashGradient}" Padding="24">
         <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="0" MaximumWidthRequest="360">
             <!-- Logo / brand mark -->
             <Border x:Name="LogoBorder"
                     WidthRequest="100"
                     HeightRequest="100"
-                    Stroke="{StaticResource SplashAccent}"
+                    Stroke="{StaticResource Primary}"
                     StrokeThickness="2"
                     StrokeShape="RoundRectangle 24"
-                    BackgroundColor="#1E1A2E"
+                    BackgroundColor="{StaticResource Surface}"
                     HorizontalOptions="Center"
                     Margin="0,0,0,24"
                     Opacity="0">
                 <Border.Shadow>
-                    <Shadow Brush="#03DAC5" Offset="0,0" Radius="20" Opacity="0.15" />
+                    <Shadow Brush="{StaticResource Primary}" Offset="0,0" Radius="20" Opacity="0.15" />
                 </Border.Shadow>
                 <Label Text="A"
                        FontFamily="SerifFontBold"
                        FontSize="48"
-                       TextColor="{StaticResource SplashAccent}"
+                       TextColor="{StaticResource Primary}"
                        HorizontalOptions="Center"
                        VerticalOptions="Center" />
             </Border>
@@ -57,7 +45,7 @@
             <Label x:Name="TaglineLabel"
                    Text="No account, no cloud, no life-counter"
                    FontSize="15"
-                   TextColor="{StaticResource SplashMuted}"
+                   TextColor="{StaticResource TextSecondary}"
                    HorizontalOptions="Center"
                    HorizontalTextAlignment="Center"
                    Margin="0,0,0,48"
@@ -71,7 +59,7 @@
                 </Grid.ColumnDefinitions>
                 <ProgressBar Grid.Column="0"
                              Progress="{Binding Progress}"
-                             ProgressColor="{StaticResource SplashAccent}"
+                             ProgressColor="{StaticResource Primary}"
                              HeightRequest="6"
                              VerticalOptions="Center"
                              Margin="0,0,12,0" />
@@ -79,7 +67,7 @@
                        Text="{Binding ProgressPercent, StringFormat='{0}%'}"
                        FontSize="13"
                        FontAttributes="Bold"
-                       TextColor="{StaticResource SplashAccent}"
+                       TextColor="{StaticResource Primary}"
                        VerticalOptions="Center"
                        MinimumWidthRequest="36"
                        HorizontalTextAlignment="End" />
@@ -98,21 +86,18 @@
             <!-- MTG fact / tip -->
             <Label Text="{Binding TipText}"
                    FontSize="13"
-                   TextColor="{StaticResource SplashMuted}"
+                   TextColor="{StaticResource TextSecondary}"
                    HorizontalOptions="Center"
                    HorizontalTextAlignment="Center"
                    MaxLines="3"
                    LineBreakMode="WordWrap"
                    Margin="0,0,0,24" />
 
-            <!-- Retry button -->
+            <!-- Retry button — colors from implicit Button (Primary / OnPrimary) -->
             <Button Text="Retry download"
                     Command="{Binding RetryCommand}"
                     IsVisible="{Binding ShowRetry}"
-                    HorizontalOptions="Center"
-                    StyleClass="FilledButton"
-                    BackgroundColor="{StaticResource Primary}"
-                    TextColor="White" />
+                    HorizontalOptions="Center" />
         </VerticalStackLayout>
     </Grid>
 </ContentPage>

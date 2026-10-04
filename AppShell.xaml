@@ -2,7 +2,7 @@
 <!-- Main shell: tab bar (Search, Collection, Stats, Decks, Settings). Tab content is assigned in AppShell.xaml.cs from DI. -->
 <Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-       xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+       xmlns:icons="clr-namespace:AetherVault.Core"
        x:Class="AetherVault.AppShell"
        Title="AetherVault"
        Shell.BackgroundColor="{StaticResource Surface}"
@@ -11,61 +11,30 @@
     <TabBar>
         <ShellContent
             x:Name="SearchTab"
-            Title="Search">
-            <ShellContent.Icon>
-                <FontImageSource FontFamily="FASolid"
-                                 Glyph="{x:Static fa:Solid.MagnifyingGlass}"
-                                 Size="20"
-                                 Color="{StaticResource TextPrimary}" />
-            </ShellContent.Icon>
-        </ShellContent>
+            Title="Search"
+            Icon="{x:Static icons:Icons.Search}" />
 
         <ShellContent
             x:Name="CollectionTab"
-            Title="Collection">
-            <ShellContent.Icon>
-                <FontImageSource FontFamily="FASolid"
-                                 Glyph="{x:Static fa:Solid.BoxArchive}"
-                                 Size="20"
-                                 Color="{StaticResource TextPrimary}" />
-            </ShellContent.Icon>
-        </ShellContent>
+            Title="Collection"
+            Icon="{x:Static icons:Icons.Collection}" />
 
         <ShellContent
             x:Name="StatsTab"
-            Title="Stats">
-            <ShellContent.Icon>
-                <FontImageSource FontFamily="FASolid"
-                                 Glyph="{x:Static fa:Solid.ChartColumn}"
-                                 Size="20"
-                                 Color="{StaticResource TextPrimary}" />
-            </ShellContent.Icon>
-        </ShellContent>
+            Title="Stats"
+            Icon="{x:Static icons:Icons.Stats}" />
 
         <ShellContent
             x:Name="DecksTab"
-            Title="Decks">
-            <ShellContent.Icon>
-                <FontImageSource FontFamily="FASolid"
-                                 Glyph="{x:Static fa:Solid.LayerGroup}"
-                                 Size="20"
-                                 Color="{StaticResource TextPrimary}" />
-            </ShellContent.Icon>
-        </ShellContent>
+            Title="Decks"
+            Icon="{x:Static icons:Icons.Decks}" />
 
         <ShellContent
             x:Name="SettingsTab"
-            Title="Settings">
-            <ShellContent.Icon>
-                <FontImageSource FontFamily="FASolid"
-                                 Glyph="{x:Static fa:Solid.Gear}"
-                                 Size="20"
-                                 Color="{StaticResource TextPrimary}" />
-            </ShellContent.Icon>
-        </ShellContent>
+            Title="Settings"
+            Icon="{x:Static icons:Icons.Settings}" />
     </TabBar>
 
     <Shell.FlyoutBehavior>Disabled</Shell.FlyoutBehavior>
-
 
 </Shell>

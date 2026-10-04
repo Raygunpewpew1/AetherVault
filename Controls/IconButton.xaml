@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="AetherVault.Controls.IconButton"
+             x:Name="Root">
+    <Grid WidthRequest="{StaticResource TouchTargetSize}"
+          HeightRequest="{StaticResource TouchTargetSize}"
+          VerticalOptions="Center"
+          HorizontalOptions="Center">
+        <ImageButton BackgroundColor="Transparent"
+                     BorderWidth="0"
+                     Padding="0"
+                     WidthRequest="{StaticResource TouchTargetSize}"
+                     HeightRequest="{StaticResource TouchTargetSize}"
+                     CornerRadius="{StaticResource CornerRadiusSmall}"
+                     Source="{Binding Glyph, Source={x:Reference Root}}"
+                     Command="{Binding Command, Source={x:Reference Root}}"
+                     CommandParameter="{Binding CommandParameter, Source={x:Reference Root}}"
+                     IsEnabled="{Binding IsEnabled, Source={x:Reference Root}}"
+                     ToolTipProperties.Text="{Binding ToolTip, Source={x:Reference Root}}"
+                     SemanticProperties.Description="{Binding ToolTip, Source={x:Reference Root}}"
+                     Aspect="Center">
+            <ImageButton.Behaviors>
+                <toolkit:IconTintColorBehavior TintColor="{Binding TintColor, Source={x:Reference Root}}" />
+            </ImageButton.Behaviors>
+        </ImageButton>
+        <Border IsVisible="{Binding ShowBadge, Source={x:Reference Root}}"
+                BackgroundColor="{StaticResource Primary}"
+                StrokeThickness="0"
+                StrokeShape="RoundRectangle 8"
+                Padding="4,1"
+                MinimumWidthRequest="{StaticResource Spacing16}"
+                HorizontalOptions="End"
+                VerticalOptions="Start"
+                Margin="0,-2,-2,0"
+                InputTransparent="True">
+            <Label Text="{Binding BadgeCount, Source={x:Reference Root}}"
+                   FontSize="{StaticResource FontSizeCaption}"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource OnPrimary}"
+                   HorizontalTextAlignment="Center"
+                   VerticalTextAlignment="Center" />
+        </Border>
+    </Grid>
+</ContentView>
