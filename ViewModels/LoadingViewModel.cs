@@ -240,15 +240,20 @@ public partial class LoadingViewModel : BaseViewModel
         // Navigate back to the loading screen — its OnAppearing will kick off the download flow.
         // Await the dispatcher so the swap is applied before this method returns; BeginInvoke-only
         // ordering was racy with lifecycle and could strand a fresh LoadingPage without a running InitAsync.
+        // Leave the shell before clearing tab Content. Android lays out the current Shell tab as soon
+        // as Content is nulled; ShellContent.GetOrCreateContent then throws
+        // "No Content found for ShellContent" and kills the process before the download starts.
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             if (Application.Current?.Windows.Count is not > 0)
                 return;
 
-            if (Application.Current.Windows[0].Page is AppShell oldShell)
-                AppShell.DetachAllTabContent(oldShell);
+            var window = Application.Current.Windows[0];
+            var oldShell = window.Page as AppShell;
+            window.Page = _serviceProvider.GetRequiredService<LoadingPage>();
 
-            Application.Current.Windows[0].Page = _serviceProvider.GetRequiredService<LoadingPage>();
+            if (oldShell != null)
+                AppShell.DetachAllTabContent(oldShell);
         });
     }
 

@@ -5,7 +5,7 @@ using AetherVault.Pages;
 /// <summary>
 /// Main shell: tab bar (Search, Collection, Stats, Decks, Settings) and registered routes for modal/detail pages.
 /// Tab pages are DI singletons; the shell is transient so Android gets a fresh ShellItemRenderer after
-/// the loading screen (DB update). Call DetachAllTabContent before leaving the shell.
+/// the loading screen (DB update). Call DetachAllTabContent only after this shell is no longer Window.Page.
 /// </summary>
 public partial class AppShell : Shell
 {
@@ -43,7 +43,10 @@ public partial class AppShell : Shell
     }
 
     /// <summary>
-    /// Clears tab content so singleton pages are not parented to a detached shell (required before DB-update navigation).
+    /// Clears tab content so singleton pages are not parented to a detached shell.
+    /// Call only after <paramref name="shell"/> is no longer <c>Window.Page</c>. Nulling
+    /// <see cref="ShellContent.Content"/> while the shell is on screen makes Android recreate the
+    /// current tab and throw because these tabs have no <c>ContentTemplate</c>.
     /// </summary>
     public static void DetachAllTabContent(AppShell shell)
     {
