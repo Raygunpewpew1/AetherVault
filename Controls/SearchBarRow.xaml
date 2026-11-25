@@ -4,23 +4,29 @@
              xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              x:Class="AetherVault.Controls.SearchBarRow"
              x:Name="Root">
-    <Grid ColumnDefinitions="*,Auto"
-          ColumnSpacing="{StaticResource Spacing8}"
-          BackgroundColor="Transparent"
-          VerticalOptions="Center">
-        <material:TextField x:Name="SearchEntry"
-                            Title="{Binding Placeholder, Source={x:Reference Root}}"
-                            Text="{Binding Text, Source={x:Reference Root}, Mode=TwoWay}"
-                            ReturnCommand="{Binding ReturnCommand, Source={x:Reference Root}}"
-                            BackgroundColor="Transparent"
-                            TextColor="{StaticResource TextPrimary}"
-                            TitleColor="{StaticResource TextSecondary}"
-                            AccentColor="{StaticResource Primary}"
-                            AllowClear="True"
-                            IsSpellCheckEnabled="False"
-                            VerticalOptions="Center" />
-        <ContentView x:Name="ActionsHost"
-                     Grid.Column="1"
-                     VerticalOptions="Center" />
-    </Grid>
+    <Border BackgroundColor="{StaticResource Surface1}"
+            Stroke="{StaticResource BorderSubtle}"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 12"
+            Padding="{StaticResource Spacing8}">
+        <Grid ColumnDefinitions="*,Auto"
+              ColumnSpacing="{StaticResource Spacing8}"
+              BackgroundColor="Transparent"
+              VerticalOptions="Center">
+            <material:TextField x:Name="SearchEntry"
+                                Title="{Binding Placeholder, Source={x:Reference Root}}"
+                                Text="{Binding Text, Source={x:Reference Root}, Mode=TwoWay}"
+                                ReturnCommand="{Binding ReturnCommand, Source={x:Reference Root}}"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource TextPrimary}"
+                                TitleColor="{StaticResource TextSecondary}"
+                                AccentColor="{StaticResource Primary}"
+                                AllowClear="True"
+                                IsSpellCheckEnabled="False"
+                                VerticalOptions="Center" />
+            <ContentView x:Name="ActionsHost"
+                         Grid.Column="1"
+                         VerticalOptions="Center" />
+        </Grid>
+    </Border>
 </ContentView>

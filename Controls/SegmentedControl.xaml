@@ -3,8 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AetherVault.Controls.SegmentedControl">
     <Border x:Name="Chrome"
-            BackgroundColor="{StaticResource CardBackground}"
-            StrokeThickness="0"
+            BackgroundColor="{StaticResource Surface1}"
+            Stroke="{StaticResource BorderSubtle}"
+            StrokeThickness="1"
             HeightRequest="{StaticResource SegmentedHeight}"
             Padding="{StaticResource Spacing4}"
             StrokeShape="RoundRectangle 999">

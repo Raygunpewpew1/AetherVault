@@ -8,7 +8,7 @@
              x:Name="CollectionPageRoot"
              x:DataType="vm:CollectionViewModel"
              Title="Collection"
-             BackgroundColor="{StaticResource Background}">
+             BackgroundColor="{StaticResource Surface0}">
 
     <Grid RowDefinitions="Auto,*">
 
@@ -38,49 +38,51 @@
                 </controls:SearchBarRow.Actions>
             </controls:SearchBarRow>
 
-            <!-- Collection-only row filters (moved to sheet in a later step) -->
-            <HorizontalStackLayout Spacing="{StaticResource Spacing8}"
-                                   VerticalOptions="Center">
-                <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
+            <Border BackgroundColor="{StaticResource Surface1}"
+                    Stroke="{StaticResource BorderSubtle}"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 12"
+                    Padding="{StaticResource Spacing8}">
+                <HorizontalStackLayout Spacing="{StaticResource Spacing8}"
                                        VerticalOptions="Center">
-                    <CheckBox IsChecked="{Binding CollectionFilterFoilOnly}"
-                              VerticalOptions="Center"
-                              Color="{StaticResource Primary}" />
-                    <Label Text="Foil only"
-                           FontSize="{StaticResource FontSizeCaption}"
-                           TextColor="{StaticResource TextSecondary}"
+                    <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
+                                           VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding CollectionFilterFoilOnly}"
+                                  VerticalOptions="Center"
+                                  Color="{StaticResource Primary}" />
+                        <Label Text="Foil only"
+                               Style="{StaticResource CaptionLabel}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
+                                           VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding CollectionFilterEtchedOnly}"
+                                  VerticalOptions="Center"
+                                  Color="{StaticResource Primary}" />
+                        <Label Text="Etched only"
+                               Style="{StaticResource CaptionLabel}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Label Text="Min copies"
+                           Style="{StaticResource CaptionLabel}"
                            VerticalOptions="Center" />
+                    <Picker Title=""
+                            ItemsSource="{Binding CollectionMinQtyPickerOptions}"
+                            SelectedIndex="{Binding CollectionFilterMinQtyPickerIndex, Mode=TwoWay}"
+                            FontSize="{StaticResource FontSizeCaption}"
+                            TextColor="{StaticResource TextPrimary}"
+                            WidthRequest="92"
+                            VerticalOptions="Center" />
                 </HorizontalStackLayout>
-                <HorizontalStackLayout Spacing="{StaticResource Spacing4}"
-                                       VerticalOptions="Center">
-                    <CheckBox IsChecked="{Binding CollectionFilterEtchedOnly}"
-                              VerticalOptions="Center"
-                              Color="{StaticResource Primary}" />
-                    <Label Text="Etched only"
-                           FontSize="{StaticResource FontSizeCaption}"
-                           TextColor="{StaticResource TextSecondary}"
-                           VerticalOptions="Center" />
-                </HorizontalStackLayout>
-                <Label Text="Min copies"
-                       FontSize="{StaticResource FontSizeCaption}"
-                       TextColor="{StaticResource TextSecondary}"
-                       VerticalOptions="Center" />
-                <Picker Title=""
-                        ItemsSource="{Binding CollectionMinQtyPickerOptions}"
-                        SelectedIndex="{Binding CollectionFilterMinQtyPickerIndex, Mode=TwoWay}"
-                        FontSize="{StaticResource FontSizeCaption}"
-                        TextColor="{StaticResource TextPrimary}"
-                        WidthRequest="92"
-                        VerticalOptions="Center" />
-            </HorizontalStackLayout>
+            </Border>
 
             <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                   ColumnSpacing="{StaticResource Spacing8}">
                 <Label Grid.Column="0"
                        Text="{Binding CollectionStatsSummary}"
+                       Style="{StaticResource FoilAccentLabel}"
                        FontSize="{StaticResource FontSizeCaption}"
                        FontAttributes="Bold"
-                       TextColor="{StaticResource TextPrimary}"
                        VerticalOptions="Center"
                        LineBreakMode="NoWrap" />
 
@@ -131,10 +133,10 @@
 
         <Grid x:Name="CollectionContentArea"
               Grid.Row="1"
-              BackgroundColor="{StaticResource Background}">
+              BackgroundColor="{StaticResource Surface0}">
             <Grid x:Name="CollectionEmptyState"
                   IsVisible="{Binding IsCollectionEmpty}"
-                  BackgroundColor="{StaticResource Background}"
+                  BackgroundColor="{StaticResource Surface0}"
                   VerticalOptions="Fill"
                   HorizontalOptions="Fill"
                   MinimumHeightRequest="200">

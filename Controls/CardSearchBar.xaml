@@ -6,35 +6,40 @@
              xmlns:controls="clr-namespace:AetherVault.Controls"
              x:Class="AetherVault.Controls.CardSearchBar"
              x:Name="CardSearchBarRoot">
-    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-        <material:TextField x:Name="SearchEntry"
-                           Grid.Column="0"
-                           Title="Search cards..."
-                           Text="{Binding SearchText, Mode=TwoWay}"
-                           ReturnCommand="{Binding SearchCommand}"
-                           BackgroundColor="{StaticResource Surface}"
-                           TextColor="{StaticResource TextPrimary}"
-                           TitleColor="{StaticResource TextSecondary}"
-                           AccentColor="{StaticResource Primary}"
-                           AllowClear="True"
-                           IsSpellCheckEnabled="False" />
+    <Border BackgroundColor="{StaticResource Surface1}"
+            Stroke="{StaticResource BorderSubtle}"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 12"
+            Padding="{StaticResource Spacing8}">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Spacing8}">
+            <material:TextField x:Name="SearchEntry"
+                               Grid.Column="0"
+                               Title="Search cards..."
+                               Text="{Binding SearchText, Mode=TwoWay}"
+                               ReturnCommand="{Binding SearchCommand}"
+                               BackgroundColor="Transparent"
+                               TextColor="{StaticResource TextPrimary}"
+                               TitleColor="{StaticResource TextSecondary}"
+                               AccentColor="{StaticResource Primary}"
+                               AllowClear="True"
+                               IsSpellCheckEnabled="False" />
 
-        <Grid Grid.Column="1"
-              WidthRequest="{StaticResource TouchTargetSize}"
-              HeightRequest="{StaticResource TouchTargetSize}"
-              VerticalOptions="Center">
-            <controls:IconButton x:Name="FiltersButton"
-                                 Glyph="{x:Static icons:Icons.Filter}"
-                                 IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBool}}"
-                                 IsActive="{Binding HasActiveFilters}"
-                                 BadgeCount="{Binding ActiveFilterCount}"
-                                 ToolTip="{Binding FiltersButtonText}" />
-            <!-- Clicked wired in code-behind (FiltersCommand / FiltersTapped) -->
+            <Grid Grid.Column="1"
+                  WidthRequest="{StaticResource TouchTargetSize}"
+                  HeightRequest="{StaticResource TouchTargetSize}"
+                  VerticalOptions="Center">
+                <controls:IconButton x:Name="FiltersButton"
+                                     Glyph="{x:Static icons:Icons.Filter}"
+                                     IsEnabled="{Binding IsBusy, Converter={StaticResource InvertedBool}}"
+                                     IsActive="{Binding HasActiveFilters}"
+                                     BadgeCount="{Binding ActiveFilterCount}"
+                                     ToolTip="{Binding FiltersButtonText}" />
+            </Grid>
+
+            <controls:IconButton Grid.Column="2"
+                                 Glyph="{Binding ViewModeIconGlyph}"
+                                 Command="{Binding ToggleViewModeCommand}"
+                                 ToolTip="{Binding ViewModeToolTip}" />
         </Grid>
-
-        <controls:IconButton Grid.Column="2"
-                             Glyph="{Binding ViewModeIconGlyph}"
-                             Command="{Binding ToggleViewModeCommand}"
-                             ToolTip="{Binding ViewModeToolTip}" />
-    </Grid>
+    </Border>
 </ContentView>

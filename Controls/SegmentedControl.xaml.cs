@@ -5,8 +5,8 @@ using Microsoft.Maui.Controls.Shapes;
 namespace AetherVault.Controls;
 
 /// <summary>
-/// Pill segmented control. Selected: Primary text on Primary @ ~15% opacity.
-/// Unselected: TextSecondary. No solid teal fill.
+/// Pill segmented control. Selected: foil Primary text on Primary @ ~15% opacity.
+/// Unselected: TextSecondary. No solid foil fill.
 /// </summary>
 public partial class SegmentedControl : ContentView
 {

@@ -9,12 +9,11 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Pages.DecksPage"
              Title="Decks"
-             BackgroundColor="{StaticResource Background}"
+             BackgroundColor="{StaticResource Surface0}"
              x:DataType="vm:DecksViewModel">
 
     <Grid RowDefinitions="Auto,Auto,*">
 
-        <!-- Header: title, status, layout toggle -->
         <Border Grid.Row="0"
                 Style="{StaticResource CardStyle}"
                 Margin="16,12,16,8"
@@ -22,18 +21,15 @@
             <Grid ColumnDefinitions="*,Auto"
                   ColumnSpacing="8">
                 <VerticalStackLayout Grid.Column="0" Spacing="4">
-                    <Label Text="My Decks"
-                           FontSize="22"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextPrimary}" />
+                    <controls:PageHeader Title="Decks" />
                     <HorizontalStackLayout Spacing="8" VerticalOptions="Center">
                         <ActivityIndicator IsRunning="{Binding IsBusy}"
                                            IsVisible="{Binding IsBusy}"
                                            HeightRequest="16"
                                            WidthRequest="16"
-                                           Color="{StaticResource Accent}" />
+                                           Color="{StaticResource Primary}" />
                         <Label Text="{Binding StatusDisplayText}"
-                               FontSize="13"
+                               Style="{StaticResource CaptionLabel}"
                                TextColor="{Binding StatusTextColor}"
                                VerticalOptions="Center" />
                     </HorizontalStackLayout>
@@ -47,7 +43,7 @@
                                  Padding="8"
                                  CornerRadius="10"
                                  Source="{x:Static icons:Icons.List}"
-                                 BackgroundColor="{StaticResource CardBackground}"
+                                 BackgroundColor="{StaticResource Surface2}"
                                  Aspect="AspectFit"
                                  SemanticProperties.Description="List layout">
                         <ImageButton.Behaviors>
@@ -57,7 +53,7 @@
                             <DataTrigger TargetType="ImageButton"
                                          Binding="{Binding IsDeckHubLayoutList}"
                                          Value="True">
-                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
                             </DataTrigger>
                         </ImageButton.Triggers>
                     </ImageButton>
@@ -67,7 +63,7 @@
                                  Padding="8"
                                  CornerRadius="10"
                                  Source="{x:Static icons:Icons.Grid}"
-                                 BackgroundColor="{StaticResource CardBackground}"
+                                 BackgroundColor="{StaticResource Surface2}"
                                  Aspect="AspectFit"
                                  SemanticProperties.Description="Tile layout">
                         <ImageButton.Behaviors>
@@ -77,7 +73,7 @@
                             <DataTrigger TargetType="ImageButton"
                                          Binding="{Binding IsDeckHubLayoutTiles}"
                                          Value="True">
-                                <Setter Property="BackgroundColor" Value="{StaticResource Accent}" />
+                                <Setter Property="BackgroundColor" Value="{StaticResource Primary}" />
                             </DataTrigger>
                         </ImageButton.Triggers>
                     </ImageButton>
@@ -85,14 +81,13 @@
             </Grid>
         </Border>
 
-        <!-- Primary CTA + deck tools -->
         <VerticalStackLayout Grid.Row="1"
                              Margin="16,0,16,8"
                              Spacing="8">
             <Button Clicked="OnNewDeckClicked"
                     Text="New deck"
-                    BackgroundColor="{StaticResource Accent}"
-                    TextColor="Black"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="{StaticResource OnPrimary}"
                     FontSize="17"
                     FontAttributes="Bold"
                     CornerRadius="12"
@@ -102,18 +97,18 @@
                     ImageSource="{x:Static icons:Icons.Add}" />
             <Button Clicked="OnDeckToolsClicked"
                     Text="Deck tools"
-                    BackgroundColor="{StaticResource Surface}"
+                    BackgroundColor="{StaticResource Surface1}"
                     TextColor="{StaticResource TextPrimary}"
                     FontSize="14"
                     CornerRadius="12"
                     HeightRequest="44"
                     HorizontalOptions="Fill"
-                    BorderWidth="0"
+                    BorderWidth="1"
+                    BorderColor="{StaticResource BorderSubtle}"
                     SemanticProperties.Hint="Import, export, or browse sample decks" />
         </VerticalStackLayout>
 
-        <!-- Content area -->
-        <Grid Grid.Row="2" BackgroundColor="{StaticResource Background}">
+        <Grid Grid.Row="2" BackgroundColor="{StaticResource Surface0}">
 
             <!-- List layout -->
             <CollectionView ItemsSource="{Binding Decks}"
@@ -144,12 +139,12 @@
                     <DataTemplate x:DataType="models:DeckEntity">
                         <controls:DeckHubTileView Padding="0"
                                                   StrokeShape="RoundRectangle 14"
-                                                  Stroke="{StaticResource CardBackground}"
+                                                  Stroke="{StaticResource BorderSubtle}"
                                                   StrokeThickness="1"
-                                                  BackgroundColor="{StaticResource Surface}">
+                                                  BackgroundColor="{StaticResource Surface1}">
                             <Grid>
                                 <Grid IsVisible="{Binding HasPreviewImage}"
-                                      BackgroundColor="{StaticResource CardBackground}">
+                                      BackgroundColor="{StaticResource Surface2}">
                                     <controls:CachedCardImage CardUuid="{Binding PreviewImageId}"
                                                                ImageSize="art_crop"
                                                                InputTransparent="True"

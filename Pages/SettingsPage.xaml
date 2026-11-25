@@ -3,20 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
              x:Class="AetherVault.Pages.SettingsPage"
+             xmlns:controls="clr-namespace:AetherVault.Controls"
              Title="Settings"
-             BackgroundColor="{StaticResource Background}">
+             BackgroundColor="{StaticResource Surface0}">
 
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="16">
 
+            <controls:PageHeader Title="Settings" />
+
             <Border Style="{StaticResource CardStyle}">
                 <VerticalStackLayout Spacing="10" Padding="4,2">
                     <Label Text="Card database"
-                           FontSize="18"
-                           FontAttributes="Bold" />
+                           Style="{StaticResource TitleLabel}" />
                     <Label Text="Re-downloads the full card database from GitHub."
-                           FontSize="13"
-                           TextColor="{StaticResource TextSecondary}" />
+                           Style="{StaticResource CaptionLabel}" />
                     <Button x:Name="ForceDbUpdateBtn"
                             Text="Force database update"
                             Clicked="OnDownloadDbClicked"
@@ -40,7 +41,7 @@
             <Border Style="{StaticResource CardStyle}">
                 <uranium:ExpanderView IsExpanded="True">
                     <uranium:ExpanderView.Header>
-                        <Label Text="Database" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="Database" Style="{StaticResource TitleLabel}" />
                     </uranium:ExpanderView.Header>
                     <VerticalStackLayout Spacing="8" Padding="0,8,0,0">
                         <Label x:Name="DbStatusLabel"
@@ -54,11 +55,9 @@
             <Border Style="{StaticResource CardStyle}">
                 <VerticalStackLayout Spacing="10" Padding="4,2">
                     <Label Text="Prices"
-                           FontSize="18"
-                           FontAttributes="Bold" />
+                           Style="{StaticResource TitleLabel}" />
                     <Label Text="Turn off price downloads to save storage and network use. You can hide collection totals and grid prices while keeping prices on search and card details."
-                           FontSize="13"
-                           TextColor="{StaticResource TextSecondary}" />
+                           Style="{StaticResource CaptionLabel}" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="Card price data (download and lookups)" VerticalOptions="Center" />
                         <Switch Grid.Row="0" Grid.Column="1" x:Name="PricesDataSwitch" VerticalOptions="Center" Toggled="OnPricesDataToggled" />
@@ -70,10 +69,9 @@
 
             <Border Style="{StaticResource CardStyle}">
                 <VerticalStackLayout x:Name="PriceSourceSection" Spacing="0" Padding="4,2">
-                    <Label Text="Price source" FontSize="18" FontAttributes="Bold" />
+                    <Label Text="Price source" Style="{StaticResource TitleLabel}" />
                     <Label Text="Preferred vendor for displayed prices and collection total (Stats tab)."
-                           FontSize="13"
-                           TextColor="{StaticResource TextSecondary}"
+                           Style="{StaticResource CaptionLabel}"
                            Margin="0,4,0,0" />
                     <HorizontalStackLayout Spacing="8" Margin="0,8,0,0">
                         <Label Text="Preferred vendor:" VerticalOptions="Center" TextColor="{StaticResource TextSecondary}" />
@@ -85,7 +83,7 @@
             <Border Style="{StaticResource CardStyle}">
                 <uranium:ExpanderView IsExpanded="True">
                     <uranium:ExpanderView.Header>
-                        <Label Text="Storage" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="Storage" Style="{StaticResource TitleLabel}" />
                     </uranium:ExpanderView.Header>
                     <VerticalStackLayout Spacing="8" Padding="0,8,0,0">
                         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
@@ -120,17 +118,16 @@
             <Border Style="{StaticResource CardStyle}">
                 <uranium:ExpanderView IsExpanded="True">
                     <uranium:ExpanderView.Header>
-                        <Label Text="App Info" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="App Info" Style="{StaticResource TitleLabel}" />
                     </uranium:ExpanderView.Header>
                     <VerticalStackLayout Spacing="4" Padding="0,8,0,0">
-                        <Label Text="AetherVault Mobile" FontSize="14" FontAttributes="Bold" />
-                        <Label Text="Version 2.0 (.NET MAUI) Uranium UI 2.14.0"
-                               FontSize="12" TextColor="{StaticResource TextSecondary}" />
+                        <Label Text="AetherVault Mobile" Style="{StaticResource BodyLabel}" FontAttributes="Bold" />
+                        <Label Text="Version 2.0 · Vault &amp; Foil"
+                               Style="{StaticResource CaptionLabel}" />
                         <Label Text="Card data: MTGJSON | Images: Scryfall"
-                               FontSize="11" TextColor="{StaticResource TextSecondary}" />
+                               Style="{StaticResource CaptionLabel}" />
                         <Label Text="Share the app diagnostic log for troubleshooting (email, Drive, etc.)."
-                               FontSize="12"
-                               TextColor="{StaticResource TextSecondary}"
+                               Style="{StaticResource CaptionLabel}"
                                Margin="0,12,0,0" />
                         <Button Text="Export log"
                                 Clicked="OnExportLogClicked"

@@ -15,7 +15,7 @@
                     Stroke="{StaticResource Primary}"
                     StrokeThickness="2"
                     StrokeShape="RoundRectangle 24"
-                    BackgroundColor="{StaticResource Surface}"
+                    BackgroundColor="{StaticResource Surface1}"
                     HorizontalOptions="Center"
                     Margin="0,0,0,24"
                     Opacity="0">

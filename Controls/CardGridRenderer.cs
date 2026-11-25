@@ -55,8 +55,8 @@ internal sealed class CardGridRenderer : IDisposable
     private SKShader? _shimmerShader;
     private SKPaint? _trailParticlePaint;
 
-    // Theme background (matches App Background #121212) so empty/zero-size canvas never shows black.
-    private static readonly SKColor ThemeBackground = new SKColor(0x12, 0x12, 0x12);
+    // Theme background (matches App Surface0 #0B0A0F) so empty/zero-size canvas never shows black.
+    private static readonly SKColor ThemeBackground = new SKColor(0x0B, 0x0A, 0x0F);
 
     // List view thumbnail dimensions
     private const float ListImgWidth = 55f;
@@ -73,8 +73,8 @@ internal sealed class CardGridRenderer : IDisposable
 
     public void EnsureResources()
     {
-        _bgPaint ??= new SKPaint { Color = new SKColor(30, 30, 30), IsAntialias = true };
-        _textPaint ??= new SKPaint { Color = SKColors.White, IsAntialias = true };
+        _bgPaint ??= new SKPaint { Color = new SKColor(0x1C, 0x1A, 0x24), IsAntialias = true };
+        _textPaint ??= new SKPaint { Color = new SKColor(0xF3, 0xEF, 0xE6), IsAntialias = true };
         _textFont ??= new SKFont(SKTypeface.FromFamilyName("CrimsonText-Regular", SKFontStyle.Normal), 12f) { Subpixel = true };
         _pricePaint ??= new SKPaint { Color = SKColors.LightGreen, IsAntialias = true };
         _priceFont ??= new SKFont(SKTypeface.FromFamilyName("CrimsonText-Regular", SKFontStyle.Normal), 8.5f) { Subpixel = true };

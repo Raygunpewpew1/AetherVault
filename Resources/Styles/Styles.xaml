@@ -9,6 +9,7 @@
     <x:Double x:Key="Spacing16">16</x:Double>
     <x:Double x:Key="Spacing24">24</x:Double>
     <x:Double x:Key="Spacing32">32</x:Double>
+    <x:Double x:Key="Spacing40">40</x:Double>
 
     <!-- Type scale (phone base). Tablet/desktop scale via OnIdiom resources below. -->
     <x:Double x:Key="FontSizeCaption">12</x:Double>
@@ -17,6 +18,7 @@
     <x:Double x:Key="FontSizeTitle">20</x:Double>
     <x:Double x:Key="FontSizeHeadline">24</x:Double>
     <x:Double x:Key="FontSizeDisplay">36</x:Double>
+    <x:Double x:Key="FontSizeCardName">22</x:Double>
 
     <!-- Resolved font sizes: phone = token, tablet/desktop ≈ token × 1.3 (rounded). -->
     <OnIdiom x:Key="FontSizeCaptionIdiom" x:TypeArguments="x:Double">
@@ -49,11 +51,17 @@
         <OnIdiom.Tablet>48</OnIdiom.Tablet>
         <OnIdiom.Desktop>48</OnIdiom.Desktop>
     </OnIdiom>
+    <OnIdiom x:Key="FontSizeCardNameIdiom" x:TypeArguments="x:Double">
+        <OnIdiom.Phone>22</OnIdiom.Phone>
+        <OnIdiom.Tablet>28</OnIdiom.Tablet>
+        <OnIdiom.Desktop>28</OnIdiom.Desktop>
+    </OnIdiom>
 
-    <!-- Corner radii: Small / Large / Full (chips, FABs). -->
-    <x:Double x:Key="CornerRadiusSmall">8</x:Double>
-    <x:Double x:Key="CornerRadiusLarge">16</x:Double>
-    <x:Double x:Key="CornerRadiusFull">999</x:Double>
+    <!-- Corner radii: Small / Medium / Large / Full. -->
+    <x:Int32 x:Key="CornerRadiusSmall">8</x:Int32>
+    <x:Int32 x:Key="CornerRadiusMedium">12</x:Int32>
+    <x:Int32 x:Key="CornerRadiusLarge">16</x:Int32>
+    <x:Int32 x:Key="CornerRadiusFull">999</x:Int32>
 
     <!-- Control metrics (prefer these over literals in Controls/). -->
     <x:Double x:Key="TouchTargetSize">48</x:Double>
@@ -63,7 +71,54 @@
     <Thickness x:Key="ThicknessPageChrome">16,8</Thickness>
     <Thickness x:Key="ThicknessContentInset">16,0,16,8</Thickness>
     <Thickness x:Key="ThicknessItemPad">12,8</Thickness>
-    <Thickness x:Key="ThicknessChipPad">4,2</Thickness>
+    <Thickness x:Key="ThicknessChipPad">8,4</Thickness>
+
+    <!-- Type role styles (Vault & Foil). -->
+    <Style x:Key="CaptionLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextSecondary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaptionIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+    </Style>
+
+    <Style x:Key="BodyLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBodyIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansRegular" />
+    </Style>
+
+    <Style x:Key="TitleLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeTitleIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="HeadlineLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeHeadlineIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="DisplayLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeDisplayIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+        <Setter Property="FontAttributes" Value="Bold" />
+    </Style>
+
+    <Style x:Key="CardNameLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCardNameIdiom}" />
+        <Setter Property="FontFamily" Value="SerifFontBold" />
+        <Setter Property="LineBreakMode" Value="WordWrap" />
+    </Style>
+
+    <Style x:Key="FoilAccentLabel" TargetType="Label">
+        <Setter Property="TextColor" Value="{StaticResource Primary}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBodyIdiom}" />
+        <Setter Property="FontFamily" Value="OpenSansSemibold" />
+    </Style>
 
     <Style TargetType="Label">
         <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
@@ -91,7 +146,7 @@
         <Setter Property="FontSize" Value="{StaticResource FontSizeBodyIdiom}" />
     </Style>
 
-    <!-- Text / link button: readable on dark surfaces (not filled Primary). -->
+    <!-- Text / link button: foil accent on dark surfaces. -->
     <Style x:Key="TextButton" TargetType="Button" Class="TextButton">
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="TextColor" Value="{StaticResource Primary}" />
@@ -128,18 +183,26 @@
         <Setter Property="Margin" Value="0,0,16,80" />
         <Setter Property="Shadow">
             <Setter.Value>
-                <Shadow Brush="Black"
+                <Shadow Brush="#D4AF6A"
                         Offset="0,4"
-                        Radius="10"
-                        Opacity="0.45" />
+                        Radius="12"
+                        Opacity="0.35" />
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style x:Key="CardStyle" TargetType="Border">
-        <Setter Property="BackgroundColor" Value="{StaticResource CardBackground}" />
+        <Setter Property="BackgroundColor" Value="{StaticResource Surface2}" />
+        <Setter Property="Stroke" Value="{StaticResource BorderSubtle}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="Padding" Value="{StaticResource Spacing12}" />
+    </Style>
+
+    <Style x:Key="ChromePanel" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource Surface1}" />
         <Setter Property="Stroke" Value="Transparent" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
         <Setter Property="Padding" Value="{StaticResource Spacing12}" />
     </Style>
 </ResourceDictionary>

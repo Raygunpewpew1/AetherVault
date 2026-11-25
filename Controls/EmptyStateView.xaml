@@ -6,26 +6,34 @@
              x:Name="Self">
     <VerticalStackLayout VerticalOptions="Center"
                          HorizontalOptions="Center"
-                         Spacing="8"
+                         Spacing="{StaticResource Spacing12}"
+                         Padding="{StaticResource Spacing24}"
                          BindingContext="{x:Reference Self}">
-        <Image x:Name="IconImage"
-               Source="{Binding IconGlyph}"
-               WidthRequest="44"
-               HeightRequest="44"
-               Aspect="AspectFit"
-               HorizontalOptions="Center">
-            <Image.Behaviors>
-                <toolkit:IconTintColorBehavior TintColor="{StaticResource TextSecondary}" />
-            </Image.Behaviors>
-        </Image>
+        <Border BackgroundColor="{StaticResource Surface1}"
+                Stroke="{StaticResource BorderSubtle}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 999"
+                WidthRequest="72"
+                HeightRequest="72"
+                HorizontalOptions="Center">
+            <Image x:Name="IconImage"
+                   Source="{Binding IconGlyph}"
+                   WidthRequest="28"
+                   HeightRequest="28"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center">
+                <Image.Behaviors>
+                    <toolkit:IconTintColorBehavior TintColor="{StaticResource Primary}" />
+                </Image.Behaviors>
+            </Image>
+        </Border>
         <Label Text="{Binding Message}"
-               FontSize="18"
-               FontAttributes="Bold"
-               TextColor="{StaticResource TextPrimary}"
-               HorizontalOptions="Center" />
+               Style="{StaticResource TitleLabel}"
+               HorizontalOptions="Center"
+               HorizontalTextAlignment="Center" />
         <Label Text="{Binding SecondaryMessage}"
-               FontSize="13"
-               TextColor="{StaticResource TextSecondary}"
+               Style="{StaticResource CaptionLabel}"
                HorizontalOptions="Center"
                HorizontalTextAlignment="Center" />
     </VerticalStackLayout>

@@ -18,15 +18,15 @@
             <converters:LegalityToColorConverter x:Key="LegalityToColor" />
 
             <Style TargetType="Page" ApplyToDerivedTypes="True">
-                <Setter Property="BackgroundColor" Value="{StaticResource Background}" />
+                <Setter Property="BackgroundColor" Value="{StaticResource Surface0}" />
             </Style>
 
             <Style TargetType="Shell" ApplyToDerivedTypes="True">
-                <Setter Property="Shell.BackgroundColor" Value="{StaticResource Surface}" />
+                <Setter Property="Shell.BackgroundColor" Value="{StaticResource Surface0}" />
                 <Setter Property="Shell.ForegroundColor" Value="{StaticResource TextPrimary}" />
-                <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource Surface}" />
+                <Setter Property="Shell.TabBarBackgroundColor" Value="{StaticResource Surface1}" />
                 <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource Primary}" />
-                <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TextSecondary}" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="{StaticResource TextMuted}" />
                 <Setter Property="Shell.TitleColor" Value="{StaticResource TextPrimary}" />
             </Style>
 

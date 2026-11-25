@@ -97,7 +97,7 @@
                                FontSize="13"
                                FontAttributes="Bold"
                                TextColor="{StaticResource TextSecondary}"
-                               BackgroundColor="{StaticResource Background}"
+                               BackgroundColor="{StaticResource Surface0}"
                                Padding="12,10,12,4" />
                     </DataTemplate>
                 </CollectionView.GroupHeaderTemplate>

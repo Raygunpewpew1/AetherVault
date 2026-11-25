@@ -1,5 +1,6 @@
 namespace AetherVault.Services;
 
+using AetherVault.Core;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Microsoft.Maui.Controls.Shapes;
@@ -97,8 +98,8 @@ public class ToastService : IToastService
             FontSize = 14,
             HeightRequest = 36,
             Padding = new Thickness(16, 0),
-            BackgroundColor = Colors.White,
-            TextColor = Colors.Black,
+            BackgroundColor = Palette.Primary,
+            TextColor = Palette.OnPrimary,
             CornerRadius = 18,
         };
 
@@ -110,7 +111,7 @@ public class ToastService : IToastService
         layout.Children.Add(new Label
         {
             Text = message,
-            TextColor = Colors.White,
+            TextColor = Palette.TextPrimary,
             FontSize = 14,
             VerticalOptions = LayoutOptions.Center,
             HorizontalTextAlignment = TextAlignment.Start,
@@ -121,9 +122,10 @@ public class ToastService : IToastService
 
         var banner = new Border
         {
-            BackgroundColor = Color.FromArgb("#DD1E1E1E"),
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            BackgroundColor = Palette.Surface2.WithAlpha(0.94f),
+            Stroke = Palette.BorderSubtle,
+            StrokeThickness = 1,
+            StrokeShape = new RoundRectangle { CornerRadius = 12 },
             Padding = new Thickness(16, 10),
             Margin = new Thickness(16, 8, 16, 0),
             HorizontalOptions = LayoutOptions.Fill,
@@ -187,9 +189,10 @@ public class ToastService : IToastService
         var overlay = OverlayHost;
         var banner = new Border
         {
-            BackgroundColor = Color.FromArgb("#DD1E1E1E"),
-            StrokeThickness = 0,
-            StrokeShape = new RoundRectangle { CornerRadius = 8 },
+            BackgroundColor = Palette.Surface2.WithAlpha(0.94f),
+            Stroke = Palette.BorderSubtle,
+            StrokeThickness = 1,
+            StrokeShape = new RoundRectangle { CornerRadius = 12 },
             Padding = new Thickness(16, 10),
             Margin = new Thickness(16, 8, 16, 0),
             HorizontalOptions = LayoutOptions.Fill,
@@ -199,7 +202,7 @@ public class ToastService : IToastService
             Content = new Label
             {
                 Text = message,
-                TextColor = Colors.White,
+                TextColor = Palette.TextPrimary,
                 FontSize = 14,
                 HorizontalTextAlignment = TextAlignment.Center,
             }

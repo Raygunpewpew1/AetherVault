@@ -6,20 +6,29 @@
              x:Name="Root">
     <VerticalStackLayout VerticalOptions="Center"
                          HorizontalOptions="Center"
-                         Spacing="{StaticResource Spacing8}"
-                         Padding="{StaticResource Spacing16}">
-        <Image Source="{Binding IconGlyph, Source={x:Reference Root}}"
-               WidthRequest="{StaticResource FontSizeDisplay}"
-               HeightRequest="{StaticResource FontSizeDisplay}"
-               Aspect="AspectFit"
-               HorizontalOptions="Center"
-               IsVisible="{Binding HasIcon, Source={x:Reference Root}}">
-            <Image.Behaviors>
-                <toolkit:IconTintColorBehavior TintColor="{StaticResource TextSecondary}" />
-            </Image.Behaviors>
-        </Image>
+                         Spacing="{StaticResource Spacing12}"
+                         Padding="{StaticResource Spacing24}">
+        <Border BackgroundColor="{StaticResource Surface1}"
+                Stroke="{StaticResource BorderSubtle}"
+                StrokeThickness="1"
+                StrokeShape="RoundRectangle 999"
+                WidthRequest="72"
+                HeightRequest="72"
+                HorizontalOptions="Center"
+                IsVisible="{Binding HasIcon, Source={x:Reference Root}}">
+            <Image Source="{Binding IconGlyph, Source={x:Reference Root}}"
+                   WidthRequest="{StaticResource FontSizeHeadline}"
+                   HeightRequest="{StaticResource FontSizeHeadline}"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center">
+                <Image.Behaviors>
+                    <toolkit:IconTintColorBehavior TintColor="{StaticResource Primary}" />
+                </Image.Behaviors>
+            </Image>
+        </Border>
         <Label Text="{Binding Message, Source={x:Reference Root}}"
-               FontSize="{StaticResource FontSizeBodyLargeIdiom}"
+               Style="{StaticResource BodyLabel}"
                TextColor="{StaticResource TextSecondary}"
                HorizontalOptions="Center"
                HorizontalTextAlignment="Center" />

@@ -8,16 +8,16 @@
              x:Class="AetherVault.Pages.SearchPage"
              x:Name="SearchPageRoot"
              Title="Search"
-             BackgroundColor="{StaticResource Background}">
+             BackgroundColor="{StaticResource Surface0}">
 
     <Grid RowDefinitions="Auto,*">
 
-        <!-- Header chrome: no outer card; sits on Background -->
         <VerticalStackLayout Grid.Row="0"
                              Padding="{StaticResource ThicknessPageChrome}"
                              Spacing="{StaticResource Spacing12}">
 
-            <!-- Cards: search + filter / view icons (Shell tab title is the only "Search" heading) -->
+            <controls:PageHeader Title="Search" />
+
             <controls:SearchBarRow x:Name="CardsSearchRow"
                                    Text="{Binding SearchText, Mode=TwoWay}"
                                    Placeholder="Search cards..."
@@ -59,8 +59,8 @@
                            FontSize="{StaticResource FontSizeCaption}"
                            VerticalOptions="Center" />
                     <Label Text="Recent"
+                           Style="{StaticResource FoilAccentLabel}"
                            FontSize="{StaticResource FontSizeCaption}"
-                           TextColor="{StaticResource Primary}"
                            TextDecorations="Underline"
                            VerticalOptions="Center"
                            IsVisible="{Binding ShowRecentSearchesShortcut}">
@@ -125,24 +125,23 @@
                         Margin="{StaticResource ThicknessContentInset}">
             <CollectionView.Header>
                 <Label Text="Recent searches"
-                       FontSize="{StaticResource FontSizeBody}"
-                       TextColor="{StaticResource TextSecondary}"
+                       Style="{StaticResource CaptionLabel}"
                        Margin="0,12,0,4" />
             </CollectionView.Header>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="x:String">
-                    <Border BackgroundColor="{StaticResource Surface}"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 8"
-                            Margin="0,0,0,4"
+                    <Border BackgroundColor="{StaticResource Surface1}"
+                            Stroke="{StaticResource BorderSubtle}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 12"
+                            Margin="0,0,0,6"
                             Padding="{StaticResource ThicknessItemPad}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type pages:SearchPage}}, Path=BindingContext.ApplyRecentSearchCommand}"
                                                   CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
                         <Label Text="{Binding .}"
-                               FontSize="{StaticResource FontSizeBody}"
-                               TextColor="{StaticResource TextPrimary}"
+                               Style="{StaticResource BodyLabel}"
                                LineBreakMode="TailTruncation" />
                     </Border>
                 </DataTemplate>
@@ -183,15 +182,16 @@
                                   RowDefinitions="Auto,Auto,Auto">
                                 <Border Grid.RowSpan="3"
                                         Grid.Column="0"
-                                        StrokeThickness="0"
+                                        Stroke="{StaticResource BorderSubtle}"
+                                        StrokeThickness="1"
                                         StrokeShape="RoundRectangle 8"
-                                        BackgroundColor="{StaticResource Surface}"
+                                        BackgroundColor="{StaticResource Surface1}"
                                         Padding="{StaticResource Spacing4}"
                                         VerticalOptions="Start">
                                     <Label Text="{Binding Code}"
-                                           FontSize="{StaticResource FontSizeCaption}"
+                                           Style="{StaticResource CaptionLabel}"
                                            FontAttributes="Bold"
-                                           TextColor="{StaticResource TextSecondary}"
+                                           TextColor="{StaticResource Primary}"
                                            MaxLines="1"
                                            LineBreakMode="MiddleTruncation"
                                            WidthRequest="{StaticResource TouchTargetSize}"
@@ -200,15 +200,13 @@
                                 <Label Grid.Row="0"
                                        Grid.Column="1"
                                        Text="{Binding Name}"
-                                       FontSize="{StaticResource FontSizeBodyLarge}"
+                                       Style="{StaticResource BodyLabel}"
                                        FontAttributes="Bold"
-                                       TextColor="{StaticResource TextPrimary}"
                                        LineBreakMode="TailTruncation" />
                                 <Label Grid.Row="0"
                                        Grid.Column="2"
                                        Text="{Binding ReleaseDisplay}"
-                                       FontSize="{StaticResource FontSizeCaption}"
-                                       TextColor="{StaticResource TextSecondary}"
+                                       Style="{StaticResource CaptionLabel}"
                                        VerticalOptions="Start"
                                        HorizontalTextAlignment="End" />
                                 <HorizontalStackLayout Grid.Row="1"
@@ -216,23 +214,22 @@
                                                        Grid.ColumnSpan="2"
                                                        Spacing="{StaticResource Spacing8}">
                                     <Label Text="{Binding CardCountLabel}"
-                                           FontSize="{StaticResource FontSizeCaption}"
-                                           TextColor="{StaticResource TextSecondary}" />
+                                           Style="{StaticResource CaptionLabel}" />
                                     <Border StrokeThickness="0"
-                                            BackgroundColor="{StaticResource CardBackground}"
+                                            StrokeShape="RoundRectangle 999"
+                                            BackgroundColor="{StaticResource Surface2}"
                                             Padding="{StaticResource ThicknessChipPad}"
                                             IsVisible="{Binding IsPreviewSet}">
                                         <Label Text="Preview"
-                                               FontSize="{StaticResource FontSizeCaption}"
-                                               TextColor="{StaticResource TextSecondary}" />
+                                               Style="{StaticResource CaptionLabel}"
+                                               TextColor="{StaticResource Primary}" />
                                     </Border>
                                 </HorizontalStackLayout>
                                 <Label Grid.Row="2"
                                        Grid.Column="1"
                                        Grid.ColumnSpan="2"
                                        Text="{Binding ParentHint}"
-                                       FontSize="{StaticResource FontSizeCaption}"
-                                       TextColor="{StaticResource TextSecondary}"
+                                       Style="{StaticResource CaptionLabel}"
                                        LineBreakMode="TailTruncation" />
                             </Grid>
                         </Border>

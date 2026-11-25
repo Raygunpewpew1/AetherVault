@@ -1,7 +1,7 @@
+using AetherVault.Core;
 using AetherVault.Services;
 using AetherVault.Services.DeckBuilder;
 using AetherVault.ViewModels;
-using SkiaSharp;
 using SkiaSharp.Views.Maui;
 
 namespace AetherVault.Pages;
@@ -36,18 +36,17 @@ public partial class CardDetailPage : ContentPage
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-        // Wire cross-platform swipe navigation via SwipeGestureContainer wrapper.
-        // Left swipe = next card; Right swipe = previous card.
         SwipeContainer.SwipedLeft += () => _ = HandleSwipeAsync(isNext: true);
         SwipeContainer.SwipedRight += () => _ = HandleSwipeAsync(isNext: false);
+        FoilCard.Tapped += (_, _) => _ = OnFoilTappedAsync();
 
         SetSvgCache.SymbolsUpdated += OnSetSymbolsUpdated;
-        Unloaded += (s, e) =>
+        Unloaded += (_, _) =>
         {
             SetSvgCache.SymbolsUpdated -= OnSetSymbolsUpdated;
+            FoilCard.Dispose();
             _viewModel.Dispose();
         };
-        //   _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
 
     private void OnSetSymbolsUpdated() =>
@@ -75,6 +74,8 @@ public partial class CardDetailPage : ContentPage
         {
             CardFlipHost.RotationY = 0;
             CardFlipHost.Scale = 1;
+            FoilCard.ResetTilt();
+            FoilCard.Invalidate();
         });
 
         if (_viewModel.ShowGalleryNavigation)
@@ -94,54 +95,26 @@ public partial class CardDetailPage : ContentPage
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(CardDetailViewModel.CardImage))
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                CardImageView.InvalidateSurface();
-            });
-        }
-        else if (e.PropertyName == nameof(CardDetailViewModel.CurrentFace))
+        if (e.PropertyName is nameof(CardDetailViewModel.CardImage) or nameof(CardDetailViewModel.CurrentFace))
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 if (_viewModel.IsSetSymbolVisible)
                     SetSymbolView.InvalidateSurface();
-                CardImageView.InvalidateSurface();
+                FoilCard.Invalidate();
             });
         }
-    }
-
-    private void OnCardImagePaint(object? sender, SKPaintSurfaceEventArgs e)
-    {
-        var canvas = e.Surface.Canvas;
-        canvas.Clear(new SKColor(30, 30, 30));
-
-        var image = _viewModel.CardImage;
-        if (image == null) return;
-
-        var info = e.Info;
-        float scale = Math.Min((float)info.Width / image.Width, (float)info.Height / image.Height);
-        float x = (info.Width - image.Width * scale) / 2f;
-        float y = (info.Height - image.Height * scale) / 2f;
-
-        var destRect = new SKRect(x, y, x + image.Width * scale, y + image.Height * scale);
-        using var paint = new SKPaint { IsAntialias = true };
-        var sampling = new SKSamplingOptions(SKCubicResampler.Mitchell);
-        canvas.DrawImage(image, destRect, sampling, paint);
     }
 
     private void OnSetSymbolPaint(object? sender, SKPaintSurfaceEventArgs e)
     {
         var canvas = e.Surface.Canvas;
-        canvas.Clear(); // Transparent
+        canvas.Clear();
 
         var setCode = _viewModel.CurrentFace?.SetCode;
-
         if (string.IsNullOrEmpty(setCode)) return;
 
         var rarityColor = _viewModel.RarityColor.ToSKColor();
-
         SetSvgCache.DrawSymbol(canvas, setCode, e.Info.Rect, rarityColor);
     }
 
@@ -198,6 +171,12 @@ public partial class CardDetailPage : ContentPage
     private async void OnFlipClicked(object? sender, EventArgs e)
         => await RunFlipFaceAnimationAsync();
 
+    private async Task OnFoilTappedAsync()
+    {
+        if (_viewModel.HasMultipleFaces && !_flipAnimating)
+            await RunFlipFaceAnimationAsync();
+    }
+
     private void OnSwipedLeft(object? sender, SwipedEventArgs e)
         => _ = HandleSwipeAsync(isNext: true);
 
@@ -213,7 +192,6 @@ public partial class CardDetailPage : ContentPage
 
         try
         {
-            // If gallery navigation is not active, just execute the command without animation.
             if (!_viewModel.ShowGalleryNavigation || CardContentRoot is null)
             {
                 if (isNext)
@@ -242,39 +220,21 @@ public partial class CardDetailPage : ContentPage
             var travel = Math.Max(48, width * 0.12);
             const uint duration = 140;
 
-            // Slide current card slightly in swipe direction.
             await CardContentRoot.TranslateToAsync(direction * travel, 0, duration, Easing.CubicOut);
 
-            // Trigger navigation while the content is offset.
             if (isNext)
                 _viewModel.NavigateNextCardCommand.Execute(null);
             else
                 _viewModel.NavigatePreviousCardCommand.Execute(null);
 
-            // Prepare new content just off-screen on the opposite side.
+            FoilCard.ResetTilt();
             CardContentRoot.TranslationX = -direction * travel;
-
-            // Slide new card into place.
             await CardContentRoot.TranslateToAsync(0, 0, duration, Easing.CubicIn);
         }
         finally
         {
             _isSwipeAnimating = false;
         }
-    }
-
-    private async void CardImageView_Touch(object? sender, SKTouchEventArgs e)
-    {
-        if (e.ActionType == SKTouchAction.Released && _viewModel.HasMultipleFaces && !_flipAnimating)
-            await RunFlipFaceAnimationAsync();
-        e.Handled = true;
-    }
-
-    private static SolidColorBrush ResolveAccentBrush()
-    {
-        if (Application.Current?.Resources.TryGetValue("Accent", out var o) == true && o is Color c)
-            return new SolidColorBrush(c);
-        return new SolidColorBrush(Color.FromArgb("#6CB4E4"));
     }
 
     private async Task PlayFlipAvailableHighlightAsync()
@@ -285,12 +245,11 @@ public partial class CardDetailPage : ContentPage
         {
             if (!IsLoaded) return;
 
-            var accent = ResolveAccentBrush();
             var savedStroke = CardArtChrome.Stroke;
             var savedThick = CardArtChrome.StrokeThickness;
 
-            CardArtChrome.Stroke = accent;
-            CardArtChrome.StrokeThickness = 3;
+            CardArtChrome.Stroke = Palette.Primary;
+            CardArtChrome.StrokeThickness = 2;
 
             await CardFlipHost.ScaleToAsync(1.04, 110);
             await CardFlipHost.ScaleToAsync(1, 220, Easing.SpringOut);
@@ -318,10 +277,11 @@ public partial class CardDetailPage : ContentPage
         {
             await MainThread.InvokeOnMainThreadAsync(async () =>
             {
+                FoilCard.ResetTilt();
                 const uint halfMs = 220;
                 await AnimateRotationYAsync(CardFlipHost, CardFlipHost.RotationY, 90, halfMs, Easing.CubicIn);
                 await _viewModel.AdvanceFaceAndLoadImageAsync();
-                CardImageView.InvalidateSurface();
+                FoilCard.Invalidate();
                 await AnimateRotationYAsync(CardFlipHost, 90, 0, halfMs, Easing.CubicOut);
             });
         }

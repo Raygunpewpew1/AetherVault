@@ -5,13 +5,20 @@
              x:Name="Root">
     <Grid ColumnDefinitions="*,Auto"
           ColumnSpacing="{StaticResource Spacing12}"
-          VerticalOptions="Center">
-        <Label Text="{Binding Title, Source={x:Reference Root}}"
-               FontSize="{StaticResource FontSizeTitleIdiom}"
-               FontAttributes="Bold"
-               TextColor="{StaticResource TextPrimary}"
-               VerticalOptions="Center"
-               LineBreakMode="TailTruncation" />
+          VerticalOptions="Center"
+          Padding="0,4">
+        <VerticalStackLayout Spacing="{StaticResource Spacing4}"
+                             VerticalOptions="Center">
+            <BoxView HeightRequest="2"
+                     WidthRequest="28"
+                     Color="{StaticResource Primary}"
+                     HorizontalOptions="Start"
+                     CornerRadius="1" />
+            <Label Text="{Binding Title, Source={x:Reference Root}}"
+                   Style="{StaticResource TitleLabel}"
+                   VerticalOptions="Center"
+                   LineBreakMode="TailTruncation" />
+        </VerticalStackLayout>
         <ContentView x:Name="TrailingHost"
                      Grid.Column="1"
                      VerticalOptions="Center"

@@ -3,15 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:skia="clr-namespace:SkiaSharp.Views.Maui.Controls;assembly=SkiaSharp.Views.Maui.Controls"
-             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
              xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
              xmlns:models="clr-namespace:AetherVault.Models"
              xmlns:core="clr-namespace:AetherVault.Core"
              xmlns:viewmodels="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.CardDetailPage"
              x:Name="DetailScreen"
-             Title="Card Details"
-             BackgroundColor="{StaticResource Background}"
+             Title="{Binding CurrentFace.Name, FallbackValue=Card}"
+             BackgroundColor="{StaticResource Surface0}"
+             Shell.TabBarIsVisible="False"
              Shell.PresentationMode="Animated">
 
     <ContentPage.ToolbarItems>
@@ -30,340 +30,306 @@
     <Grid RowDefinitions="*,Auto,Auto">
 
         <ScrollView Grid.Row="0">
-            <!-- SwipeGestureContainer wraps the content instead of overlaying it.
-                 This allows children (buttons, expanders) to receive touches while
-                 still capturing horizontal swipes for navigation. -->
             <controls:SwipeGestureContainer x:Name="SwipeContainer">
                 <VerticalStackLayout x:Name="CardContentRoot"
-                                     Padding="16"
-                                     Spacing="8">
+                                     Padding="{StaticResource Spacing16}"
+                                     Spacing="{StaticResource Spacing12}">
 
+                    <!-- Premium foil card stage -->
                     <Border x:Name="CardArtChrome"
-                            StrokeShape="RoundRectangle 12"
+                            BackgroundColor="Transparent"
+                            Stroke="{StaticResource Primary}"
                             StrokeThickness="0"
-                            HeightRequest="380"
+                            StrokeShape="RoundRectangle 16"
+                            HeightRequest="340"
                             HorizontalOptions="Center"
-                            WidthRequest="272">
+                            WidthRequest="244"
+                            Padding="0">
+                        <Border.Shadow>
+                            <Shadow Brush="#D4AF6A"
+                                    Offset="0,10"
+                                    Radius="24"
+                                    Opacity="0.22" />
+                        </Border.Shadow>
                         <Border x:Name="CardFlipHost"
                                 BackgroundColor="Transparent"
                                 AnchorX="0.5"
                                 AnchorY="0.5"
                                 HorizontalOptions="Fill"
                                 VerticalOptions="Fill">
-                        <Grid>
-                            <skia:SKCanvasView x:Name="CardImageView"
-                                               PaintSurface="OnCardImagePaint"
-                                               EnableTouchEvents="True"
-                                               Touch="CardImageView_Touch"
-                                               HeightRequest="380"
-                                               WidthRequest="272" />
-                            <ActivityIndicator x:Name="ImageLoading"
-                                               IsRunning="{Binding IsImageLoading}"
-                                               IsVisible="{Binding IsImageLoading}"
-                                               VerticalOptions="Center"
-                                               HorizontalOptions="Center"
-                                               Color="{StaticResource Primary}" />
-                            <VerticalStackLayout x:Name="ImageFallback"
-                                                 IsVisible="{Binding CardImageLoadFailed}"
-                                                 VerticalOptions="Center"
-                                                 HorizontalOptions="Center"
-                                                 Spacing="6">
-                                <Label Text="&#x1F5BC;"
-                                       FontSize="36"
-                                       HorizontalOptions="Center" />
-                                <Label Text="Image unavailable"
-                                       FontSize="12"
-                                       TextColor="{StaticResource TextSecondary}"
-                                       HorizontalOptions="Center" />
-                            </VerticalStackLayout>
-                        </Grid>
+                            <Grid>
+                                <controls:FoilCardView x:Name="FoilCard"
+                                                       CardImage="{Binding CardImage}"
+                                                       HeightRequest="340"
+                                                       WidthRequest="244" />
+                                <ActivityIndicator x:Name="ImageLoading"
+                                                   IsRunning="{Binding IsImageLoading}"
+                                                   IsVisible="{Binding IsImageLoading}"
+                                                   VerticalOptions="Center"
+                                                   HorizontalOptions="Center"
+                                                   Color="{StaticResource Primary}" />
+                                <VerticalStackLayout x:Name="ImageFallback"
+                                                     IsVisible="{Binding CardImageLoadFailed}"
+                                                     VerticalOptions="Center"
+                                                     HorizontalOptions="Center"
+                                                     Spacing="6"
+                                                     InputTransparent="True">
+                                    <Label Text="Art unavailable"
+                                           Style="{StaticResource CaptionLabel}"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
+                                <Button Text="Flip"
+                                        Clicked="OnFlipClicked"
+                                        IsVisible="{Binding HasMultipleFaces}"
+                                        Style="{StaticResource TextButton}"
+                                        TextColor="{StaticResource FoilHighlight}"
+                                        BackgroundColor="#CC0B0A0F"
+                                        FontSize="13"
+                                        HeightRequest="32"
+                                        Padding="12,0"
+                                        VerticalOptions="End"
+                                        HorizontalOptions="End"
+                                        Margin="0,0,10,10" />
+                            </Grid>
                         </Border>
                     </Border>
 
-                <Label Text="{Binding CardPosition}"
-                       IsVisible="{Binding ShowGalleryNavigation}"
-                       HorizontalOptions="Center"
-                       FontSize="11"
-                       TextColor="{StaticResource TextSecondary}" />
+                    <Label Text="{Binding CardPosition}"
+                           IsVisible="{Binding ShowGalleryNavigation}"
+                           HorizontalOptions="Center"
+                           Style="{StaticResource CaptionLabel}" />
 
-                <Label Text="{Binding DeckSynergyHintLine}"
-                       IsVisible="{Binding ShowDeckSynergyHint}"
-                       HorizontalOptions="Center"
-                       FontSize="11"
-                       TextColor="{StaticResource Accent}"
-                       LineBreakMode="WordWrap"
-                       Margin="8,0" />
+                    <Label Text="{Binding DeckSynergyHintLine}"
+                           IsVisible="{Binding ShowDeckSynergyHint}"
+                           HorizontalOptions="Center"
+                           Style="{StaticResource CaptionLabel}"
+                           LineBreakMode="WordWrap" />
 
-                <Label x:Name="SwipeHintLabel"
-                       Text="Swipe left or right to browse cards"
-                       HorizontalOptions="Center"
-                       FontSize="11"
-                       Opacity="0"
-                       TextColor="{StaticResource TextSecondary}" />
+                    <Label x:Name="SwipeHintLabel"
+                           Text="Swipe to browse"
+                           HorizontalOptions="Center"
+                           Style="{StaticResource CaptionLabel}"
+                           Opacity="0" />
 
-                <Label x:Name="FlipHint"
-                       Text="Tap art to flip · accent pulse = double-faced"
-                       IsVisible="{Binding HasMultipleFaces}"
-                       HorizontalOptions="Center"
-                       FontSize="11"
-                       TextColor="{StaticResource TextSecondary}" />
+                    <!-- Collector sheet -->
+                    <Border Style="{StaticResource CardStyle}"
+                            Padding="{StaticResource Spacing16}">
+                        <VerticalStackLayout Spacing="{StaticResource Spacing8}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Spacing8}">
+                                <Label x:Name="CardNameLabel"
+                                       Text="{Binding CurrentFace.Name}"
+                                       Style="{StaticResource CardNameLabel}" />
+                                <controls:ManaCostView x:Name="ManaCost"
+                                                       ManaText="{Binding CurrentFace.ManaCost}"
+                                                       Grid.Column="1"
+                                                       VerticalOptions="Center" />
+                            </Grid>
 
-                <Border Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding ShowOtherPrintingsSection}">
-                    <VerticalStackLayout Spacing="10">
+                            <Label x:Name="TypeLineLabel"
+                                   Text="{Binding CurrentFace.CardType}"
+                                   Style="{StaticResource CaptionLabel}" />
+
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Spacing8}">
+                                <skia:SKCanvasView x:Name="SetSymbolView"
+                                                   HeightRequest="20"
+                                                   WidthRequest="20"
+                                                   PaintSurface="OnSetSymbolPaint"
+                                                   IsVisible="{Binding IsSetSymbolVisible}"
+                                                   VerticalOptions="Start" />
+                                <Label x:Name="SetInfoLabel"
+                                       Grid.Column="1"
+                                       Text="{Binding SetInfoText}"
+                                       Style="{StaticResource CaptionLabel}"
+                                       LineBreakMode="WordWrap" />
+                                <Label x:Name="RarityLabel"
+                                       Grid.Column="2"
+                                       Text="{Binding CurrentFace.Rarity}"
+                                       TextColor="{Binding RarityColor}"
+                                       VerticalOptions="Start"
+                                       FontSize="{StaticResource FontSizeCaptionIdiom}" />
+                            </Grid>
+
+                            <Label x:Name="PriceLabel"
+                                   Text="{Binding PriceDisplay}"
+                                   Style="{StaticResource FoilAccentLabel}"
+                                   FontSize="{StaticResource FontSizeBodyLargeIdiom}"
+                                   IsVisible="{Binding IsPriceVisible}" />
+
+                            <Label x:Name="PTLabel"
+                                   Text="{Binding PtText}"
+                                   Style="{StaticResource BodyLabel}"
+                                   IsVisible="{Binding IsPtVisible}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <controls:CardTextView x:Name="CardTextView"
+                                           CardText="{Binding CombinedText}"
+                                           IsVisible="{Binding IsTextVisible}"
+                                           HorizontalOptions="Fill"
+                                           TextColor="{StaticResource TextPrimary}" />
+
+                    <VerticalStackLayout Spacing="10"
+                                         IsVisible="{Binding HasKeywordHelp}"
+                                         BindableLayout.ItemsSource="{Binding KeywordHelpRows}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="viewmodels:KeywordHelpRow">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding Keyword}"
+                                           Style="{StaticResource BodyLabel}" />
+                                    <Label Text="{Binding Summary}"
+                                           Style="{StaticResource CaptionLabel}"
+                                           LineBreakMode="WordWrap" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Label x:Name="FlavorTextLabel"
+                           Text="{Binding CurrentFace.FlavorText}"
+                           FontAttributes="Italic"
+                           FontFamily="SerifFontItalic"
+                           FontSize="{StaticResource FontSizeBodyIdiom}"
+                           TextColor="{StaticResource TextSecondary}"
+                           LineBreakMode="WordWrap"
+                           IsVisible="{Binding IsFlavorVisible}" />
+
+                    <Label x:Name="ArtistLabel"
+                           Text="{Binding CurrentFace.Artist, StringFormat='Illustrated by {0}'}"
+                           Style="{StaticResource CaptionLabel}"
+                           IsVisible="{Binding IsArtistVisible}" />
+
+                    <VerticalStackLayout Spacing="{StaticResource Spacing12}"
+                                         IsVisible="{Binding ShowOtherPrintingsSection}">
                         <Grid ColumnDefinitions="*,Auto">
                             <Label Text="Other printings"
-                                   FontSize="16"
-                                   FontAttributes="Bold"
-                                   TextColor="{StaticResource TextPrimary}"
+                                   Style="{StaticResource TitleLabel}"
                                    VerticalOptions="Center" />
                             <Button Grid.Column="1"
                                     Text="{Binding SeeAllPrintingsLabel}"
                                     Command="{Binding OpenSeeAllPrintingsCommand}"
                                     IsVisible="{Binding ShowSeeAllPrintings}"
                                     Style="{StaticResource TextButton}"
-                                    FontSize="13"
+                                    FontSize="{StaticResource FontSizeCaptionIdiom}"
                                     HeightRequest="32" />
                         </Grid>
                         <ActivityIndicator IsRunning="{Binding IsOtherPrintingsLoading}"
                                            IsVisible="{Binding IsOtherPrintingsLoading}"
-                                           Color="{StaticResource Primary}" />
-                        <ScrollView Orientation="Horizontal"
-                                    HorizontalScrollBarVisibility="Never"
-                                    IsVisible="{Binding HasOtherPrintings}">
-                            <HorizontalStackLayout Spacing="8"
-                                                   BindableLayout.ItemsSource="{Binding OtherPrintings}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="models:OtherPrintingSummary">
-                                        <Border Padding="10,8"
-                                                Stroke="{StaticResource FilterHairline}"
-                                                StrokeThickness="1"
-                                                StrokeShape="RoundRectangle 8"
-                                                BackgroundColor="{StaticResource Surface}">
-                                            <Border.GestureRecognizers>
-                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}, Path=OpenOtherPrintingCommand}"
-                                                                      CommandParameter="{Binding .}" />
-                                            </Border.GestureRecognizers>
-                                            <VerticalStackLayout Spacing="2">
-                                                <Label Text="{Binding OwnershipBadge}"
-                                                       FontSize="10"
-                                                       FontAttributes="Bold"
-                                                       TextColor="{StaticResource Accent}"
-                                                       IsVisible="{Binding ShowOwnershipBadge}" />
-                                                <Label Text="{Binding TitleText}"
-                                                       FontSize="13"
-                                                       FontAttributes="Bold"
-                                                       LineBreakMode="TailTruncation"
-                                                       MaximumWidthRequest="180"
-                                                       TextColor="{StaticResource TextPrimary}" />
-                                                <Label Text="{Binding DetailText}"
-                                                       FontSize="11"
-                                                       LineBreakMode="TailTruncation"
-                                                       MaximumWidthRequest="180"
-                                                       TextColor="{StaticResource TextSecondary}" />
-                                            </VerticalStackLayout>
-                                        </Border>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </HorizontalStackLayout>
-                        </ScrollView>
-                    </VerticalStackLayout>
-                </Border>
-
-                <Border Style="{StaticResource CardStyle}"
-                        Margin="0,8,0,0">
-                    <VerticalStackLayout Spacing="4">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Label x:Name="CardNameLabel"
-                                   Text="{Binding CurrentFace.Name}"
-                                   FontSize="18"
-                                   FontAttributes="Bold"
-                                   TextColor="{StaticResource TextPrimary}"
-                                   LineBreakMode="WordWrap"
-                                   FontAutoScalingEnabled="True" />
-                            <controls:ManaCostView x:Name="ManaCost"
-                                                   ManaText="{Binding CurrentFace.ManaCost}"
-                                                   Grid.Column="1"
-                                                   VerticalOptions="Center" />
-                        </Grid>
-
-                        <Label x:Name="TypeLineLabel"
-                               Text="{Binding CurrentFace.CardType}"
-                               FontSize="14"
-                               TextColor="{StaticResource TextSecondary}" />
-
-                        <HorizontalStackLayout Spacing="8"
-                                               VerticalOptions="Center">
-                            <skia:SKCanvasView x:Name="SetSymbolView"
-                                               HeightRequest="24"
-                                               WidthRequest="24"
-                                               PaintSurface="OnSetSymbolPaint"
-                                               IsVisible="{Binding IsSetSymbolVisible}" />
-                            <Label x:Name="SetInfoLabel"
-                                   Text="{Binding SetInfoText}"
-                                   VerticalOptions="Center"
-                                   FontSize="12"
-                                   LineBreakMode="WordWrap"
-                                   TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="RarityLabel"
-                                   Text="{Binding CurrentFace.Rarity}"
-                                   TextColor="{Binding RarityColor}"
-                                   VerticalOptions="Center"
-                                   FontSize="12"
-                                   FontAttributes="Bold" />
-                        </HorizontalStackLayout>
-
-                        <Label x:Name="PriceLabel"
-                               Text="{Binding PriceDisplay}"
-                               FontSize="14"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource Accent}"
-                               IsVisible="{Binding IsPriceVisible}" />
-
-                        <Label x:Name="PTLabel"
-                               Text="{Binding PtText}"
-                               FontSize="14"
-                               TextColor="{StaticResource TextPrimary}"
-                               IsVisible="{Binding IsPtVisible}" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <Border x:Name="TextBorder"
-                        Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding IsTextVisible}">
-                    <controls:CardTextView x:Name="CardTextView"
-                                           CardText="{Binding CombinedText}"
-                                           HorizontalOptions="Fill"
-                                           TextColor="{StaticResource TextPrimary}" />
-                </Border>
-
-                <Border Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding HasKeywordHelp}">
-                    <uranium:ExpanderView>
-                        <uranium:ExpanderView.Header>
-                            <Label Text="Keyword reminders"
-                                   FontSize="16"
-                                   FontAttributes="Bold" />
-                        </uranium:ExpanderView.Header>
-                        <VerticalStackLayout Spacing="0">
-                            <VerticalStackLayout Spacing="10"
-                                                 Padding="0,8,0,0"
-                                                 BindableLayout.ItemsSource="{Binding KeywordHelpRows}">
-                                <BindableLayout.ItemTemplate>
-                                    <DataTemplate x:DataType="viewmodels:KeywordHelpRow">
+                                           Color="{StaticResource Primary}"
+                                           HorizontalOptions="Start" />
+                        <VerticalStackLayout Spacing="0"
+                                             IsVisible="{Binding HasOtherPrintings}"
+                                             BindableLayout.ItemsSource="{Binding OtherPrintings}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:OtherPrintingSummary">
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          Padding="0,12"
+                                          ColumnSpacing="12">
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}, Path=OpenOtherPrintingCommand}"
+                                                                  CommandParameter="{Binding .}" />
+                                        </Grid.GestureRecognizers>
                                         <VerticalStackLayout Spacing="2">
-                                            <Label Text="{Binding Keyword}"
-                                                   FontSize="14"
-                                                   FontAttributes="Bold"
-                                                   TextColor="{StaticResource TextPrimary}" />
-                                            <Label Text="{Binding Summary}"
-                                                   FontSize="13"
-                                                   TextColor="{StaticResource TextSecondary}"
+                                            <Label Text="{Binding TitleText}"
+                                                   Style="{StaticResource BodyLabel}"
+                                                   LineBreakMode="WordWrap" />
+                                            <Label Text="{Binding DetailText}"
+                                                   Style="{StaticResource CaptionLabel}"
                                                    LineBreakMode="WordWrap" />
                                         </VerticalStackLayout>
-                                    </DataTemplate>
-                                </BindableLayout.ItemTemplate>
-                            </VerticalStackLayout>
-                            <Label Text="Short reminders only. Text in parentheses is an extra literal memory aid; if anything disagrees with the card or the Comprehensive Rules, those win."
-                                   FontSize="11"
-                                   TextColor="{StaticResource TextSecondary}"
-                                   Margin="0,10,0,0"
-                                   LineBreakMode="WordWrap" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding OwnershipBadge}"
+                                               Style="{StaticResource CaptionLabel}"
+                                               VerticalOptions="Center"
+                                               IsVisible="{Binding ShowOwnershipBadge}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
                         </VerticalStackLayout>
-                    </uranium:ExpanderView>
-                </Border>
+                    </VerticalStackLayout>
 
-                <Border x:Name="FlavorBorder"
-                        Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding IsFlavorVisible}">
-                    <Label x:Name="FlavorTextLabel"
-                           Text="{Binding CurrentFace.FlavorText}"
-                           FontAttributes="Italic" 
-                           FontSize="13"
-                           TextColor="{StaticResource TextSecondary}"
-                           LineBreakMode="WordWrap" />
-                </Border>
-
-                <Label x:Name="ArtistLabel"
-                       Text="{Binding CurrentFace.Artist, StringFormat='Illustrated by {0}'}"
-                       FontSize="11"
-                       TextColor="{StaticResource TextSecondary}"
-                       IsVisible="{Binding IsArtistVisible}" />
-
-                <Border IsVisible="{Binding HasPurchaseLinks}"
-                        Style="{StaticResource CardStyle}">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Buy Online"
-                               FontSize="16"
-                               FontAttributes="Bold" />
-                        <VerticalStackLayout x:Name="PurchaseLinksStack" Spacing="6" Padding="0,4,0,0" BindableLayout.ItemsSource="{Binding PurchaseLinks}">
+                    <VerticalStackLayout Spacing="{StaticResource Spacing8}"
+                                         IsVisible="{Binding HasPurchaseLinks}">
+                        <Label Text="Buy"
+                               Style="{StaticResource TitleLabel}" />
+                        <VerticalStackLayout x:Name="PurchaseLinksStack"
+                                             Spacing="6"
+                                             BindableLayout.ItemsSource="{Binding PurchaseLinks}">
                             <BindableLayout.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:PurchaseLink">
                                     <Label TextType="Html"
                                            Text="{Binding Label}"
-                                           FontSize="14"
-                                           TextColor="#6CB4E4"
-                                           TextDecorations="Underline">
+                                           FontSize="{StaticResource FontSizeBodyIdiom}"
+                                           TextColor="{StaticResource Primary}">
                                         <Label.GestureRecognizers>
-                                            <TapGestureRecognizer Command="{Binding OpenLinkCommand, Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}}" CommandParameter="{Binding Url}" />
+                                            <TapGestureRecognizer Command="{Binding OpenLinkCommand, Source={RelativeSource AncestorType={x:Type viewmodels:CardDetailViewModel}}}"
+                                                                  CommandParameter="{Binding Url}" />
                                         </Label.GestureRecognizers>
                                     </Label>
                                 </DataTemplate>
                             </BindableLayout.ItemTemplate>
                         </VerticalStackLayout>
                     </VerticalStackLayout>
-                </Border>
 
-                <Border Style="{StaticResource CardStyle}">
-                    <uranium:ExpanderView>
-                        <uranium:ExpanderView.Header>
-                            <Label Text="Format Legality"
-                                   FontSize="16"
-                                   FontAttributes="Bold" />
-                        </uranium:ExpanderView.Header>
-                        <VerticalStackLayout x:Name="LegalitiesStack" Spacing="2" Padding="0,8,0,0" BindableLayout.ItemsSource="{Binding Legalities}">
-                            <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="viewmodels:LegalityItem">
-                                    <Grid ColumnDefinitions="*,Auto" Padding="0,2">
-                                        <Label Text="{Binding Format}" FontSize="13" TextColor="#A0A0A0" />
-                                        <Label Text="{Binding StatusText}"
-                                               FontSize="13"
-                                               FontAttributes="Bold"
-                                               HorizontalTextAlignment="End"
-                                               Grid.Column="1"
-                                               TextColor="{Binding Status, Converter={StaticResource LegalityToColor}}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </BindableLayout.ItemTemplate>
-                        </VerticalStackLayout>
-                    </uranium:ExpanderView>
-                </Border>
+                    <Border Style="{StaticResource CardStyle}" Padding="0">
+                        <uranium:ExpanderView>
+                            <uranium:ExpanderView.Header>
+                                <Label Text="Legality"
+                                       Style="{StaticResource TitleLabel}"
+                                       Padding="12,10" />
+                            </uranium:ExpanderView.Header>
+                            <VerticalStackLayout x:Name="LegalitiesStack"
+                                                 Spacing="2"
+                                                 Padding="12,0,12,12"
+                                                 BindableLayout.ItemsSource="{Binding Legalities}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="viewmodels:LegalityItem">
+                                        <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                                            <Label Text="{Binding Format}"
+                                                   Style="{StaticResource CaptionLabel}" />
+                                            <Label Text="{Binding StatusText}"
+                                                   FontSize="{StaticResource FontSizeCaptionIdiom}"
+                                                   FontAttributes="Bold"
+                                                   HorizontalTextAlignment="End"
+                                                   Grid.Column="1"
+                                                   TextColor="{Binding Status, Converter={StaticResource LegalityToColor}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </uranium:ExpanderView>
+                    </Border>
 
-                <Border Style="{StaticResource CardStyle}"
-                        IsVisible="{Binding HasRulings}">
-                    <uranium:ExpanderView>
-                        <uranium:ExpanderView.Header>
-                            <Label Text="Rulings"
-                                   FontSize="16"
-                                   FontAttributes="Bold" />
-                        </uranium:ExpanderView.Header>
-                        <VerticalStackLayout x:Name="RulingsStack" Spacing="8" Padding="0,8,0,0" BindableLayout.ItemsSource="{Binding Card.Rulings}">
-                            <BindableLayout.ItemTemplate>
-                                <DataTemplate x:DataType="core:CardRuling">
-                                    <VerticalStackLayout Spacing="2">
-                                        <Label Text="{Binding Date, StringFormat='{0:d}'}" FontSize="11" TextColor="#888888" />
-                                        <controls:CardTextView CardText="{Binding Text}"
-                                                               TextSize="13"
-                                                               TextColor="#E0E0E0"
-                                                               SymbolSize="14"
-                                                               BackgroundColor="Transparent"
-                                                               HorizontalOptions="Fill" />
-                                    </VerticalStackLayout>
-                                </DataTemplate>
-                            </BindableLayout.ItemTemplate>
-                        </VerticalStackLayout>
-                    </uranium:ExpanderView>
-                </Border>
+                    <Border Style="{StaticResource CardStyle}"
+                            Padding="0"
+                            Margin="0,0,0,24"
+                            IsVisible="{Binding HasRulings}">
+                        <uranium:ExpanderView>
+                            <uranium:ExpanderView.Header>
+                                <Label Text="Rulings"
+                                       Style="{StaticResource TitleLabel}"
+                                       Padding="12,10" />
+                            </uranium:ExpanderView.Header>
+                            <VerticalStackLayout x:Name="RulingsStack"
+                                                 Spacing="8"
+                                                 Padding="12,0,12,12"
+                                                 BindableLayout.ItemsSource="{Binding Card.Rulings}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="core:CardRuling">
+                                        <VerticalStackLayout Spacing="2">
+                                            <Label Text="{Binding Date, StringFormat='{0:d}'}"
+                                                   Style="{StaticResource CaptionLabel}" />
+                                            <controls:CardTextView CardText="{Binding Text}"
+                                                                   FontSize="13"
+                                                                   TextColor="{StaticResource TextPrimary}"
+                                                                   SymbolSize="14"
+                                                                   BackgroundColor="Transparent"
+                                                                   HorizontalOptions="Fill" />
+                                        </VerticalStackLayout>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </uranium:ExpanderView>
+                    </Border>
 
                 </VerticalStackLayout>
             </controls:SwipeGestureContainer>
@@ -372,57 +338,46 @@
         <Label Grid.Row="1"
                Text="{Binding StatusDisplayText}"
                TextColor="{Binding StatusTextColor}"
-               FontSize="12"
+               FontSize="{StaticResource FontSizeCaptionIdiom}"
                Margin="12,4,12,0"
                IsVisible="{Binding HasStatusMessage}"
                HorizontalTextAlignment="Center" />
 
         <Grid Grid.Row="2"
-              BackgroundColor="{StaticResource Surface}"
-              Padding="12,8"
-              ColumnDefinitions="*,Auto,Auto,Auto"
-              ColumnSpacing="8">
+              BackgroundColor="{StaticResource Surface1}"
+              Padding="16,10,8,14"
+              ColumnDefinitions="*,Auto,Auto"
+              ColumnSpacing="0">
             <Grid.GestureRecognizers>
                 <SwipeGestureRecognizer Direction="Left" Swiped="OnSwipedLeft" />
                 <SwipeGestureRecognizer Direction="Right" Swiped="OnSwipedRight" />
             </Grid.GestureRecognizers>
 
-            <Button Text="Add to Collection"
+            <Button Text="Add to collection"
                     Clicked="OnAddClicked"
-                    HeightRequest="40"
-                    FontSize="13"
+                    HeightRequest="48"
+                    FontSize="{StaticResource FontSizeBodyLargeIdiom}"
                     Padding="16,0"
-                    StyleClass="FilledButton" />
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="{StaticResource OnPrimary}"
+                    CornerRadius="{StaticResource CornerRadiusMedium}" />
 
             <Button Grid.Column="1"
-                    Text="+ Deck"
+                    Text="Deck"
                     Clicked="OnAddToDeckClicked"
-                    BackgroundColor="{StaticResource CardBackground}"
-                    TextColor="{StaticResource Accent}"
-                    HeightRequest="40"
-                    FontSize="13"
-                    Padding="12,0" />
+                    Style="{StaticResource TextButton}"
+                    HeightRequest="48"
+                    FontSize="{StaticResource FontSizeBodyLargeIdiom}" />
 
             <Button Grid.Column="2"
                     x:Name="RemoveBtn"
                     Text="Remove"
                     Clicked="OnRemoveClicked"
-                    BackgroundColor="{StaticResource ErrorColor}"
-                    HeightRequest="40"
-                    FontSize="13"
-                    Padding="12,0"
+                    Style="{StaticResource TextButton}"
+                    TextColor="{StaticResource ErrorColor}"
+                    HeightRequest="48"
+                    FontSize="{StaticResource FontSizeBodyLargeIdiom}"
                     IsVisible="{Binding IsInCollection}" />
-
-            <Button Grid.Column="3"
-                    x:Name="FlipBtn"
-                    Text="Flip"
-                    Clicked="OnFlipClicked"
-                    BackgroundColor="{StaticResource CardBackground}"
-                    HeightRequest="40"
-                    FontSize="13"
-                    Padding="12,0"
-                    IsVisible="{Binding HasMultipleFaces}"
-                    StyleClass="ElevatedButton" />
         </Grid>
 
     </Grid>

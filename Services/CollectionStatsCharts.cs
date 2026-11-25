@@ -14,12 +14,12 @@ public static class CollectionStatsCharts
     private static readonly SKColor RareColor = SKColor.Parse("#FFD700");
     private static readonly SKColor MythicColor = SKColor.Parse("#FF8C00");
 
-    private static readonly SKColor CreatureColor = SKColor.Parse("#03DAC5");
-    private static readonly SKColor SpellColor = SKColor.Parse("#6200EE");
-    private static readonly SKColor LandColor = SKColor.Parse("#4CAF50");
+    private static readonly SKColor CreatureColor = SKColor.Parse("#D4AF6A");
+    private static readonly SKColor SpellColor = SKColor.Parse("#C4785A");
+    private static readonly SKColor LandColor = SKColor.Parse("#7A9A7A");
 
-    private static readonly SKColor CaptionText = SKColor.Parse("#A0A0A0");
-    private static readonly SKColor ValueText = SKColor.Parse("#F0F0F0");
+    private static readonly SKColor CaptionText = SKColor.Parse("#9A9488");
+    private static readonly SKColor ValueText = SKColor.Parse("#F3EFE6");
 
     /// <summary>Returns false when there are no cards to chart.</summary>
     public static bool TryCreateDistributionCharts(CollectionStats stats, out DonutChart? rarityChart, out DonutChart? typeChart)

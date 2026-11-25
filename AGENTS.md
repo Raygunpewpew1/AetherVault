@@ -142,6 +142,13 @@ Use enums, not magic strings: `LegalityStatus`, `CardRarity`, `CardLayout`, `Dec
 
 ## UI and MAUI guidelines
 
+### Vault & Foil design system
+
+- **Identity**: deep near-black vault (`Surface0` `#0B0A0F`), champagne/gold foil `Primary` (`#D4AF6A`), soft charcoal surfaces (`Surface1`/`Surface2`). Card names use **CrimsonText** (`CardNameLabel` / `SerifFont*`); UI chrome uses OpenSans.
+- **Tokens**: edit [`Resources/Styles/AppColors.xaml`](Resources/Styles/AppColors.xaml) and mirror hex in [`Core/Palette.cs`](Core/Palette.cs). Prefer `StaticResource` / styles over one-off hex in pages.
+- **CardGrid**: keep Skia (`CardGrid` / `CardGridRenderer`) for Search/Collection — do **not** swap for `CollectionView` without benchmarking.
+- **3D / foil motion**: only on **Card Detail** (`FoilCardView` tilt + shimmer). Grid stays flat/fast (placeholder shimmer only).
+
 - **XAML namespaces**: e.g. `CardRuling` (`AetherVault.Core`), `PriceEntry` (`AetherVault.Services`) — add correct `xmlns`.
 - **Dynamic lists**: `BindableLayout.ItemsSource` to VM collections, not imperative view construction in code-behind.
 - **`<Frame>`** is obsolete on .NET 9+ → use **`<Border>`** (`Stroke`, `StrokeShape`).

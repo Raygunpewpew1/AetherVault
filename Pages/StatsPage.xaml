@@ -3,55 +3,57 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
              xmlns:charts="clr-namespace:Microcharts.Maui;assembly=Microcharts.Maui"
+             xmlns:controls="clr-namespace:AetherVault.Controls"
              xmlns:viewmodels="clr-namespace:AetherVault.ViewModels"
              x:Class="AetherVault.Pages.StatsPage"
              x:DataType="viewmodels:StatsViewModel"
              Title="Stats"
-             BackgroundColor="{StaticResource Background}">
+             BackgroundColor="{StaticResource Surface0}">
 
     <ScrollView Padding="16">
         <VerticalStackLayout Spacing="16">
 
+            <controls:PageHeader Title="Stats" />
+
             <Border Style="{StaticResource CardStyle}">
                 <uranium:ExpanderView IsExpanded="True">
                     <uranium:ExpanderView.Header>
-                        <Label Text="Collection" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="Collection" Style="{StaticResource TitleLabel}" />
                     </uranium:ExpanderView.Header>
                     <VerticalStackLayout Spacing="8" Padding="0,8,0,0">
                         <Label Text="Price options and preferred vendor are under the Settings tab."
-                               FontSize="13"
-                               TextColor="{StaticResource TextSecondary}"
+                               Style="{StaticResource CaptionLabel}"
                                Margin="0,0,0,8" />
                         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
-                            <Label Text="Total Cards:" TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="TotalCardsLabel" Grid.Column="1" Text="0" HorizontalTextAlignment="End" />
+                            <Label Text="Total Cards:" Style="{StaticResource CaptionLabel}" />
+                            <Label x:Name="TotalCardsLabel" Grid.Column="1" Text="0" HorizontalTextAlignment="End" Style="{StaticResource BodyLabel}" />
 
-                            <Label Grid.Row="1" Text="Unique Cards:" TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="UniqueCardsLabel" Grid.Row="1" Grid.Column="1" Text="0" HorizontalTextAlignment="End" />
+                            <Label Grid.Row="1" Text="Unique Cards:" Style="{StaticResource CaptionLabel}" />
+                            <Label x:Name="UniqueCardsLabel" Grid.Row="1" Grid.Column="1" Text="0" HorizontalTextAlignment="End" Style="{StaticResource BodyLabel}" />
 
-                            <Label x:Name="TotalValueCaptionLabel" Grid.Row="2" Text="Total Value:" TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="TotalValueLabel" Grid.Row="2" Grid.Column="1" Text="$0.00" HorizontalTextAlignment="End" FontAttributes="Bold" />
+                            <Label x:Name="TotalValueCaptionLabel" Grid.Row="2" Text="Total Value:" Style="{StaticResource CaptionLabel}" />
+                            <Label x:Name="TotalValueLabel" Grid.Row="2" Grid.Column="1" Text="$0.00" HorizontalTextAlignment="End" Style="{StaticResource FoilAccentLabel}" FontAttributes="Bold" />
 
-                            <Label Grid.Row="3" Text="Average CMC:" TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="AvgCMCLabel" Grid.Row="3" Grid.Column="1" Text="0.00" HorizontalTextAlignment="End" />
+                            <Label Grid.Row="3" Text="Average CMC:" Style="{StaticResource CaptionLabel}" />
+                            <Label x:Name="AvgCMCLabel" Grid.Row="3" Grid.Column="1" Text="0.00" HorizontalTextAlignment="End" Style="{StaticResource BodyLabel}" />
 
-                            <Label Grid.Row="4" Text="Foils:" TextColor="{StaticResource TextSecondary}" />
-                            <Label x:Name="FoilCountLabel" Grid.Row="4" Grid.Column="1" Text="0" HorizontalTextAlignment="End" />
+                            <Label Grid.Row="4" Text="Foils:" Style="{StaticResource CaptionLabel}" />
+                            <Label x:Name="FoilCountLabel" Grid.Row="4" Grid.Column="1" Text="0" HorizontalTextAlignment="End" Style="{StaticResource BodyLabel}" />
                         </Grid>
 
-                        <Label Text="By Type" FontSize="14" FontAttributes="Bold" Margin="0,8,0,0" />
+                        <Label Text="By Type" Style="{StaticResource BodyLabel}" FontAttributes="Bold" Margin="0,8,0,0" />
                         <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto" ColumnSpacing="8">
                             <VerticalStackLayout HorizontalOptions="Center">
-                                <Label x:Name="CreatureCountLabel" Text="0" FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                                <Label Text="Creatures" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label x:Name="CreatureCountLabel" Text="0" FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" TextColor="{StaticResource Primary}" />
+                                <Label Text="Creatures" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center">
                                 <Label x:Name="SpellCountLabel" Text="0" FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                                <Label Text="Spells" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="Spells" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center">
                                 <Label x:Name="LandCountLabel" Text="0" FontSize="20" FontAttributes="Bold" HorizontalTextAlignment="Center" />
-                                <Label Text="Lands" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="Lands" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                         </Grid>
 
@@ -61,27 +63,27 @@
                                             HorizontalOptions="Fill"
                                             SemanticProperties.Description="Chart of creatures, spells, and lands in your collection" />
 
-                        <Label Text="By Rarity" FontSize="14" FontAttributes="Bold" Margin="0,8,0,0" />
+                        <Label Text="By Rarity" Style="{StaticResource BodyLabel}" FontAttributes="Bold" Margin="0,8,0,0" />
                         <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="Auto" ColumnSpacing="4">
                             <VerticalStackLayout HorizontalOptions="Center">
                                 <Label x:Name="CommonLabel" Text="0" FontSize="16" FontAttributes="Bold" HorizontalTextAlignment="Center"
                                        TextColor="{StaticResource RarityCommon}" />
-                                <Label Text="C" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="C" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center">
                                 <Label x:Name="UncommonLabel" Text="0" FontSize="16" FontAttributes="Bold" HorizontalTextAlignment="Center"
                                        TextColor="{StaticResource RarityUncommon}" />
-                                <Label Text="U" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="U" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center">
                                 <Label x:Name="RareLabel" Text="0" FontSize="16" FontAttributes="Bold" HorizontalTextAlignment="Center"
                                        TextColor="{StaticResource RarityRare}" />
-                                <Label Text="R" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="R" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                             <VerticalStackLayout Grid.Column="3" HorizontalOptions="Center">
                                 <Label x:Name="MythicLabel" Text="0" FontSize="16" FontAttributes="Bold" HorizontalTextAlignment="Center"
                                        TextColor="{StaticResource RarityMythic}" />
-                                <Label Text="M" FontSize="11" TextColor="{StaticResource TextSecondary}" HorizontalTextAlignment="Center" />
+                                <Label Text="M" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
                             </VerticalStackLayout>
                         </Grid>
 

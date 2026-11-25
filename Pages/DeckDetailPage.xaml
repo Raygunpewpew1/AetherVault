@@ -9,7 +9,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="AetherVault.Pages.DeckDetailPage"
              Title="{Binding Deck.Name}"
-             BackgroundColor="{StaticResource Background}"
+             BackgroundColor="{StaticResource Surface0}"
              x:DataType="vm:DeckDetailViewModel">
 
     <ContentPage.ToolbarItems>

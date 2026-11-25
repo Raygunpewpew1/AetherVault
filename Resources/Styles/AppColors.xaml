@@ -1,41 +1,55 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
-    <Color x:Key="Primary">#03DAC5</Color>
-    <!-- Darker teal for pressed/hover — NOT Uranium's "Primary in dark theme". Revisit if StyleResource/ColorsOverride is added. -->
-    <Color x:Key="PrimaryDark">#018786</Color>
-    <!-- Alias of Primary; migrate call sites to Primary in step 4, then delete. -->
-    <Color x:Key="Accent">#03DAC5</Color>
-    <Color x:Key="OnPrimary">#121212</Color>
-    <Color x:Key="Background">#121212</Color>
-    <Color x:Key="Surface">#1E1E1E</Color>
-    <Color x:Key="CardBackground">#252525</Color>
-    <Color x:Key="TextPrimary">#F0F0F0</Color>
-    <Color x:Key="TextSecondary">#A0A0A0</Color>
-    <Color x:Key="ErrorColor">#CF6679</Color>
-    <Color x:Key="LegalGreen">#4CAF50</Color>
-    <Color x:Key="BannedRed">#F44336</Color>
-    <Color x:Key="RestrictedYellow">#FFC107</Color>
+    <!-- Vault & Foil: champagne gold foil on deep near-black vault. Keep Core/Palette.cs in sync. -->
+    <Color x:Key="Primary">#D4AF6A</Color>
+    <Color x:Key="PrimaryDark">#A8873F</Color>
+    <Color x:Key="Accent">#D4AF6A</Color>
+    <Color x:Key="OnPrimary">#0B0A0F</Color>
+
+    <Color x:Key="Background">#0B0A0F</Color>
+    <!-- Surface0 = page / shell; Surface1 = chrome; Surface2 = cards / elevated panels -->
+    <Color x:Key="Surface0">#0B0A0F</Color>
+    <Color x:Key="Surface1">#14121A</Color>
+    <Color x:Key="Surface2">#1C1A24</Color>
+    <Color x:Key="Surface">#14121A</Color>
+    <Color x:Key="CardBackground">#1C1A24</Color>
+    <Color x:Key="BorderSubtle">#2A2734</Color>
+    <Color x:Key="FoilHighlight">#F0E0B8</Color>
+
+    <Color x:Key="TextPrimary">#F3EFE6</Color>
+    <Color x:Key="TextSecondary">#9A9488</Color>
+    <Color x:Key="TextMuted">#6E685E</Color>
+    <Color x:Key="ErrorColor">#E07A7A</Color>
+    <Color x:Key="LegalGreen">#6BBF7A</Color>
+    <Color x:Key="BannedRed">#E07070</Color>
+    <Color x:Key="RestrictedYellow">#E0C060</Color>
     <Color x:Key="RarityCommon">#C0C0C0</Color>
     <Color x:Key="RarityUncommon">#B0C4DE</Color>
     <Color x:Key="RarityRare">#FFD700</Color>
     <Color x:Key="RarityMythic">#FF8C00</Color>
 
-    <!-- Chart series: avoid teal next to green; Primary reserved for UI accents. -->
+    <!-- Chart series: warm vault tones; Primary reserved for UI accents. -->
     <x:Array x:Key="ChartPalette" Type="{x:Type Color}">
-        <Color>#7C4DFF</Color>
-        <Color>#FF8A65</Color>
-        <Color>#42A5F5</Color>
-        <Color>#FFD54F</Color>
-        <Color>#EC407A</Color>
-        <Color>#AB47BC</Color>
+        <Color>#D4AF6A</Color>
+        <Color>#C4785A</Color>
+        <Color>#6B9EBF</Color>
+        <Color>#E0C060</Color>
+        <Color>#A87A9A</Color>
+        <Color>#7A9A7A</Color>
         <Color>#8D6E63</Color>
-        <Color>#26C6DA</Color>
+        <Color>#9A9488</Color>
     </x:Array>
 
     <LinearGradientBrush x:Key="SplashGradient" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#0D0B12" Offset="0" />
-        <GradientStop Color="#121212" Offset="0.4" />
-        <GradientStop Color="#1A1628" Offset="1" />
+        <GradientStop Color="#07060A" Offset="0" />
+        <GradientStop Color="#0B0A0F" Offset="0.45" />
+        <GradientStop Color="#16120E" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="FoilAccentGradient" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#A8873F" Offset="0" />
+        <GradientStop Color="#F0E0B8" Offset="0.5" />
+        <GradientStop Color="#D4AF6A" Offset="1" />
     </LinearGradientBrush>
 </ResourceDictionary>
